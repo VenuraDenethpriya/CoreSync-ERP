@@ -118,9 +118,17 @@ func New() (*Container, error) {
 	}
 
 	// Build the DSN string
+	// db := &DB{
+	// 	DSN: fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s TimeZone=UTC",
+	// 		os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASS"), os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_PORT")),
+	// }
 	db := &DB{
-		DSN: fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s TimeZone=UTC",
-			os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASS"), os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_PORT")),
+		DSN: fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require TimeZone=UTC",
+			os.Getenv("POSTGRES_HOST"),
+			os.Getenv("POSTGRES_USER"),
+			os.Getenv("POSTGRES_PASS"),
+			os.Getenv("POSTGRES_DB"),
+			os.Getenv("POSTGRES_PORT")),
 	}
 
 	// --- PORT RESOLUTION LOGIC ---
