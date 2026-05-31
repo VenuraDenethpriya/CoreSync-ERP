@@ -1,0 +1,139 @@
+import { Button } from "@/components/ui/button";
+import BreadCrumbs from "../../components/ui/BreadCrumbs";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CustomerTable } from "./Components/TableCard.page";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { LockIcon } from "lucide-react";
+import { Roles } from "@/const/const";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
+import { createAuditLog } from "@/api/settingApi";
+
+const Customers = () => {
+  const { user, isSignedIn } = useUser();
+  const { getToken } = useAuth();
+
+  const breadcrumbs = [
+    { name: "Dashboard", link: "/" },
+    { name: "Customers", link: "/customers" },
+  ];
+
+  const [exportData, setExportData] = useState([]);
+  const navigate = useNavigate();
+
+  const handleDownloadPDF = async () => {
+    try {
+      const doc = new jsPDF();
+      const tableColumn = ["Title","Name", "Phone No.", "Order No", "Order Date"];
+      const tableRows = [];
+
+      exportData.forEach(item => {
+        const rowData = [
+          item.title,
+          item.customerName,
+          item.phoneNo,
+          item.lastOrderNo || "-",
+          item.lastOrderDate || "-",
+        ];
+        tableRows.push(rowData);
+      });
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+      });
+      doc.text("Customer List", 14, 15);
+      doc.save("Customers List.pdf");
+
+      const token = await getToken();
+            await createAuditLog(token, {
+              action: "PDF Downloaded",
+              status_code: 200,
+              user: user.id,
+              description: `${user.firstName} ${user.lastName} downloaded the customers list as a PDF file.`,
+            });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+      return;
+    }
+
+  };
+
+  const handleNewItem = () => {
+    navigate("/customers/add-customer");
+  };
+
+  if (!isSignedIn) {
+    return (
+      <div className="flex items-center justify-center h-[80vh] px-4">
+        <div className="bg-white shadow-md rounded-xl p-8 max-w-lg text-center border border-red-200">
+          <div className="flex flex-col items-center justify-center gap-3">
+            <LockIcon className="w-14 h-14 text-red-600" />
+            <h1 className="text-2xl font-semibold text-gray-800">
+              Authentication Required
+            </h1>
+            <p className="text-gray-600">
+              You should be signed in to access this page.
+            </p>
+            <Button
+              className="mt-4 bg-blue-700 hover:bg-blue-800 text-white"
+              onClick={() =>  navigate("/login")} 
+            >
+              Log In
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (user.publicMetadata.role == Roles.WAREHOUSE_STAFF || user.publicMetadata.role == Roles.INVENTORY_MANAGER || user.publicMetadata.role == Roles.OFFICE_STAFF) {
+    return (
+      <div className="flex items-center justify-center h-[80vh] px-4">
+        <div className="bg-white shadow-md rounded-xl p-8 max-w-lg text-center border border-red-200">
+          <div className="flex flex-col items-center justify-center gap-3">
+            <LockIcon className="w-14 h-14 text-red-600" />
+            <h1 className="text-2xl font-semibold text-gray-800">
+              Access Denied
+            </h1>
+            <p className="text-gray-600">
+              You are not authorized to access this page. Please contact your administrator if you believe this is a mistake.
+            </p>
+            <Button
+              className="mt-4 bg-blue-700 hover:bg-blue-800 text-white"
+              onClick={() => navigate("/")}
+            >
+              Go to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <BreadCrumbs breadcrumbs={breadcrumbs} />
+      <div className="px-16 sm:gap-2 gap-1 flex items-center sm:justify-end justify-center mb-4">
+        <Button onClick={handleNewItem} className="bg-blue-800 hover:bg-blue-900">
+          New Customer
+        </Button>
+        <Button
+          variant="outline"
+          className="border-2 border-blue-950 hover:bg-blue-950 hover:text-white transition-all ease-in"
+          onClick={handleDownloadPDF}
+        >
+          Download
+        </Button>
+      </div>
+      <div className="mx-3 sm:max-w-screen sm:mx-16">
+        <CustomerTable setExportData={setExportData} />
+      </div>
+    </>
+  );
+};
+
+export default Customers;

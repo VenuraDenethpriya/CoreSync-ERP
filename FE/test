@@ -1,0 +1,14 @@
+<PDFDownloadLink
+                                    document={<FoundReportTemplate data={reportData} />}
+                                    fileName={`Found-Report-${props.referanceNo}.pdf`}
+                                >
+                                    {({ blob, url, loading, error }) => (
+                                        <Button
+                                            className=" mt-2"
+                                            variant="outline"
+                                            disabled={loading}
+                                        >
+                                            {loading ? 'Generating...' : 'Save Report'}
+                                        </Button>
+                                    )}
+                                </PDFDownloadLink>

@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+README.md
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Runtime
+*.pid
+*.seed
+
+# Build artifacts
+bin/
+dist/
+build/
+
+# Test files
+*_test.go
+test/
+coverage.out
+
+# Documentation
+docs/swagger.json
+docs/swagger.yaml
