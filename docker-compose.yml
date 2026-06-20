@@ -2,25 +2,24 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine
-    restart: always
-    environment:
-        POSTGRES_HOST: ${POSTGRES_HOST}
+      image: postgres:15-alpine
+      restart: always
+      environment:
         POSTGRES_USER: ${POSTGRES_USER}
-        POSTGRES_PASS: ${POSTGRES_PASS}
+        POSTGRES_PASSWORD: ${POSTGRES_PASS}
         POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+      ports:
+        - "5432:5432"
+      volumes:
+        - pgdata:/var/lib/postgresql/data
 
   backend:
-    build:
-      context: ./BE
+    image: venuradenethpriya/myproject-backend:latest
+    restart: always
     ports:
       - "3000:3000"
-    environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASS}@db:5432/${POSTGRES_DB}?sslmode=disable
+    env_file:
+      - .env
     depends_on:
       - db
   
