@@ -8,7 +8,32 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Backend
+        run: |
+          docker build -t venuradenethpriya/erp-system-backend:latest ./BE
+          docker push venuradenethpriya/erp-system-backend:latest
+
+      - name: Build and Push Frontend
+        run: |
+          echo "VITE_API_BASE_GO_URL=http://${{ secrets.EC2_HOST }}:3000/api/v1" > ./FE/.env
+          echo "VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}" >> ./FE/.env
+          echo "VITE_CLOUDINARY_URL=${{ secrets.VITE_CLOUDINARY_URL }}" >> ./FE/.env
+          echo "VITE_CLOUDINARY_AUDIO_URL=${{ secrets.VITE_CLOUDINARY_AUDIO_URL }}" >> ./FE/.env
+          echo "VITE_WS_URL=ws://${{ secrets.EC2_HOST }}:3000/api/v1/ws/orders" >> ./FE/.env
+          docker build -t venuradenethpriya/erp-system-frontend:latest ./FE
+          docker push venuradenethpriya/erp-system-frontend:latest
+
+  # --- JOB 2: DEPLOY TO AWS EC2 ---
   deploy:
     name: Deploy to AWS EC2
     needs: build-and-publish 
@@ -36,6 +61,7 @@ jobs:
           script: |
             cd /home/ubuntu/app
             
+            # Generate .env file
             echo "POSTGRES_HOST=db" > .env
             echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
             echo "POSTGRES_PASS=${{ secrets.POSTGRES_PASS }}" >> .env
@@ -43,11 +69,13 @@ jobs:
             echo "POSTGRES_PORT=5432" >> .env
             echo "APP_NAME=${{ secrets.APP_NAME }}" >> .env
             echo "CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}" >> .env
-
-
+            
+            # Pull new images
             sudo docker pull venuradenethpriya/erp-system-frontend:latest
             sudo docker pull venuradenethpriya/erp-system-backend:latest
             
+            # Restart application
             sudo docker-compose up -d
             
+            # Clean up old images
             sudo docker image prune -f
