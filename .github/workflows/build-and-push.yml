@@ -1,0 +1,31 @@
+name: Build and Push to Docker Hub
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Backend
+        run: |
+          docker build -t venuradenethpriya/myproject-backend:latest ./BE
+          docker push venuradenethpriya/myproject-backend:latest
+
+      - name: Build and Push Frontend
+        run: |
+          docker build -t venuradenethpriya/myproject-frontend:latest ./FE
+          docker push venuradenethpriya/myproject-frontend:latest
+          
