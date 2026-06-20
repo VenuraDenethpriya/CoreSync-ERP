@@ -21,11 +21,10 @@ jobs:
 
       - name: Build and Push Backend
         run: |
-          docker build -t venuradenethpriya/myproject-backend:latest ./BE
-          docker push venuradenethpriya/myproject-backend:latest
+          docker build -t venuradenethpriya/erp-system-backend:latest ./BE
+          docker push venuradenethpriya/erp-system-backend:latest
 
       - name: Build and Push Frontend
         run: |
-          docker build -t venuradenethpriya/myproject-frontend:latest ./FE
-          docker push venuradenethpriya/myproject-frontend:latest
-          
+          docker build -t venuradenethpriya/erp-system-frontend:latest ./FE
+          docker push venuradenethpriya/erp-system-frontend:latest
