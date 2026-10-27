@@ -54,11 +54,11 @@ func IsRuleError(err error) bool {
 // automatic withdrawal on pack Completed / order Delivered, photos required on receipt.
 // Purchase requests, reports and the count screens work either way.
 func Enabled() bool {
-	return strings.EqualFold(strings.TCoreSyncpace(os.Getenv("INVENTORY_CONTROLS_ENABLED")), "true")
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("INVENTORY_CONTROLS_ENABLED")), "true")
 }
 
 func envInt(name string, def int) int {
-	if v, err := strconv.Atoi(strings.TCoreSyncpace(os.Getenv(name))); err == nil && v > 0 {
+	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(name))); err == nil && v > 0 {
 		return v
 	}
 	return def
@@ -78,7 +78,7 @@ func CountStartDay() int { return envInt("STOCK_COUNT_START_DAY", 25) }
 func Approvers() []string {
 	var out []string
 	for _, s := range strings.Split(os.Getenv("STOCK_APPROVER_CLERK_IDS"), ",") {
-		if s = strings.TCoreSyncpace(s); s != "" {
+		if s = strings.TrimSpace(s); s != "" {
 			out = append(out, s)
 		}
 	}
@@ -146,7 +146,7 @@ func ManualPRStatus(isLow bool, reason string) (string, error) {
 	if isLow {
 		return PRApproved, nil
 	}
-	if strings.TCoreSyncpace(reason) == "" {
+	if strings.TrimSpace(reason) == "" {
 		return "", refuse("this item is not below its low level: give a reason for the purchase request")
 	}
 	return PRPendingApproval, nil
@@ -218,7 +218,7 @@ func CanCloseCount(lines []CountLine) error {
 			notCounted = append(notCounted, l.ItemCode)
 			continue
 		}
-		if *l.CountedQty != l.SystemQty && strings.TCoreSyncpace(l.Comment) == "" {
+		if *l.CountedQty != l.SystemQty && strings.TrimSpace(l.Comment) == "" {
 			noComment = append(noComment, l.ItemCode)
 		}
 	}

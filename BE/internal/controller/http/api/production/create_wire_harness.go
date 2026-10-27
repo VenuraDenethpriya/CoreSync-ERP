@@ -41,7 +41,7 @@ func (h *ProductionHandler) CreateWireHarness(c *gin.Context) {
 		productName = createdWireHarness[0].Product.Name
 		userName = createdWireHarness[0].CreatedBy
 		if createdWireHarness[0].User != nil {
-			userName = strings.TCoreSyncpace(createdWireHarness[0].User.FirstName + " " + createdWireHarness[0].User.LastName)
+			userName = strings.TrimSpace(createdWireHarness[0].User.FirstName + " " + createdWireHarness[0].User.LastName)
 		}
 
 		for _, casing := range createdWireHarness {

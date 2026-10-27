@@ -56,7 +56,7 @@ func (l *LeaveDates) Scan(value interface{}) error {
 		var dates []time.Time
 
 		for _, part := range parts {
-			part = strings.TCoreSyncpace(part)
+			part = strings.TrimSpace(part)
 			part = strings.Trim(part, `"`)
 
 			layouts := []string{

@@ -17,7 +17,7 @@ import (
 func ApproverEmails() []string {
 	var out []string
 	for _, s := range strings.Split(os.Getenv("STOCK_APPROVER_EMAIL"), ",") {
-		if s = strings.TCoreSyncpace(s); s != "" {
+		if s = strings.TrimSpace(s); s != "" {
 			out = append(out, s)
 		}
 	}
@@ -25,7 +25,7 @@ func ApproverEmails() []string {
 }
 
 func appLink() string {
-	base := strings.TrimRight(strings.TCoreSyncpace(os.Getenv("CoreSync_APP_URL")), "/")
+	base := strings.TrimRight(strings.TrimSpace(os.Getenv("CoreSync_APP_URL")), "/")
 	if base == "" {
 		return ""
 	}

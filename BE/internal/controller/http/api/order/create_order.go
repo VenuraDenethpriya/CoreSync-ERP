@@ -234,7 +234,7 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 	// Custom description
 	userName := createOrder.CreatedBy
 	if createOrder.User != nil {
-		userName = strings.TCoreSyncpace(createOrder.User.FirstName + " " + createOrder.User.LastName)
+		userName = strings.TrimSpace(createOrder.User.FirstName + " " + createOrder.User.LastName)
 	}
 
 	// Set audit info

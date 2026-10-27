@@ -56,12 +56,12 @@ func serviceKeyMatches(presented, configured string) bool {
 
 // ipAllowed reports whether ip is in the comma-separated allow list (empty list = any IP).
 func ipAllowed(ip, allowList string) bool {
-	allowList = strings.TCoreSyncpace(allowList)
+	allowList = strings.TrimSpace(allowList)
 	if allowList == "" {
 		return true
 	}
 	for _, a := range strings.Split(allowList, ",") {
-		if strings.TCoreSyncpace(a) == ip {
+		if strings.TrimSpace(a) == ip {
 			return true
 		}
 	}
@@ -70,7 +70,7 @@ func ipAllowed(ip, allowList string) bool {
 
 // cleanRequester keeps a short, safe name for the audit log.
 func cleanRequester(s string) string {
-	s = strings.TCoreSyncpace(requesterPattern.ReplaceAllString(s, ""))
+	s = strings.TrimSpace(requesterPattern.ReplaceAllString(s, ""))
 	if len(s) > 40 {
 		s = s[:40]
 	}

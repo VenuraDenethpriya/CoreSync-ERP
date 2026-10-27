@@ -51,12 +51,12 @@ func (s *Service) ReportDiscrepancy(ctx context.Context, inventoryID uuid.UUID, 
 	if qty == 0 {
 		return refuse("quantity must not be 0 (use + for excess, - for shortage)")
 	}
-	if strings.TCoreSyncpace(explanation) == "" {
+	if strings.TrimSpace(explanation) == "" {
 		return refuse("explain what happened to the goods")
 	}
 	since := s.dbNow(ctx)
 	if err := s.db.WithContext(ctx).Exec(`INSERT INTO stock_discrepancies (id, inventory_id, quantity, stock_effect, source_type, explanation, created_by)
-		VALUES (?,?,?,?,'OTHER',?,?)`, uuid.New(), inventoryID, qty, qty, strings.TCoreSyncpace(explanation), actor).Error; err != nil {
+		VALUES (?,?,?,?,'OTHER',?,?)`, uuid.New(), inventoryID, qty, qty, strings.TrimSpace(explanation), actor).Error; err != nil {
 		return err
 	}
 	s.emailNewReports(ctx, since, "CoreSync: excess/shortage reported, needs your approval") // [ADDED 2026-10-13]
@@ -65,10 +65,10 @@ func (s *Service) ReportDiscrepancy(ctx context.Context, inventoryID uuid.UUID, 
 
 // CommentDiscrepancy: an Admin explains the difference before Eranja decides.
 func (s *Service) CommentDiscrepancy(ctx context.Context, id uuid.UUID, comment, actor string) error {
-	if strings.TCoreSyncpace(comment) == "" {
+	if strings.TrimSpace(comment) == "" {
 		return refuse("comment is empty")
 	}
-	res := s.db.WithContext(ctx).Exec(`UPDATE stock_discrepancies SET admin_comment = ? WHERE id = ? AND status = 'PENDING'`, strings.TCoreSyncpace(comment), id)
+	res := s.db.WithContext(ctx).Exec(`UPDATE stock_discrepancies SET admin_comment = ? WHERE id = ? AND status = 'PENDING'`, strings.TrimSpace(comment), id)
 	if res.Error != nil {
 		return res.Error
 	}
@@ -232,7 +232,7 @@ func (s *Service) CommentCountLine(ctx context.Context, lineID uuid.UUID, commen
 		if err := s.openLine(tx, lineID); err != nil {
 			return err
 		}
-		return tx.Exec(`UPDATE stock_count_lines SET admin_comment = ?, commented_by = ? WHERE id = ?`, strings.TCoreSyncpace(comment), actor, lineID).Error
+		return tx.Exec(`UPDATE stock_count_lines SET admin_comment = ?, commented_by = ? WHERE id = ?`, strings.TrimSpace(comment), actor, lineID).Error
 	})
 }
 

@@ -40,7 +40,7 @@ func (ch *ProductHandler) CreateProduct(ctx *gin.Context) {
 	// // Custom description
 	userName := createProduct.CreatedBy
 	if createProduct.User != nil {
-		userName = strings.TCoreSyncpace(createProduct.User.FirstName + " " + createProduct.User.LastName)
+		userName = strings.TrimSpace(createProduct.User.FirstName + " " + createProduct.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{

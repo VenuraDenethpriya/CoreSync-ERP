@@ -33,7 +33,7 @@ func parseEnvList(val string) []string {
 	parts := strings.Split(val, ",")
 	var result []string
 	for _, p := range parts {
-		clean := strings.TCoreSyncpace(p)
+		clean := strings.TrimSpace(p)
 		if clean != "" {
 			result = append(result, clean)
 		}

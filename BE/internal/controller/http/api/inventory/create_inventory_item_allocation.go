@@ -51,7 +51,7 @@ func (ih *InventoryHandler) CreateInventoryItemAllocation(c *gin.Context) {
 		logger.Info(c, "Inventory item allocation created", zap.Any("inventory item allocation", createInventoryItemAllocation))
 		userName := createInventoryItemAllocation.Allocator
 		if createInventoryItemAllocation.User != nil {
-			userName = strings.TCoreSyncpace(createInventoryItemAllocation.User.FirstName + " " + createInventoryItemAllocation.User.LastName)
+			userName = strings.TrimSpace(createInventoryItemAllocation.User.FirstName + " " + createInventoryItemAllocation.User.LastName)
 		}
 		common.SetAuditInfo(c, common.AuditLogDetails{
 			Headers: map[string]string{"X-Response-Message": "Item allocation created"},

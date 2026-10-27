@@ -77,7 +77,7 @@ func parseList(b []byte) []string {
 func cleanList(v []string) []string {
 	var out []string
 	for _, s := range v {
-		if s = strings.TCoreSyncpace(s); s != "" {
+		if s = strings.TrimSpace(s); s != "" {
 			out = append(out, s)
 		}
 	}
@@ -179,7 +179,7 @@ type StockItem struct {
 }
 
 func (s *Service) ListStock(ctx context.Context, query string) ([]StockItem, error) {
-	q := "%" + strings.TCoreSyncpace(query) + "%"
+	q := "%" + strings.TrimSpace(query) + "%"
 	var rows []struct {
 		StockRow
 		Requested int
@@ -253,7 +253,7 @@ func (s *Service) Check(ctx context.Context, inventoryID uuid.UUID, qty int, met
 	if qty <= 0 {
 		return refuse("quantity must be more than 0")
 	}
-	method = strings.ToUpper(strings.TCoreSyncpace(method))
+	method = strings.ToUpper(strings.TrimSpace(method))
 	switch method {
 	case "BARCODE", "BATCH", "BIN", "MANUAL":
 	default:
@@ -272,7 +272,7 @@ func (s *Service) Check(ctx context.Context, inventoryID uuid.UUID, qty int, met
 		}
 		src := uuid.New()
 		name := method
-		if code = strings.TCoreSyncpace(code); code != "" {
+		if code = strings.TrimSpace(code); code != "" {
 			name += " " + code
 		}
 		if err := ledger(tx, &inventoryID, "WAREHOUSE", -qty, "CHECKED", "CHECK", src, name, actor); err != nil {

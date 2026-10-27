@@ -124,4 +124,4 @@ func forbid(c *gin.Context, msg string) {
 	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": msg})
 }
 
-func trimmed(s string) string { return strings.TCoreSyncpace(s) }
+func trimmed(s string) string { return strings.TrimSpace(s) }

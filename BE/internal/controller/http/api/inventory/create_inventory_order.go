@@ -29,7 +29,7 @@ func (ch *InventoryHandler) CreateInventoryOrders(ctx *gin.Context) {
 	}
 	userName := createInventory.CreatedBy
 	if createInventory.User != nil {
-		userName = strings.TCoreSyncpace(createInventory.User.FirstName + " " + createInventory.User.LastName)
+		userName = strings.TrimSpace(createInventory.User.FirstName + " " + createInventory.User.LastName)
 	}
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Inventory Order created"},

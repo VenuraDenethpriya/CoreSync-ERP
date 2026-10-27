@@ -119,7 +119,7 @@ func (sr *SaleRepository) GetSales(ctx context.Context, query string, status str
 		domainSale.SalespersonData = s.SalespersonData.SalespersonFromModelToDomain()
 
 		if s.User != nil && s.User.ID != uuid.Nil {
-			domainSale.UpdatedBy = strings.TCoreSyncpace(
+			domainSale.UpdatedBy = strings.TrimSpace(
 				s.User.FirstName + " " + s.User.LastName,
 			)
 		}

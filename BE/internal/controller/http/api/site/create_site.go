@@ -69,7 +69,7 @@ func (h *SiteHandler) CreateSite(c *gin.Context) {
 			site.Date.Format("2006-01-02"),
 			site.StartTime,
 			site.EndTime,
-			strings.TCoreSyncpace(customerName),
+			strings.TrimSpace(customerName),
 			customerPhone,
 			site.Description,
 		)

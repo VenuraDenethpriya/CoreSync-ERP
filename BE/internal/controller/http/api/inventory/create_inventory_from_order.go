@@ -25,7 +25,7 @@ func (ch *InventoryHandler) CreateInventoryFromOrders(ctx *gin.Context) {
 	}
 	userName := result.CreatedBy
 	if result.User != nil {
-		userName = strings.TCoreSyncpace(result.User.FirstName + " " + result.User.LastName)
+		userName = strings.TrimSpace(result.User.FirstName + " " + result.User.LastName)
 	}
 
 	common.SetAuditInfo(ctx, common.AuditLogDetails{

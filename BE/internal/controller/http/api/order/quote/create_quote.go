@@ -118,7 +118,7 @@ func (ch *QuoteHandler) CreateQuote(ctx *gin.Context) {
 	}
 	userName := createdQuote.CreatedBy
 	if createdQuote.User != nil {
-		userName = strings.TCoreSyncpace(createdQuote.User.FirstName + " " + createdQuote.User.LastName)
+		userName = strings.TrimSpace(createdQuote.User.FirstName + " " + createdQuote.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{

@@ -41,7 +41,7 @@ func (h *ProductionHandler) CreateCasing(c *gin.Context) {
 		productName = createdCasings[0].Product.Name
 		userName = createdCasings[0].CreatedBy
 		if createdCasings[0].User != nil {
-			userName = strings.TCoreSyncpace(createdCasings[0].User.FirstName + " " + createdCasings[0].User.LastName)
+			userName = strings.TrimSpace(createdCasings[0].User.FirstName + " " + createdCasings[0].User.LastName)
 		}
 
 		for _, casing := range createdCasings {

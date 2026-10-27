@@ -258,7 +258,7 @@ func (sr *SalespersonRepository) GetSalespersonByID(
 func (sr *SalespersonRepository) GetSalesperonsList(ctx context.Context, status string) ([]*domain.Salesperson, error) {
 	var salespersons []*models.SalespersonModel
 
-	cleanStatus := strings.TCoreSyncpace(status)
+	cleanStatus := strings.TrimSpace(status)
 
 	query := sr.db.Debug().WithContext(ctx).
 		Model(&models.SalespersonModel{}).

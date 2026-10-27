@@ -58,7 +58,7 @@ func (ch *ProductHandler) UpdateProduct(ctx *gin.Context) {
 	}
 	userName := updateProduct.CreatedBy
 	if updateProduct.User != nil {
-		userName = strings.TCoreSyncpace(updateProduct.User.FirstName + " " + updateProduct.User.LastName)
+		userName = strings.TrimSpace(updateProduct.User.FirstName + " " + updateProduct.User.LastName)
 	}
 
 	// Helper function to set audit info

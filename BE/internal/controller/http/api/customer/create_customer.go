@@ -58,7 +58,7 @@ func (ch *CustomerHandler) CreateCustomer(ctx *gin.Context) {
 	// Custom description
 	userName := createdCustomer.CreatedBy
 	if createdCustomer.User != nil {
-		userName = strings.TCoreSyncpace(createdCustomer.User.FirstName + " " + createdCustomer.User.LastName)
+		userName = strings.TrimSpace(createdCustomer.User.FirstName + " " + createdCustomer.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{

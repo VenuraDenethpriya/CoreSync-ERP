@@ -46,7 +46,7 @@ func (ch *ProductHandler) CreateProductBom(ctx *gin.Context) {
 		firstBom := createdBoms[0]
 		userName = firstBom.CreatedBy
 		if firstBom.User != nil {
-			userName = strings.TCoreSyncpace(firstBom.User.FirstName + " " + firstBom.User.LastName)
+			userName = strings.TrimSpace(firstBom.User.FirstName + " " + firstBom.User.LastName)
 		}
 		if firstBom.Product != nil {
 			productName = firstBom.Product.Name

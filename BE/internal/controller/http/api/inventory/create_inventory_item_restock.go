@@ -31,7 +31,7 @@ func (ih *InventoryHandler) CreateInventoryItemRestock(c *gin.Context) {
 	// Custom description
 	userName := createInventoryItemRestock.UserName
 	if createInventoryItemRestock.User != nil {
-		userName = strings.TCoreSyncpace(createInventoryItemRestock.User.FirstName + " " + createInventoryItemRestock.User.LastName)
+		userName = strings.TrimSpace(createInventoryItemRestock.User.FirstName + " " + createInventoryItemRestock.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(c, common.AuditLogDetails{

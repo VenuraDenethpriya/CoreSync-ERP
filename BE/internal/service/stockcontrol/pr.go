@@ -122,7 +122,7 @@ func (s *Service) ListPRs(ctx context.Context, status, query string, limit, offs
 		where += ` AND o.status = ?`
 		args = append(args, status)
 	}
-	if q := strings.TCoreSyncpace(query); q != "" {
+	if q := strings.TrimSpace(query); q != "" {
 		where += ` AND (o.item_code ILIKE ? OR o.item_name ILIKE ? OR o.order_no ILIKE ?)`
 		args = append(args, "%"+q+"%", "%"+q+"%", "%"+q+"%")
 	}
@@ -194,7 +194,7 @@ func (s *Service) CreatePR(ctx context.Context, in CreatePRInput, actor string) 
 	}
 	var id uuid.UUID
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		code, name := strings.TCoreSyncpace(in.NewItemCode), strings.TCoreSyncpace(in.NewItemName)
+		code, name := strings.TrimSpace(in.NewItemCode), strings.TrimSpace(in.NewItemName)
 		isLow := false
 		if in.InventoryID != nil && *in.InventoryID != uuid.Nil {
 			it, err := lockItem(tx, *in.InventoryID)
@@ -237,7 +237,7 @@ func (s *Service) CreatePR(ctx context.Context, in CreatePRInput, actor string) 
 				order_date, created_by, created_at, updated_at, inventory_id, pr_type, reason, supplier, purchase_photos, approved_by, approved_at)
 			VALUES (?,?,?,?,?,0,?,?,?,?,now(),now(),?,?,?,?,?::jsonb,?,?)`,
 			id, newPRNo(), code, name, in.Quantity, in.Amount, status, s.now().Format("2006-01-02"), actor,
-			in.InventoryID, PRTypeManual, strings.TCoreSyncpace(in.Reason), strings.TCoreSyncpace(in.Supplier),
+			in.InventoryID, PRTypeManual, strings.TrimSpace(in.Reason), strings.TrimSpace(in.Supplier),
 			jsonList(cleanList(in.PurchasePhotos)), approvedBy, approvedAt).Error
 	})
 	if err != nil {
@@ -336,7 +336,7 @@ func (s *Service) RejectPR(ctx context.Context, id uuid.UUID, reason, actor stri
 			return refuse("a %s purchase request cannot be rejected", r.Status)
 		}
 		return tx.Exec(`UPDATE inventory_orders SET status = ?, rejected_reason = ?, approved_by = ?, approved_at = now(), updated_at = now() WHERE id = ?`,
-			PRRejected, strings.TCoreSyncpace(reason), actor, id).Error
+			PRRejected, strings.TrimSpace(reason), actor, id).Error
 	})
 	if err != nil {
 		return nil, err
@@ -395,7 +395,7 @@ func (s *Service) Receive(ctx context.Context, id uuid.UUID, in ReceiveInput, ac
 	if in.Quantity <= 0 {
 		return nil, refuse("quantity must be more than 0")
 	}
-	in.ReceivedBy = strings.TCoreSyncpace(in.ReceivedBy)
+	in.ReceivedBy = strings.TrimSpace(in.ReceivedBy)
 	in.GoodsPhotos, in.ItemPhotos = cleanList(in.GoodsPhotos), cleanList(in.ItemPhotos)
 	if in.ReceivedBy == "" {
 		return nil, refuse("enter who received the goods")
@@ -451,7 +451,7 @@ func (s *Service) Receive(ctx context.Context, id uuid.UUID, in ReceiveInput, ac
 		}
 		if err := tx.Exec(`INSERT INTO stock_receipts (id, order_id, inventory_id, quantity, received_by, goods_photos, item_photos, remark, created_by)
 			VALUES (?,?,?,?,?,?::jsonb,?::jsonb,?,?)`, uuid.New(), id, it.ID, in.Quantity, in.ReceivedBy,
-			jsonList(in.GoodsPhotos), jsonList(in.ItemPhotos), strings.TCoreSyncpace(in.Remark), actor).Error; err != nil {
+			jsonList(in.GoodsPhotos), jsonList(in.ItemPhotos), strings.TrimSpace(in.Remark), actor).Error; err != nil {
 			return err
 		}
 		if err := ledger(tx, &it.ID, "PAID", -fromPaid, "RECEIVED", "PR", id, r.OrderNo, actor); err != nil {

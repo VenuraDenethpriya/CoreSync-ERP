@@ -35,7 +35,7 @@ func (ri *RepairHandler) CreateRepairItemUsage(ctx *gin.Context) {
 
 		userName := createdUsage.UserName
 		if createdUsage.User != nil {
-			userName = strings.TCoreSyncpace(createdUsage.User.FirstName + " " + createdUsage.User.LastName)
+			userName = strings.TrimSpace(createdUsage.User.FirstName + " " + createdUsage.User.LastName)
 		}
 
 		common.SetAuditInfo(ctx, common.AuditLogDetails{
