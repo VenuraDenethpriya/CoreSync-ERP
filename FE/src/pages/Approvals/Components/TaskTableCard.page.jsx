@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PaginationComponent } from "@/components/Pagination"
 import { EditTask } from "./EditTask"
-import { useAuth } from "@clerk/clerk-react"
+import { useAuth, useUser } from "@clerk/clerk-react"
 import ActionMenu from "./ActionMenu"
 import { TaskDeleteAlert } from "./DeleteAlert"
 import { fetchTaskDetails, fethchTasksList } from "@/api/taskApi"
@@ -32,12 +32,13 @@ import { Calendar } from "@/components/ui/calendar"
 import { fetchUsersList } from "@/api/userApi"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns";
+import { Roles } from "@/const/const"
 
 
 
 export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
   const { getToken } = useAuth();
-
+  const { user } = useUser();
   const [data, setData] = useState([])
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState("")
@@ -52,11 +53,11 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
 
   const [employees, setEmployees] = useState([])
   const [selectedAssignee, setSelectedAssignee] = useState("")
-  const [dateRange, setDateRange] = useState({
-    from: new Date(),
-    to: new Date(),
-  })
-  const [taskDetails, setTaskDetails] = useState(null)
+  // const [dateRange, setDateRange] = useState({
+  //   from: new Date(),
+  //   to: new Date(),
+  // })
+  const [dateRange, setDateRange] = useState(undefined)
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -125,49 +126,49 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
     getStaff()
   }, [getToken])
 
-  const fetchData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const token = await getToken();
+  // const fetchData = useCallback(async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     const token = await getToken();
 
-      const start = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
-      const end = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
+  //     const start = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
+  //     const end = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
 
-      const response = await fetchTaskDetails(
-        token,
-        selectedAssignee,
-        start,
-        end
-      );
+  //     const response = await fetchTaskDetails(
+  //       token,
+  //       selectedAssignee,
+  //       start,
+  //       end
+  //     );
 
-      const apiData = response?.data || [];
+  //     const apiData = response?.data || [];
 
-      setTotal(apiData.length);
+  //     setTotal(apiData.length);
 
-      const mappedData = apiData.map((task) => ({
-        id: task.id,
-        task: task.task,
-        assignee: task.assignee,
-        date: task.date,
-        time: task.time,
-        orderNO: task.order_no,
-        JobNo: task.job_no,
-        orderID: task.order_id,
-        JobID: task.job_id,
-        status: task.status,
-        description: task.description,
-        createdAt: task.created_at,
-      })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  //     const mappedData = apiData.map((task) => ({
+  //       id: task.id,
+  //       task: task.task,
+  //       assignee: task.assignee,
+  //       date: task.date,
+  //       time: task.time,
+  //       orderNO: task.order_no,
+  //       JobNo: task.job_no,
+  //       orderID: task.order_id,
+  //       JobID: task.job_id,
+  //       status: task.status,
+  //       description: task.description,
+  //       createdAt: task.created_at,
+  //     })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-      setData(mappedData);
-      setExportData(mappedData);
-    } catch (error) {
-      setIsError(true);
-      setErrorMessage(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getToken, selectedAssignee, dateRange, setExportData]);
+  //     setData(mappedData);
+  //     setExportData(mappedData);
+  //   } catch (error) {
+  //     setIsError(true);
+  //     setErrorMessage(error.message);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }, [getToken, selectedAssignee, dateRange, setExportData]);
 
   const columns = [
     {
@@ -256,7 +257,7 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
     },
     {
       accessorKey: "orderNO",
-      header: "Order/Job NO",
+      header: "Order/Serial/Job NO",
       cell: ({ row }) => {
         return (
           <div className="capitalize" >{row.getValue("orderNO")}</div>
@@ -348,8 +349,10 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
     try {
       setIsLoading(true);
       const token = await getToken();
+      const start = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
+      const end = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
 
-      const response = await fethchTasksList(token, search, limit, offset);
+      const response = await fethchTasksList(token, search, limit, offset, selectedAssignee, start, end);
 
       const apiData = response?.data?.task || [];
       setTotal(response?.data?.total_tasks || 0);
@@ -362,7 +365,7 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
           assignee: task.assignee,
           date: task.date,
           time: task.time,
-          orderNO: task.order_no || task.job_no,
+          orderNO: task.order_no || task.job_no || task.serial_no,
           orderID: task.order_id,
           JobID: task.job_id,
           status: task.status,
@@ -378,26 +381,21 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
     } finally {
       setIsLoading(false);
     }
-  }, [getToken, search, limit, offset]);
+  }, [getToken, search, limit, offset, selectedAssignee, dateRange]);
 
   useEffect(() => {
     fetchTaskData();
-    fetchData();
-  }, [fetchTaskData, fetchData]);
+  }, [fetchTaskData]);
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = () => {
     try {
-      const token = await getToken();
-      const start = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
-      const end = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
-
-      const res = await fetchTaskDetails(token, selectedAssignee, start, end);
-      const reportData = res?.data || [];
-
-      if (reportData.length === 0) {
+      if (data.length === 0) {
         alert("No data found for the selected filters.");
         return;
       }
+
+      const start = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
+      const end = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
 
       const selectedEmployee = employees.find(emp => emp.clerk_id === selectedAssignee);
       const displayName = selectedEmployee
@@ -406,20 +404,21 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
 
       const doc = new jsPDF();
       const tableColumn = ["Task", "Assignee", "Deadline", "Order No", "Status", "Description", "Created At"];
-      const tableRows = reportData.map(item => [
+
+      const tableRows = data.map(item => [
         item.task,
         item.assignee,
-        new Date(item.date).toLocaleDateString("en-GB"),
-        item.order_no,
+        item.date ? new Date(item.date).toLocaleDateString("en-GB") : "N/A",
+        item.orderNO,
         item.status,
         item.description,
-        format(new Date(item.created_at), "dd/MM/yyyy HH:mm")
+        item.createdAt ? format(new Date(item.createdAt), "dd/MM/yyyy HH:mm") : "N/A"
       ]);
 
       doc.setFontSize(18);
       doc.text(`Task Report: ${displayName.replace('_', ' ')}`, 14, 15);
       doc.setFontSize(11);
-      doc.text(`Period: ${start} to ${end}`, 14, 22);
+      doc.text(`Period: ${start || "All Time"} to ${end || "All Time"}`, 14, 22);
 
       autoTable(doc, {
         head: [tableColumn],
@@ -435,52 +434,44 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
     }
   };
 
-  const handleDownloadExcel = async () => {
+  const handleDownloadExcel = () => {
     try {
-      setIsLoading(true);
-      const token = await getToken();
-
-      const start = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
-      const end = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
-
-      const res = await fetchTaskDetails(token, selectedAssignee, start, end);
-      const reportData = res?.data || [];
-
-      if (reportData.length === 0) {
+      if (data.length === 0) {
         alert("No data found for the selected filters.");
         return;
       }
+
+      const start = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
+      const end = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
 
       const selectedEmployee = employees.find(emp => emp.clerk_id === selectedAssignee);
       const displayName = selectedEmployee
         ? `${selectedEmployee.first_name}_${selectedEmployee.last_name}`
         : "All_Assignees";
 
-      const exportData = reportData.map(item => ({
+      const exportData = data.map(item => ({
         "Task": item.task,
         "Assignee": item.assignee,
-        "Deadline": new Date(item.date).toLocaleDateString("en-GB"),
-        "Order Number": item.order_no,
+        "Deadline": item.date ? new Date(item.date).toLocaleDateString("en-GB") : "N/A",
+        "Order Number": item.orderNO,
         "Status": item.status,
         "Description": item.description,
-        "Created At": format(new Date(item.created_at), "dd/MM/yyyy HH:mm")
+        "Created At": item.createdAt ? format(new Date(item.createdAt), "dd/MM/yyyy HH:mm") : "N/A"
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-      XLSX.utils.sheet_add_aoa(worksheet, [[`Task Report: ${displayName.replace('_', ' ')} (Period: ${start} to ${end})`]], { origin: "A1" });
+      const title = `Task Report: ${displayName.replace('_', ' ')} (Period: ${start || "All Time"} to ${end || "All Time"})`;
+      XLSX.utils.sheet_add_aoa(worksheet, [[title]], { origin: "A1" });
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Tasks Report");
-
 
       const fileName = `Tasks_Report_${displayName}_${start}_to_${end}.xlsx`;
       XLSX.writeFile(workbook, fileName);
 
     } catch (error) {
       console.error("Excel Export failed:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -577,14 +568,14 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
                     <Download className="h-4 w-4" /> Export
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Choose Format</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleDownloadPDF} className="gap-2 text-red-600 cursor-pointer">
-                    <FileText className="h-4 w-4" /> PDF Report
+                <DropdownMenuContent align="end" className="w-40 rounded-xl shadow-lg">
+                  <DropdownMenuItem onClick={handleDownloadPDF} className="cursor-pointer font-medium text-slate-700">
+                    <FileText className="w-4 h-4 mr-2 text-rose-500" />
+                    Export PDF
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadExcel} className="gap-2 text-green-700 cursor-pointer">
-                    <FileSpreadsheet className="h-4 w-4" /> Excel Sheet
+                  <DropdownMenuItem onClick={handleDownloadExcel} className="cursor-pointer font-medium text-slate-700">
+                    <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-500" />
+                    Export Excel
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -790,23 +781,26 @@ export function TaskTable({ setExportData, handleTaskCards, isAnimating }) {
                 />
               </PopoverContent>
             </Popover>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-10 px-5 shadow-lg shadow-blue-100">
-                  <Download className="h-4 w-4" /> Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Choose Format</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDownloadPDF} className="gap-2 text-red-600 cursor-pointer">
-                  <FileText className="h-4 w-4" /> PDF Report
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownloadExcel} className="gap-2 text-green-700 cursor-pointer">
-                  <FileSpreadsheet className="h-4 w-4" /> Excel Sheet
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {
+              user.publicMetadata.role == Roles.READ_ONLY ? null : <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-10 px-5 shadow-lg shadow-blue-100">
+                    <Download className="h-4 w-4" /> Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40 rounded-xl shadow-lg">
+                  <DropdownMenuItem onClick={handleDownloadPDF} className="cursor-pointer font-medium text-slate-700">
+                    <FileText className="w-4 h-4 mr-2 text-rose-500" />
+                    Export PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadExcel} className="cursor-pointer font-medium text-slate-700">
+                    <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-500" />
+                    Export Excel
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            }
+
           </div>
 
           <div className="flex items-center gap-3">

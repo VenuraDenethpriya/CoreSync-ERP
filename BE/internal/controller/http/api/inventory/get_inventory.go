@@ -1,9 +1,9 @@
 package inventory
 
 import (
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -19,7 +19,7 @@ func (ch *InventoryHandler) GetInventory(ctx *gin.Context) {
 		common.HandleError(ctx, err)
 		return
 	}
-	inventories, totalInventory, err := ch.inventoryService.GetInventory(ctx, searchParams.Query, searchParams.Limit, searchParams.Offset)
+	inventories, totalInventory, err := ch.inventoryService.GetInventory(ctx, searchParams.Query, searchParams.Limit, searchParams.Offset, searchParams.Sellable)
 	if err != nil {
 		logger.Error(ctx, "Error getting inventory", zap.Any("error", err))
 		common.HandleError(ctx, err)

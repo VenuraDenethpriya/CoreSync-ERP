@@ -1,11 +1,11 @@
 package product
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/helper/logger"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +40,7 @@ func (ch *ProductHandler) CreateProduct(ctx *gin.Context) {
 	// // Custom description
 	userName := createProduct.CreatedBy
 	if createProduct.User != nil {
-		userName = strings.TrimSpace(createProduct.User.FirstName + " " + createProduct.User.LastName)
+		userName = strings.TCoreSyncpace(createProduct.User.FirstName + " " + createProduct.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{

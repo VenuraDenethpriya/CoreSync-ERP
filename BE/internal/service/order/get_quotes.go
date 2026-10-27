@@ -1,10 +1,10 @@
 package order
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
-func (s *service) GetQuotes(ctx context.Context, query string, limit int, offset int) ([]*domain.Quote, int, error) {
-	return s.quoteRepo.GetQuotes(ctx, query, limit, offset)
+func (s *service) GetQuotes(ctx context.Context, query string, limit int, offset int, userRole string, clerkID string, userEmail string) ([]*domain.Quote, int, error) {
+	return s.quoteRepo.GetQuotes(ctx, query, limit, offset, userRole, clerkID, userEmail)
 }

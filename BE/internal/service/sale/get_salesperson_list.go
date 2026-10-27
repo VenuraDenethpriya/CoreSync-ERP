@@ -1,10 +1,10 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
-func (s *service) GetSalespersonsList(ctx context.Context) ([]*domain.Salesperson, error) {
-	return s.salespersonRepo.GetSalesperonsList(ctx)
+func (s *service) GetSalespersonsList(ctx context.Context, status string) ([]*domain.Salesperson, error) {
+	return s.salespersonRepo.GetSalesperonsList(ctx, status)
 }

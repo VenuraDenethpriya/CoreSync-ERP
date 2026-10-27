@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -93,22 +93,6 @@ func (ur *UserRepository) UpdateUser(ctx context.Context, user *domain.User) (*d
 	return userModel.UserModelToDomain(), nil
 }
 
-// DeleteUser deletes a user from the database.
-//
-//	func (ur *UserRepository) DeleteUser(ctx context.Context, user *domain.User) (*domain.User, error) {
-//		var userModel models.UserModel
-//		err := ur.db.First(&userModel, user.ID).Error
-//		if err != nil {
-//			return nil, err
-//		}
-//		err = ur.db.Delete(&userModel).Error
-//		if err != nil {
-//			return nil, err
-//		}
-//		return userModel.UserModelToDomain(), nil
-//	}
-//
-// repository.go
 func (ur *UserRepository) DeleteUser(ctx context.Context, user *domain.User) (*models.UserModel, error) {
 	var userModel models.UserModel
 	if err := ur.db.First(&userModel, "id = ?", user.ID).Error; err != nil {
@@ -120,7 +104,6 @@ func (ur *UserRepository) DeleteUser(ctx context.Context, user *domain.User) (*m
 	return &userModel, nil
 }
 
-// Find user by Clerk ID (the actor)
 func (ur *UserRepository) FindByClerkID(ctx context.Context, clerkID string) (*models.UserModel, error) {
 	var userModel models.UserModel
 	if err := ur.db.First(&userModel, "clerk_id = ?", clerkID).Error; err != nil {
@@ -128,19 +111,33 @@ func (ur *UserRepository) FindByClerkID(ctx context.Context, clerkID string) (*m
 	}
 	return &userModel, nil
 }
+
 func (ur *UserRepository) FindManyByClerkIDs(ctx context.Context, clerkIDs []string) (map[string]*models.UserModel, error) {
 	var users []*models.UserModel
 
-	// Use a single "IN" query to fetch all users at once
 	if err := ur.db.Where("clerk_id IN ?", clerkIDs).Find(&users).Error; err != nil {
 		return nil, err
 	}
 
-	// Create a map for fast lookups (clerk_id -> user)
 	userMap := make(map[string]*models.UserModel)
 	for _, user := range users {
 		userMap[user.ClerkID] = user
 	}
 
 	return userMap, nil
+}
+
+func (ur *UserRepository) GetUsersByIDs(ctx context.Context, ids []string) ([]domain.User, error) {
+	var userModels []models.UserModel
+
+	if err := ur.db.Where("clerk_id IN ?", ids).Find(&userModels).Error; err != nil {
+		return nil, err
+	}
+
+	var users []domain.User
+	for _, um := range userModels {
+		users = append(users, *um.UserModelToDomain())
+	}
+
+	return users, nil
 }

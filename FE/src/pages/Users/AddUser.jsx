@@ -1,16 +1,21 @@
 import AddUserForm from "./Components/AddUserForm";
 
 function AddUser() {
-    
     return (
-        <>
-        <div className="max-w-screen sm:m-6 py-6 sm:px-14 px-6 bg-slate-50 rounded-md">
-            <div >
-                <h1 className="sm:text-3xl text-xl font-semibold py-4">Add User</h1>
+        <div className="w-full space-y-6">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/70">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">
+                    Add User
+                </h1>
+                {/* <p className="text-sm text-slate-500 mt-1">
+                    Fill in the details below to create a new user account in the system.
+                </p> */}
             </div>
-            <AddUserForm />
+
+            <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200/70">
+                <AddUserForm />
+            </div>
         </div>
-        </>        
     );
 }
 

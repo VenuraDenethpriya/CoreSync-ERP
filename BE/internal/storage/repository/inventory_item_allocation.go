@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -66,6 +66,7 @@ func (iu *InventoryItemAllocationRepository) GetInventoryItemAllocation(
 	ctx context.Context,
 	orderID uuid.UUID,
 	itemID uuid.UUID,
+	packID uuid.UUID,
 	limit int,
 	offset int,
 ) ([]*domain.InventoryItemAllocate, int, error) {
@@ -74,6 +75,7 @@ func (iu *InventoryItemAllocationRepository) GetInventoryItemAllocation(
 	query := iu.db.
 		Preload("Inventory").
 		Preload("Order").
+		Preload("OrderItem").
 		Preload("User")
 
 	if orderID != uuid.Nil {
@@ -82,7 +84,9 @@ func (iu *InventoryItemAllocationRepository) GetInventoryItemAllocation(
 	if itemID != uuid.Nil {
 		query = query.Where("item_id = ?", itemID)
 	}
-
+	if packID != uuid.Nil {
+		query = query.Where("pack_id = ?", packID)
+	}
 	var total int64
 	if err := query.Model(&models.InventoryItemAllocateModel{}).Count(&total).Error; err != nil {
 		return nil, 0, err

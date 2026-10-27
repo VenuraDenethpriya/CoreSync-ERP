@@ -1,0 +1,441 @@
+import { useNavigate, useParams } from "react-router";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { featchPackById, updatePack } from "@/api/orderApi";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { fetchProductById } from "@/api/productApi";
+import { featchInventoryAllocation } from "@/api/inventoryApi";
+import { ErrorState } from "@/components/Skeleton"; 
+import HardwareDropDown from "./HardwareDropDown";
+import DesignDropDown from "./DesignDropDown";
+import { PaginationComponent } from "@/components/Pagination";
+import ItemAllocation from "./ItemAllocation";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
+function PackApprovalsView() {
+    const { isLoaded, getToken } = useAuth();
+    const { user } = useUser();
+    const { packId } = useParams();
+
+    const breadcrumbs = [
+        { name: "Dashboard", link: "/" },
+        { name: "Approvals", link: "/approvals" },
+        { name: "", link: `/approvals/${packId}` },
+    ];
+
+    const [packData, setPackData] = useState(null);
+    const [isClient, setIsClient] = useState(false);
+    const [showProductDetails, setShowProductDetails] = useState({});
+    const [total, setTotal] = useState(0);
+    const [limit, setLimit] = useState(10);
+    const [offset, setOffset] = useState(0);
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [itemAllocation, setItemAllocation] = useState([]);
+
+    const [ready, setReady] = useState(false);
+    const [status, setStatus] = useState();
+
+    const togleProductDetails = (id) => {
+        setShowProductDetails(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+    const [productData, setProductData] = useState();
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    const fetchPackData = async () => {
+        try {
+            const token = await getToken();
+            if (!token) return;
+            const response = await featchPackById(token, packId);
+            setPackData(response.data);
+        } catch (error) {
+            setIsError(true);
+            setErrorMessage("Error fetching pack data: " + error.message);
+            console.error("Error fetching pack data:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (!isLoaded) return;
+        setIsLoading(true);
+        fetchPackData().then(() => setIsLoading(false));
+    }, [getToken, packId, isLoaded]);
+
+    useEffect(() => {
+        if (!packData || !Array.isArray(packData.order_items)) return;
+        setIsLoading(true);
+        const fetchProductData = async () => {
+            const productIds = packData.order_items.map(item => item.product_id);
+
+            try {
+                const token = await getToken();
+                const responses = await Promise.all(
+                    productIds.map(id => fetchProductById(token, id))
+                );
+
+                const allProductData = responses.map(res => res.data);
+                setProductData(allProductData);
+            } catch (error) {
+                setIsError(true);
+                setErrorMessage("Error fetching product data: " + error.message);
+                console.error("Error fetching product data:", error);
+            } finally {
+                setIsLoading(false);
+                setIsError(false);
+            }
+        };
+
+        fetchProductData();
+    }, [packData, getToken, isLoaded]);
+
+    const fetchAllocationData = async () => {
+        try {
+            const token = await getToken();
+            const response = await featchInventoryAllocation(token, { packId, limit, offset });
+            setItemAllocation(response?.data?.items || []);
+            setTotal(response?.data.total || 0);
+        } catch (error) {
+            console.error("Error fetching item allocation:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (packId) {
+            fetchAllocationData();
+        }
+    }, [packId, getToken, limit, offset]);
+
+    const handleStatusChange = async () => {
+        try {
+            const token = await getToken();
+            const response = await updatePack(token, {
+                packId: packId,
+                status: "Pending",
+            });
+            if (response.message === "success") {
+                toast.success(`Pack NO: ${response.data.SerialNo} updated!`);
+
+                setPackData(prev => ({
+                    ...prev,
+                    status: "Pending"
+                }));
+            } else {
+                setStatus(status);
+                toast.error("Failed to update status");
+            }
+        } catch (error) {
+            console.error("Error updating order status:", error);
+            toast.error("Failed to update status");
+        }
+    };
+
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case "Pending":
+                return <Badge className="rounded-full bg-amber-100 text-amber-700 hover:bg-amber-100 font-bold text-xs px-3 py-1 border-0">Pending</Badge>;
+            case "In Progress":
+                return <Badge className="rounded-full bg-slate-100 text-slate-700 hover:bg-slate-100 font-bold text-xs px-3 py-1 border-0">In Progress</Badge>;
+            case "Delivered":
+                return <Badge className="rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-100 font-bold text-xs px-3 py-1 border-0">Delivered</Badge>;
+            case "Completed":
+                return <Badge className="rounded-full bg-blue-100 text-blue-700 hover:bg-blue-100 font-bold text-xs px-3 py-1 border-0">Completed</Badge>;
+            case "Drafted":
+                return <Badge className="rounded-full bg-amber-100 text-amber-700 hover:bg-amber-100 font-bold text-xs px-3 py-1 border-0">Drafted</Badge>;
+            case "Cancelled":
+                return <Badge className="rounded-full bg-blue-100 text-blue-700 hover:bg-blue-100 font-bold text-xs px-3 py-1 border-0">Completed</Badge>;
+            case "Hold":
+                return <Badge className="rounded-full bg-amber-100 text-amber-700 hover:bg-amber-100 font-bold text-xs px-3 py-1 border-0">Drafted</Badge>;
+            default:
+                return <Badge className="rounded-full bg-slate-100 text-slate-600 hover:bg-slate-100 font-bold text-xs px-3 py-1 border-0">{status || "No Status"}</Badge>;
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="w-full space-y-6 animate-pulse">
+                {/* Header Skeleton */}
+                <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/70 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div className="flex items-center gap-4 w-full">
+                        <div className="h-8 w-48 bg-slate-200 rounded-xl"></div>
+                        <div className="h-6 w-20 bg-slate-100 rounded-full"></div>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    {/* Notes Box Skeleton */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="h-6 w-24 bg-slate-200 rounded-lg mb-4"></div>
+                        <div className="space-y-2">
+                            <div className="h-4 w-full bg-slate-100 rounded"></div>
+                            <div className="h-4 w-3/4 bg-slate-100 rounded"></div>
+                        </div>
+                    </div>
+
+                    {/* Product Specifications Skeleton */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="h-6 w-48 bg-slate-200 rounded-lg mb-5"></div>
+                        <div className="space-y-3">
+                            {Array.from({ length: 2 }).map((_, i) => (
+                                <div key={i} className="h-14 w-full bg-slate-50 border border-slate-200/70 rounded-2xl"></div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Hardware Request Skeleton */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="h-6 w-40 bg-slate-200 rounded-lg mb-5"></div>
+                        <div className="h-10 w-full bg-slate-100 rounded-xl"></div>
+                    </div>
+
+                    {/* Design Request Skeleton */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="h-6 w-40 bg-slate-200 rounded-lg mb-5"></div>
+                        <div className="h-10 w-full bg-slate-100 rounded-xl"></div>
+                    </div>
+
+                    {/* Items Allocation Segment Skeleton */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="flex justify-between items-center mb-5">
+                            <div className="h-6 w-40 bg-slate-200 rounded-lg"></div>
+                            <div className="h-10 w-32 bg-slate-200 rounded-xl"></div>
+                        </div>
+                        <div className="grid sm:grid-cols-5 grid-cols-1 gap-4 border-b border-slate-100 pb-2">
+                            <div className="h-3 w-20 bg-slate-200 rounded"></div>
+                            <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                            <div className="h-3 w-12 bg-slate-200 rounded"></div>
+                            <div className="h-3 w-20 bg-slate-200 rounded"></div>
+                            <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                        </div>
+                        {Array.from({ length: 2 }).map((_, i) => (
+                            <div key={i} className="grid sm:grid-cols-5 grid-cols-1 gap-4 py-3 border-b border-slate-100 items-center">
+                                <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                                <div className="h-4 w-32 bg-slate-100 rounded"></div>
+                                <div className="h-4 w-8 bg-slate-200 rounded"></div>
+                                <div className="h-4 w-24 bg-slate-100 rounded"></div>
+                                <div className="h-4 w-32 bg-slate-100 rounded"></div>
+                            </div>
+                        ))}
+                        <div className="flex justify-between items-center pt-4 mt-2">
+                            <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                            <div className="h-8 w-64 bg-slate-100 rounded-lg"></div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 pt-6 border-t border-slate-200">
+                            <div className="flex items-center gap-3">
+                                <div className="h-5 w-5 bg-slate-200 rounded"></div>
+                                <div className="h-4 w-40 bg-slate-200 rounded"></div>
+                            </div>
+                            <div className="h-10 w-32 bg-blue-200 rounded-xl sm:ml-auto"></div>
+                        </div>
+                    </div>
+
+                    {/* Timestamps Skeleton */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-16">
+                            <div className="space-y-2">
+                                <div className="h-3 w-20 bg-slate-200 rounded"></div>
+                                <div className="h-4 w-36 bg-slate-100 rounded"></div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                                <div className="h-4 w-36 bg-slate-100 rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (isError) {
+        return <ErrorState errorMessage={errorMessage} />;
+    }
+
+    return (
+        <div className="w-full space-y-6">
+            
+            {/* Header Section */}
+            <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/70 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight break-all">
+                        {packData?.serial_no}
+                    </h1>
+                    {getStatusBadge(packData?.status)}
+                </div>
+            </div>
+
+            <div className="space-y-6">
+                
+                {/* Notes Box */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <h3 className="text-lg font-bold mb-4 text-slate-800">Notes</h3>
+                    <div className="flex flex-col space-y-3">
+                        <NoteDetail label="" value={packData?.note} />
+                        {!packData?.note && (
+                            <p className="text-sm text-slate-400">No specific notes available for products.</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Product Specifications */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <h3 className="text-lg font-bold mb-5 text-slate-800">Product Specifications</h3>
+                    <div className="w-full space-y-3">
+                        <div className="border border-slate-200/70 rounded-2xl overflow-hidden shadow-sm">
+                            <div
+                                className="flex items-center justify-between p-4 bg-slate-50/70 cursor-pointer transition-colors hover:bg-slate-100"
+                                onClick={() => togleProductDetails(packData?.product_id)}
+                            >
+                                <h3 className="text-base font-bold text-slate-800 pr-2 break-words">
+                                    {packData?.name}
+                                </h3>
+                                {showProductDetails[packData?.product_id] ? <ChevronUp className="h-5 w-5 shrink-0 text-slate-500" /> : <ChevronDown className="h-5 w-5 shrink-0 text-slate-500" />}
+                            </div>
+
+                            {showProductDetails[packData?.product_id] && (
+                                <div className="p-5 bg-white border-t border-slate-100 space-y-3">
+                                    <InfoItem label="Category" value={packData?.category} />
+                                    <InfoItem label="Base Price" value={packData?.base_price != null ? `LKR ${packData.base_price}` : undefined} />
+                                    <InfoItem label="Pack Type" value={packData?.type} />
+                                    <InfoItem label="Capacity" value={packData?.capacity ? `${packData.capacity} Ah` : undefined} />
+                                    <InfoItem label="Voltage" value={packData?.voltage ? `${packData.voltage} V` : undefined} />
+                                    <InfoItem label="Cell Type" value={packData?.cell_type} />
+                                    <InfoItem label="Cell Count" value={packData?.cell_count} />
+                                    <InfoItem label="BMS Type" value={packData?.bms_type} />
+                                    <InfoItem label="Monitor" value={packData?.monitor} />
+                                    <InfoItem label="Specifications" value={packData?.specifications} />
+                                    <InfoItem label="Is Active" value={packData?.is_active ? "Yes" : "No"} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Hardware Request */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <h3 className="text-lg font-bold mb-5 text-slate-800">Hardware Request</h3>
+                    <div className="w-full">
+                        <HardwareDropDown />
+                    </div>
+                </div>
+
+                {/* Design Request */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <h3 className="text-lg font-bold mb-5 text-slate-800">Design Request</h3>
+                    <div className="w-full">
+                        <DesignDropDown />
+                    </div>
+                </div>
+
+                {/* Items Allocation Segment */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <div className="flex flex-col sm:flex-row gap-4 mb-5 sm:items-center justify-between">
+                        <h3 className="text-lg font-bold text-slate-800">Items Allocation</h3>
+                        <ItemAllocation type="pack" packData={packData} onSuccess={fetchAllocationData} />
+                    </div>
+
+                    <div className="space-y-3 w-full">
+                        <div className="hidden sm:grid grid-cols-5 text-xs text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100 pb-2">
+                            <span>Item Code</span>
+                            <span>Item Name</span>
+                            <span>Count</span>
+                            <span>Allocator</span>
+                            <span>Time Stamp</span>
+                        </div>
+
+                        {itemAllocation?.map((item) => (
+                            <div key={item.id} className="flex flex-col sm:grid sm:grid-cols-5 text-sm sm:text-xs text-slate-700 font-medium gap-1 sm:gap-0 border-b border-slate-100 pb-3 sm:pb-3 last:border-0 items-center">
+                                <div className="flex sm:block justify-between w-full"><span className="sm:hidden font-bold text-slate-400 text-xs">Item Code:</span> <span className="font-mono text-xs">{item.item_code}</span></div>
+                                <div className="flex sm:block justify-between w-full"><span className="sm:hidden font-bold text-slate-400 text-xs">Item Name:</span> {item.item_name}</div>
+                                <div className="flex sm:block justify-between w-full"><span className="sm:hidden font-bold text-slate-400 text-xs">Count:</span> <span className="font-bold">{item.usage_count}</span></div>
+                                <div className="flex sm:block justify-between w-full"><span className="sm:hidden font-bold text-slate-400 text-xs">Allocator:</span> {item.user_name}</div>
+                                <div className="flex sm:block justify-between w-full"><span className="sm:hidden font-bold text-slate-400 text-xs">Time Stamp:</span> <span className="text-slate-500 text-xs">{new Date(item.created_at).toLocaleString()}</span></div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 mt-4 border-t border-slate-100">
+                        <div className="text-xs text-slate-500 font-medium mb-2 sm:mb-0">
+                            Total: {total || 0} Allocations.
+                        </div>
+                        <div className="w-full sm:w-auto flex justify-center"><PaginationComponent total={total} limit={limit} offset={offset} setOffset={setOffset} /></div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-6 pt-6 border-t border-slate-200">
+                        <div className="flex items-center gap-3">
+                            <Checkbox id="terms" checked={ready === true} onCheckedChange={(checked) => setReady(checked === true)} />
+                            <Label htmlFor="terms" className="font-semibold text-sm text-slate-700 cursor-pointer">Site readiness confirmed</Label>
+                        </div>
+                        <Button type="button" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-8 h-10 w-full sm:w-auto sm:ml-auto" onClick={handleStatusChange} disabled={!ready}>Submit</Button>
+                    </div>
+                </div>
+
+                {/* Timestamps */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <div className="text-xs sm:text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-16">
+                        <Timestamp label="Created At" value={packData?.created_at} />
+                        <Timestamp label="Last Updated At" value={packData?.updated_at} />
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+}
+
+function DetailRow({ label, value }) {
+    return (
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline py-1.5">
+            <span className="text-slate-500 text-sm font-semibold">{label}:</span>
+            <span className="text-sm text-slate-800 font-medium mt-1 sm:mt-0">{value || "N/A"}</span>
+        </div>
+    );
+}
+
+function InfoItem({ label, value }) {
+    return (
+        <div className="flex flex-col sm:flex-row py-2 border-b border-slate-100 last:border-b-0">
+            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider w-full sm:w-32 shrink-0">{label}:</span>
+            <span className="text-sm text-slate-800 font-medium ml-0 sm:ml-4 mt-0.5 sm:mt-0 break-words">{value || "N/A"}</span>
+        </div>
+    );
+}
+
+function NoteDetail({ label, value }) {
+    const formattedLines = value?.split('\n').filter(line => line.trim() !== '') || [];
+
+    return (
+        <div className="py-2 border-b border-slate-100 last:border-0">
+            {label && <span className="text-slate-800 font-semibold text-sm block mb-1">{label}</span>}
+            <ul className="pl-4 list-disc text-sm text-slate-600 space-y-1">
+                {formattedLines.map((line, idx) => (
+                    <li key={idx} className="break-words">{line.trim()}</li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+function Timestamp({ label, value }) {
+    return (
+        <div className="flex flex-col">
+            <span className="uppercase tracking-wider text-[10px] text-slate-400 font-bold mb-1">{label}</span>
+            <span className="font-semibold text-slate-700 text-sm">{value ? new Date(value).toLocaleString() : "N/A"}</span>
+        </div>
+    );
+}
+
+export default PackApprovalsView;

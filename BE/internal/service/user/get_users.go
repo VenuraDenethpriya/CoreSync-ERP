@@ -1,8 +1,8 @@
 package user
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetUsers(ctx context.Context, query string, limit int, offset int) ([]*domain.User, int, error) {

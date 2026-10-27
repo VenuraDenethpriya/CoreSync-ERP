@@ -1,8 +1,8 @@
 package dashboard
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/storage/repository"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/storage/repository"
 )
 
 type Service interface {

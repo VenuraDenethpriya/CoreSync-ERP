@@ -1,5 +1,5 @@
-import { featchAllOrders } from "@/api/orderApi";
 import { updateRepair } from "@/api/repair";
+import { featchAllOrders } from "@/api/orderApi";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,15 +23,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { float64 } from "zod";
+import { Pencil } from "lucide-react";
 
-export function EditRepair({ onUpdate, ...props }) {
+export function EditRepair({ onUpdate, repairData }) {
   const { getToken } = useAuth();
-  const repairId = props.repairData.repair_id;
+  const repairId = repairData?.repair_id;
 
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
 
   const [orderNo, setOrderNo] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -40,68 +39,25 @@ export function EditRepair({ onUpdate, ...props }) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [description, setDescription] = useState("");
 
-  const [data, setData] = useState([])
-  const [searchOrders, setSearchOrders] = useState("")
+  const [data, setData] = useState([]);
+  const [searchOrders, setSearchOrders] = useState("");
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
-  const [limitOrders, setLimitOrders] = useState(10)
-  const [offsetOrders, setOffsetOrders] = useState(0)
-  const [totalOrders, setTotalOrders] = useState(0)
-  const vat = "";
-  const orderStatus = "";
-  const paymentStatus = "";
-
 
   useEffect(() => {
-    if (open && props.repairData) {
-      setOrderNo(props.repairData.order_id);
-      if (props.repairData.due_date) {
-        const formattedDate = props.repairData.due_date.split('T')[0];
-        setDueDate(formattedDate);
+    if (open && repairData) {
+      setOrderNo(repairData.order_id || "");
+      if (repairData.due_date) {
+        setDueDate(repairData.due_date.split('T')[0]);
       } else {
         setDueDate("");
       }
-      setPrice(props.repairData.price)
-      setCustomerName(props.repairData.customer_name)
-      setCustomerPhone(props.repairData.customer_phone)
-      setDescription(props.repairData.description)
-
-
+      setPrice(repairData.price || "");
+      setCustomerName(repairData.customer_name || "");
+      setCustomerPhone(repairData.customer_phone || "");
+      setDescription(repairData.description || "");
     }
-  }, [open, props.repairData]);
-
-  const handleEditSaleSubmit = async () => {
-    try {
-      const token = await getToken();
-      setIsSubmitting(true);
-
-      let finalDate = dueDate;
-      if (!dueDate.includes("T")) {
-        finalDate = `${dueDate}T00:00:00Z`;
-      }
-      const response = await updateRepair(token, repairId, {
-        repair_id: repairId,
-        order_id: orderNo,
-        due_date: finalDate,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        price: parseFloat(price),
-        description: description,
-      });
-      if (response.message === "success") {
-        toast.success("Job updated successfully!", { position: "bottom-right" });
-        setIsSubmitting(false);
-        setOpen(false);
-
-        if (onUpdate) {
-          onUpdate();
-        }
-      }
-    } catch (error) {
-      console.error("Error updating repair:", error);
-      toast.error("Error updating repair! Please try again.", { position: "bottom-right" });
-    }
-  };
+  }, [open, repairData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -115,10 +71,8 @@ export function EditRepair({ onUpdate, ...props }) {
           searchValue = searchValue.replace("INV/EHP/", "");
         }
 
-        const response = await featchAllOrders(token, searchValue, vat, orderStatus, paymentStatus, limitOrders, offsetOrders);
+        const response = await featchAllOrders(token, searchValue, "", "", "", 10, 0);
         const apiData = response?.data.orders || [];
-        const total = response.data.total_orders;
-        setTotalOrders(total);
 
         const mappedData = apiData
           .map((order) => ({
@@ -126,153 +80,199 @@ export function EditRepair({ onUpdate, ...props }) {
             orderNo: order.order_no,
             type: order.type,
             created_at: order.created_at,
-            updated_at: order.updated_at,
           }))
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        // --- NEW CODE: Inject existing order if it's not in the fetched list ---
-        if (open && props.repairData && props.repairData.order_id) {
-          const orderExistsInList = mappedData.some((order) => order.orderId === props.repairData.order_id);
-
+        if (open && repairData && repairData.order_id) {
+          const orderExistsInList = mappedData.some((order) => order.orderId === repairData.order_id);
           if (!orderExistsInList) {
             mappedData.unshift({
-              orderId: props.repairData.order_id,
-              // Fallbacks in case these aren't joined in your repairData payload
-              orderNo: props.repairData.order_no || "Existing Order",
-              type: props.repairData.order_type || "",
-              created_at: props.repairData.created_at || new Date().toISOString(),
+              orderId: repairData.order_id,
+              orderNo: repairData.order_no || "Existing Order",
+              type: repairData.order_type || "",
+              created_at: repairData.created_at || new Date().toISOString(),
             });
           }
         }
-        // -----------------------------------------------------------------------
-
         setData(mappedData);
       } catch (error) {
         console.error("Error fetching orders:", error);
-        setOrdersError("Failed to load orders. Please try again.");
+        setOrdersError("Failed to load orders.");
       } finally {
         setOrdersLoading(false);
       }
     };
     fetchData();
-  }, [searchOrders, limitOrders, offsetOrders, getToken, open, props.repairData]); // Added open and props.repairData to dependencies
+  }, [searchOrders, getToken, open, repairData]);
+
+  const handleEditRepairSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    try {
+      const token = await getToken();
+      setIsSubmitting(true);
+
+      let finalDate = dueDate;
+      if (dueDate && !dueDate.includes("T")) {
+        finalDate = `${dueDate}T00:00:00Z`;
+      }
+
+      const response = await updateRepair(token, repairId, {
+        repair_id: repairId,
+        order_id: orderNo,
+        due_date: finalDate,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        price: parseFloat(price),
+        description: description,
+      });
+
+      if (response.message === "success") {
+        toast.success("Job updated successfully!", { position: "bottom-right" });
+        setOpen(false);
+        if (onUpdate) {
+          onUpdate();
+        }
+      } else {
+        toast.error("Error updating repair!", { position: "bottom-right" });
+      }
+    } catch (error) {
+      console.error("Error updating repair:", error);
+      toast.error("Error updating repair!", { position: "bottom-right" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit</Button>
+        <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-10 px-4">
+          <Pencil className="w-4 h-4 mr-2" /> Edit
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[1200px]">
-        <DialogHeader>
-          <DialogTitle>Edit Repair</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[900px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl">
+        <DialogHeader className="space-y-1.5">
+          <DialogTitle className="text-xl font-extrabold text-slate-800">Edit Repair</DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
             Make changes to repair details. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid sm:grid-cols-2 grid-cols-1 gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="OrderNo" className="justify-self-start text-left">
-              Order No.
-            </Label>
-            <Select value={orderNo} onValueChange={setOrderNo} className="col-span-3">
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select an order" />
-              </SelectTrigger>
-              <SelectContent>
-                <Input
-                  type="text"
-                  placeholder="Search Order No"
-                  className="mb-2"
-                  value={searchOrders}
-                  onChange={(e) => setSearchOrders(e.target.value)}
-                />
-                {ordersLoading ? (
-                  <SelectItem value="loading" disabled>Searching orders...</SelectItem>
-                ) : ordersError ? (
-                  <div className="p-2 text-red-600 text-center">
-                    <p>{ordersError}</p>
-                  </div>
-                ) : data.length > 0 ? (
-                  data.map((order) => (
-                    <SelectItem key={order.orderId} value={order.orderId}>
-                      {order.type}{order.orderNo}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-results" disabled>No orders found.</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+
+        <form onSubmit={handleEditRepairSubmit} className="space-y-6 pt-4">
+          <div className="grid sm:grid-cols-2 grid-cols-1 gap-5">
+            
+            {/* Order No */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="OrderNo" className="text-slate-700 font-semibold text-sm">Order No.</Label>
+              <Select value={orderNo} onValueChange={setOrderNo}>
+                <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                  <SelectValue placeholder="Select an order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <Input
+                    type="text"
+                    placeholder="Search Order No..."
+                    className="mb-2 h-9"
+                    value={searchOrders}
+                    onChange={(e) => setSearchOrders(e.target.value)}
+                  />
+                  {ordersLoading ? (
+                    <SelectItem value="loading" disabled>Searching orders...</SelectItem>
+                  ) : ordersError ? (
+                    <div className="p-2 text-rose-500 text-center text-xs">{ordersError}</div>
+                  ) : data.length > 0 ? (
+                    data.map((order) => (
+                      <SelectItem key={order.orderId} value={order.orderId}>
+                        {order.type}{order.orderNo}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-results" disabled>No orders found.</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Price */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="Price" className="text-slate-700 font-semibold text-sm">Price (LKR)</Label>
+              <Input
+                id="Price"
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+              />
+            </div>
+
+            {/* Due Date */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="DueDate" className="text-slate-700 font-semibold text-sm">Due Date</Label>
+              <Input
+                id="DueDate"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+              />
+            </div>
+
+            {/* Customer Name */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="CustomerName" className="text-slate-700 font-semibold text-sm">Customer Name</Label>
+              <Input
+                id="CustomerName"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+              />
+            </div>
+
+            {/* Customer Phone */}
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="CustomerPhone" className="text-slate-700 font-semibold text-sm">Customer Phone No.</Label>
+              <Input
+                id="CustomerPhone"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="Description" className="text-slate-700 font-semibold text-sm">Description</Label>
+              <Textarea
+                id="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full min-h-[90px] border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+                rows={3}
+                placeholder="Enter description..."
+              />
+            </div>
+
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Price" className="justify-self-start text-left">
-              Price
-            </Label>
-            <Input
-              id="Price"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="DueDate" className="justify-self-start text-left">
-              Due Date
-            </Label>
-            <Input
-              id="DueDate"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="col-span-3 w-full"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="CustomerName" className="justify-self-start text-left">
-              Customer Name
-            </Label>
-            <Input
-              id="CustomerName"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="CustomerPhone" className="justify-self-start text-left">
-              Customer Phone No.
-            </Label>
-            <Input
-              id="CustomerPhone"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Description" className="justify-self-start text-left">
-              Description
-            </Label>
-            <Textarea
-              id="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button className="bg-blue-800 hover:bg-blue-900" onClick={handleEditSaleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Save changes"}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="pt-4 border-t border-slate-100 flex gap-3 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

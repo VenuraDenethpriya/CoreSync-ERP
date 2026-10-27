@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -37,11 +37,19 @@ func (ur *QuoteItemRepository) UpdateQuoteItem(ctx context.Context, quoteItem *d
 	if err != nil {
 		return nil, err
 	}
-	quoteItemModel.ProductID = quoteItem.ProductID
-	quoteItemModel.Quantity = quoteItem.Quantity
-	quoteItemModel.UnitPrice = quoteItem.UnitPrice
-	quoteItemModel.SubTotal = quoteItem.SubTotal
-	quoteItemModel.Note = quoteItem.Note
+	// quoteItemModel.ProductID = quoteItem.ProductID
+	// quoteItemModel.Quantity = quoteItem.Quantity
+	// quoteItemModel.UnitPrice = quoteItem.UnitPrice
+	// quoteItemModel.SubTotal = quoteItem.SubTotal
+	// quoteItemModel.Note = quoteItem.Note
+
+	err = ur.db.Model(&quoteItemModel).Updates(map[string]interface{}{
+		"product_id": quoteItem.ProductID,
+		"quantity":   quoteItem.Quantity,
+		"unit_price": quoteItem.UnitPrice,
+		"sub_total":  quoteItem.SubTotal,
+		"note":       quoteItem.Note,
+	}).Error
 
 	err = ur.db.Updates(&quoteItemModel).Error
 

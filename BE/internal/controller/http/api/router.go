@@ -1,30 +1,35 @@
 package api
 
 import (
+	"CoreSync-backend/docs"
+	"CoreSync-backend/internal/config"
+	"CoreSync-backend/internal/controller/http/api/customer"
+	"CoreSync-backend/internal/controller/http/api/dashboard"
+	"CoreSync-backend/internal/controller/http/api/finance"
+	"CoreSync-backend/internal/controller/http/api/hr"
+	"CoreSync-backend/internal/controller/http/api/inventory"
+	"CoreSync-backend/internal/controller/http/api/order"
+	"CoreSync-backend/internal/controller/http/api/order/quote"
+	"CoreSync-backend/internal/controller/http/api/product"
+	"CoreSync-backend/internal/controller/http/api/production"
+	"CoreSync-backend/internal/controller/http/api/repair"
+	"CoreSync-backend/internal/controller/http/api/report"
+	"CoreSync-backend/internal/controller/http/api/sale"
+	"CoreSync-backend/internal/controller/http/api/sale/call"
+	"CoreSync-backend/internal/controller/http/api/sale/salesperson"
+	"CoreSync-backend/internal/controller/http/api/setting"
+	"CoreSync-backend/internal/controller/http/api/site"
+	stockcontrolapi "CoreSync-backend/internal/controller/http/api/stockcontrol" // [ADDED 2026-10-13]
+	"CoreSync-backend/internal/controller/http/api/task"
+	"CoreSync-backend/internal/controller/http/api/user"
+	"CoreSync-backend/internal/controller/http/api/ws"
+	"CoreSync-backend/internal/controller/http/middleware"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/service"
+	"CoreSync-backend/pkg/sms"
 	"log"
 	"net/http"
 	"os"
-	"rims-backend/docs"
-	"rims-backend/internal/config"
-	"rims-backend/internal/controller/http/api/customer"
-	"rims-backend/internal/controller/http/api/dashboard"
-	"rims-backend/internal/controller/http/api/inventory"
-	"rims-backend/internal/controller/http/api/order"
-	"rims-backend/internal/controller/http/api/order/quote"
-	"rims-backend/internal/controller/http/api/product"
-	"rims-backend/internal/controller/http/api/repair"
-	"rims-backend/internal/controller/http/api/report"
-	"rims-backend/internal/controller/http/api/sale"
-	"rims-backend/internal/controller/http/api/sale/call"
-	"rims-backend/internal/controller/http/api/sale/salesperson"
-	"rims-backend/internal/controller/http/api/setting"
-	"rims-backend/internal/controller/http/api/task"
-	"rims-backend/internal/controller/http/api/user"
-	"rims-backend/internal/controller/http/api/ws"
-	"rims-backend/internal/controller/http/middleware"
-	"rims-backend/internal/events"
-	"rims-backend/internal/service"
-	"rims-backend/pkg/sms"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -97,7 +102,11 @@ func NewRouter(config *config.HTTP, services *service.Services, bus *events.Even
 		salespersonHandler,
 		callHandler,
 		repairHandler,
-		reportHandler := SetupHandlers(services, bus, smsService)
+		reportHandler,
+		siteHandler,
+		financeHandler,
+		hrHandler,
+		productionHandler := SetupHandlers(services, bus, smsService)
 
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	v1 := router.Group("/api/v1")
@@ -130,6 +139,12 @@ func NewRouter(config *config.HTTP, services *service.Services, bus *events.Even
 	sale.SetupSaleRoutes(v1, saleHandler, salespersonHandler, callHandler, auditSvc)
 	repair.SetupRepairRoutes(v1, repairHandler, auditSvc)
 	report.SetupReportRoutes(v1, reportHandler, auditSvc)
+	site.SetupSiteRoutes(v1, siteHandler, auditSvc)
+	finance.SetupFinanceRoutes(v1, financeHandler, auditSvc)
+	hr.SetupHrRoutes(v1, hrHandler, auditSvc)
+	production.SetupProductionRoutes(v1, productionHandler, auditSvc)
+	// [ADDED 2026-10-13] inventory controls: purchase requests, stock stages, reports, month-end count
+	stockcontrolapi.SetupRoutes(v1, stockcontrolapi.NewHandler(services.StockControl), auditSvc)
 	return &Router{
 		router,
 	}, nil
@@ -149,6 +164,7 @@ func healthCheck(c *gin.Context) {
 //		corsConfig.AllowCredentials = true
 //		return corsConfig
 //	}
+
 func getCORSConfig(allowedOrigins string) cors.Config {
 	corsConfig := cors.DefaultConfig()
 	// Split the origins from .env
@@ -192,8 +208,13 @@ func SetupHandlers(
 	*salesperson.SalepersonHandler,
 	*call.CallHandler,
 	*repair.RepairHandler,
-	*report.ReportHandler) {
-	orderHandler := order.NewOrderHandler(services.OrderService, services.CustomerService, bus, smsService)
+	*report.ReportHandler,
+	*site.SiteHandler,
+	*finance.FinanceHandler,
+	*hr.HrHandler,
+	*production.ProductionHandler,
+) {
+	orderHandler := order.NewOrderHandler(services.OrderService, services.CustomerService, services.ProductService, bus, smsService, services.InventoryService)
 	quoteHandler := quote.NewQuoteHandler(services.OrderService, services.CustomerService)
 	customerHandler := customer.NewCustomerHandler(services.CustomerService)
 	productHandler := product.NewProductHandler(services.ProductService)
@@ -208,6 +229,10 @@ func SetupHandlers(
 	callHandler := call.NewCallHandler(services.SaleService)
 	repairHandler := repair.NewRepairHandler(services.RepairService)
 	reportHandler := report.NewReportHandler(services.ReportService)
+	siteHandler := site.NewSiteHandler(services.SiteService, services.UserService, bus, smsService)
+	financeHandler := finance.NewFinanceHandler(services.FinanceService, services.AuditlogsService)
+	hrHandler := hr.NewHrHandler(services.HrService, services.UserService)
+	productionHandler := production.NewProductionHandler(services.ProductionService)
 	return orderHandler,
 		quoteHandler,
 		customerHandler,
@@ -222,5 +247,9 @@ func SetupHandlers(
 		salespersonHandler,
 		callHandler,
 		repairHandler,
-		reportHandler
+		reportHandler,
+		siteHandler,
+		financeHandler,
+		hrHandler,
+		productionHandler
 }

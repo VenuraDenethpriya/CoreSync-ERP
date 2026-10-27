@@ -38,7 +38,6 @@ const Login = () => {
       sessionStorage.setItem("userName", user.displayName || "User");
       sessionStorage.setItem("userEmail", user.email);
 
-      console.log("User logged in:", user.displayName);
       navigate("/dashboard");
   
     } catch (error) {

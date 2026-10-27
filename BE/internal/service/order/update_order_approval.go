@@ -1,26 +1,26 @@
 package order
 
 import (
+	"CoreSync-backend/internal/email"
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"fmt"
 	"os"
-	"rims-backend/internal/email"
-	"rims-backend/internal/service/domain"
 	"strings"
 )
 
-func (s *service) UpdateOrderApproval(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+func (s *service) UpdateOrderApproval(ctx context.Context, order *domain.Order, actingClerkID string) (*domain.Order, string, error) {
 	//  Update DB
 	updatedOrder, err := s.orderRepo.UpdateOrderApproval(ctx, order)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Send CAD file links email (if CAD emails exist)
 	if len(order.CADFiles.Email) > 0 {
 		links, err := s.sheetsClient.GetFileLinks(order.CADFiles.FileName)
 		if err != nil {
-			return updatedOrder, fmt.Errorf("failed to fetch CAD links: %w", err)
+			return updatedOrder, "", fmt.Errorf("failed to fetch CAD links: %w", err)
 		}
 
 		htmlContent := fmt.Sprintf(
@@ -32,10 +32,10 @@ func (s *service) UpdateOrderApproval(ctx context.Context, order *domain.Order) 
 		for file, link := range links {
 			htmlContent += fmt.Sprintf("<p>%s: <a href='%s' target='_blank'>Download</a></p>", file, link)
 		}
-		htmlContent += "<p>Please ensure the prints match the specified quantity. Contact us if you encounter any issues accessing the files. Chalangana: 070 700 7668</p><p>Thank you,<br/>Renewaa Team</p>"
+		htmlContent += "<p>Please ensure the prints match the specified quantity. Contact us if you encounter any issues accessing the files. Chalangana: 070 700 7668</p><p>Thank you,<br/>CoreSync Team</p>"
 
 		msg := email.EmailMessage{
-			From:    "Renewaa <" + os.Getenv("FROM_EMAIL") + ">",
+			From:    "CoreSync <" + os.Getenv("FROM_EMAIL") + ">",
 			To:      order.CADFiles.Email,
 			Cc:      strings.Split(os.Getenv("CC_EMAIL"), ","),
 			Bcc:     strings.Split(os.Getenv("BCC_EMAIL"), ","),
@@ -44,7 +44,7 @@ func (s *service) UpdateOrderApproval(ctx context.Context, order *domain.Order) 
 		}
 
 		if err := s.emailSender.SendOrderConfirmation(msg); err != nil {
-			return updatedOrder, fmt.Errorf("failed to send CAD email: %w", err)
+			return updatedOrder, "", fmt.Errorf("failed to send CAD email: %w", err)
 		}
 	}
 
@@ -55,12 +55,12 @@ func (s *service) UpdateOrderApproval(ctx context.Context, order *domain.Order) 
 				"<p>A new CAD design is required</p>"+
 				"<p><strong>Description / Requirements:</strong></p><p>%s</p>"+
 				"<p>Please create the CAD design according to the description above and share the completed files once ready.</p>"+
-				"<p>Thank you for your prompt attention.<br/>Renewaa Team</p>",
+				"<p>Thank you for your prompt attention.<br/>CoreSync Team</p>",
 			order.Designer.Description,
 		)
 
 		msg := email.EmailMessage{
-			From:    "Renewaa <" + os.Getenv("FROM_EMAIL") + ">",
+			From:    "CoreSync <" + os.Getenv("FROM_EMAIL") + ">",
 			To:      order.Designer.Email,
 			Cc:      strings.Split(os.Getenv("CC_EMAIL"), ","),
 			Bcc:     strings.Split(os.Getenv("BCC_EMAIL"), ","),
@@ -69,9 +69,14 @@ func (s *service) UpdateOrderApproval(ctx context.Context, order *domain.Order) 
 		}
 
 		if err := s.emailSender.SendOrderConfirmation(msg); err != nil {
-			return updatedOrder, fmt.Errorf("failed to send designer email: %w", err)
+			return updatedOrder, "", fmt.Errorf("failed to send designer email: %w", err)
 		}
 	}
 
-	return updatedOrder, nil
+	actor, err := s.userRepo.FindByClerkID(ctx, actingClerkID)
+	if err != nil {
+		return nil, "", err
+	}
+	actorName := actor.FirstName + " " + actor.LastName
+	return updatedOrder, actorName, nil
 }

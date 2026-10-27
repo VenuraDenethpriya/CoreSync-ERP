@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -11,7 +11,7 @@ type InventoryItemModel struct {
 	ID uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
 
 	Inventory InventoryModel `gorm:"foreignKey:ItemID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL" json:"inventory"`
-	ItemID uuid.UUID `gorm:"type:uuid;column:item_id" json:"item_id"`
+	ItemID    uuid.UUID      `gorm:"type:uuid;column:item_id" json:"item_id"`
 
 	RestockID uuid.UUID `gorm:"type:uuid;column:restock_id" json:"restock_id"`
 	ItemCode  string    `gorm:"type:varchar(100);column:item_code" json:"item_code"`

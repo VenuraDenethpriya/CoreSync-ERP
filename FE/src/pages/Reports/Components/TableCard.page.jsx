@@ -25,9 +25,13 @@ import { useAuth, useUser } from "@clerk/clerk-react"
 import { ChangeOrderStatusDropdownMenu } from "@/components/ChangeOrderStatusMenu"
 import { useDebounce } from "@/hooks/useDebounce"
 import { fetchReportData } from "@/api/reportApi"
+import { fethchSalespersonNames } from "@/api/salespersonApi"
+import { Input } from "@/components/ui/input"
+import { Roles } from "@/const/const"
 
 export function ReportTable({ setExportData }) {
   const { getToken } = useAuth();
+  const { user } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -36,9 +40,18 @@ export function ReportTable({ setExportData }) {
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
-  const [type, setType] = useState("order"); // Matches the lowercase SelectItem value
+  const [type, setType] = useState("order");
   const [orderStatus, setOrderStatus] = useState("");
+
+
   const [paymentStatus, setPaymentStatus] = useState("");
+  const [vat, setVat] = useState("")
+  const [PaymentMode, setPaymentMode] = useState("")
+  const [selectedSalesperson, setSelectedSalesperson] = useState("");
+
+
+
+  const [salespersons, setSalespersons] = useState([]);
 
   const [limit, setLimit] = useState(10);
   const [offset, setOffset] = useState(0);
@@ -46,11 +59,11 @@ export function ReportTable({ setExportData }) {
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // FIX 1: Set default date range at the TOP LEVEL of the component
+
   const [dateRange, setDateRange] = useState(() => {
     const to = new Date();
     const from = new Date();
-    from.setDate(to.getDate() - 30); // Default to the last 30 days
+    from.setDate(to.getDate() - 30);
     return { from, to };
   });
 
@@ -62,7 +75,6 @@ export function ReportTable({ setExportData }) {
     setOffset((pageParam - 1) * limit);
   }, [location.search, limit]);
 
-  // --- 1. SELECTION COLUMN DEFINITION ---
   const selectionColumn = {
     id: "select",
     header: ({ table }) => (
@@ -95,6 +107,14 @@ export function ReportTable({ setExportData }) {
       return new Intl.NumberFormat("en-LK", { style: "currency", currency: "LKR" }).format(finalPrice);
     };
 
+    // Helper to format the payment modes array
+    const formatPaymentModes = (modes) => {
+      if (Array.isArray(modes) && modes.length > 0) {
+        return modes.join(", ");
+      }
+      return "N/A";
+    };
+
     let cols = [];
 
     switch (type) {
@@ -113,7 +133,6 @@ export function ReportTable({ setExportData }) {
       case "product":
         cols = [
           { accessorKey: "product_name", header: "Product Name" },
-          // Note: If Category is an object in Go, you may need a cell renderer here: cell: ({row}) => row.getValue("category")?.Name
           { accessorKey: "category", header: "Category" },
           { accessorKey: "price", header: "Price", cell: ({ row }) => formatPrice(row.getValue("price")) },
           { accessorKey: "type", header: "Type" },
@@ -139,8 +158,35 @@ export function ReportTable({ setExportData }) {
           { accessorKey: "salesperson", header: "Salesperson" },
           { accessorKey: "customer", header: "Customer Name" },
           { accessorKey: "commission", header: "Commission", cell: ({ row }) => formatPrice(row.getValue("commission")) },
+          { accessorKey: "status", header: "Status" },
+          {
+            accessorKey: "vat_status",
+            header: "Vat Status",
+            cell: ({ row }) => row.getValue("vat_status") ? "VAT" : "Non VAT"
+          },
+          { accessorKey: "payment_status", header: "Payment Status" },
+          {
+            accessorKey: "payment_mode",
+            header: "Payment Mode",
+            cell: ({ row }) => formatPaymentModes(row.getValue("payment_mode"))
+          },
           { accessorKey: "created_by", header: "Created By" },
           { accessorKey: "created_at", header: "Created At", cell: ({ row }) => formatDate(row.getValue("created_at")) },
+        ];
+        break;
+      case "payment":
+        cols = [
+          { accessorKey: "order_no", header: "Order No" },
+          { accessorKey: "payment_mode", header: "Type" },
+          { accessorKey: "salesperson", header: "Salesperson" },
+          { accessorKey: "customer", header: "Customer Name" },
+          { accessorKey: "price", header: "Amount", cell: ({ row }) => formatPrice(row.getValue("price")) },
+          {
+            accessorKey: "vat_status",
+            header: "Vat Status",
+            cell: ({ row }) => row.getValue("vat_status") ? "VAT" : "Non VAT"
+          },
+          { accessorKey: "created_at", header: "Date", cell: ({ row }) => formatDate(row.getValue("created_at")) },
         ];
         break;
       case "repair":
@@ -160,8 +206,12 @@ export function ReportTable({ setExportData }) {
           {
             accessorKey: "order_no",
             header: "Order No.",
-            // Go backend already concatenates Type + "-" + OrderNo, so we just display it. Use row.original.id for routing.
             cell: ({ row }) => <div className="capitalize cursor-pointer text-blue-600 font-medium" onClick={() => navigate(`/orders/${row.original.id}`)}>{row.getValue("order_no")}</div>,
+          },
+          {
+            accessorKey: "salesperson",
+            header: "Salesperson",
+            cell: ({ row }) => <div className="capitalize">{row.getValue("salesperson")}</div>,
           },
           {
             accessorKey: "customer",
@@ -179,7 +229,7 @@ export function ReportTable({ setExportData }) {
             cell: ({ row }) => (
               <ChangeOrderStatusDropdownMenu
                 status={row.getValue("order_status")}
-                orderId={row.original.id} // Updated to use 'id'
+                orderId={row.original.id}
                 orderNo={row.getValue("order_no")}
                 paymentStatus={row.getValue("payment_status")}
               />
@@ -195,9 +245,23 @@ export function ReportTable({ setExportData }) {
             },
           },
           {
-            accessorKey: "expected_delivery",
-            header: "Expected Delivery",
-            cell: ({ row }) => formatDate(row.getValue("expected_delivery")),
+            accessorKey: "vat_status",
+            header: "Vat Status",
+            cell: ({ row }) => (
+              <span className={`font-medium ${row.getValue("vat_status") ? "text-blue-600" : "text-gray-600"}`}>
+                {row.getValue("vat_status") ? "VAT" : "Non VAT"}
+              </span>
+            ),
+          },
+          {
+            accessorKey: "payment_mode",
+            header: "Payment Mode",
+            cell: ({ row }) => formatPaymentModes(row.getValue("payment_mode")),
+          },
+          {
+            accessorKey: "created_at",
+            header: "Created Date",
+            cell: ({ row }) => formatDate(row.getValue("created_at")),
           }
         ];
         break;
@@ -215,11 +279,32 @@ export function ReportTable({ setExportData }) {
     state: {
       rowSelection,
       pagination: {
-        pageIndex: offset / limit, 
+        pageIndex: offset / limit,
         pageSize: limit,
       },
     },
   });
+
+  useEffect(() => {
+    const loadSalespersons = async () => {
+      try {
+        const token = await getToken();
+        const response = await fethchSalespersonNames(token);
+        const salespersonsList = response.data.salespersons;
+
+        const formattedList = salespersonsList.map(item => ({
+          id: item.id,
+          name: item.salesperson
+        }));
+
+        setSalespersons(formattedList);
+      } catch (err) {
+        console.error("Error fetching salespersons:", err);
+      }
+    };
+
+    loadSalespersons();
+  }, []);
 
   const pageSummary = useMemo(() => {
     let amount = 0;
@@ -227,10 +312,8 @@ export function ReportTable({ setExportData }) {
 
     data.forEach(item => {
       if (isMonetary) {
-        // Sales report returns "commission" instead of "price"
         amount += parseFloat(item.price || item.commission || 0);
       } else {
-        // Inventory uses "quantity"
         amount += parseInt(item.quantity || 0);
       }
     });
@@ -247,10 +330,8 @@ export function ReportTable({ setExportData }) {
     let amount = 0;
     const isMonetary = type !== "inventory";
 
-    // Check if user selected specific rows
     const hasSelection = Object.keys(rowSelection).length > 0;
 
-    // If selected, only calculate selected rows. Otherwise, calculate ALL fetched data.
     const targetData = hasSelection
       ? table.getFilteredSelectedRowModel().rows.map(r => r.original)
       : data;
@@ -276,7 +357,6 @@ export function ReportTable({ setExportData }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Return early if we don't have BOTH dates
       if (!dateRange || !dateRange.from || !dateRange.to) return;
 
       try {
@@ -294,7 +374,17 @@ export function ReportTable({ setExportData }) {
         const startDateStr = formatDateForApi(dateRange.from);
         const endDateStr = formatDateForApi(dateRange.to);
 
-        const response = await fetchReportData(token, type, startDateStr, endDateStr);
+        const response = await fetchReportData(
+          token,
+          type,
+          startDateStr,
+          endDateStr,
+          vat,
+          orderStatus,
+          PaymentMode,
+          paymentStatus,
+          selectedSalesperson
+        );
 
         if (response && response.code === "0") {
           const apiData = response.data || [];
@@ -316,7 +406,7 @@ export function ReportTable({ setExportData }) {
     };
 
     fetchData();
-  }, [type, dateRange, setExportData]);
+  }, [type, dateRange, vat, orderStatus, PaymentMode, paymentStatus, selectedSalesperson, setExportData]);
 
 
 
@@ -346,10 +436,13 @@ export function ReportTable({ setExportData }) {
     setSearch("");
     setType("order");
     setOrderStatus("");
+    setVat("");
+    setSelectedSalesperson("");
+    setPaymentMode("");
     setPaymentStatus("");
     setRowSelection({});
+    setVat("")
 
-    // Reset dates to last 30 days
     const to = new Date();
     const from = new Date();
     from.setDate(to.getDate() - 30);
@@ -365,7 +458,6 @@ export function ReportTable({ setExportData }) {
           <h3 className="text-2xl font-bold text-gray-900">{total} Items</h3>
         </div>
         <div className="p-4 bg-white border rounded-xl shadow-sm flex flex-col justify-center">
-          {/* Use the new dynamic label and amount */}
           <p className="text-sm text-gray-500 font-medium">{dataSummary.label}</p>
           <h3 className="text-2xl font-bold text-gray-900">{dataSummary.amount}</h3>
         </div>
@@ -376,11 +468,13 @@ export function ReportTable({ setExportData }) {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <Label className="text-lg font-semibold text-gray-800">Filter Reports</Label>
           <div className="flex gap-2">
-            <Button onClick={handleExportCSV} variant="default" className="gap-2">
+            {
+              user.publicMetadata.role == Roles.READ_ONLY ? null : <Button onClick={handleExportCSV} variant="default" className="gap-2">
               <Download className="w-4 h-4" />
-              {/* Change "Export Page Data" to "Export All Data" */}
               {Object.keys(rowSelection).length > 0 ? `Export Selected (${Object.keys(rowSelection).length})` : "Export All Data"}
             </Button>
+            }
+            
             <Button onClick={handleClearFilters} variant="outline" className="text-blue-700 bg-blue-50">
               <MdOutlineRefresh className="text-lg" />
             </Button>
@@ -397,6 +491,7 @@ export function ReportTable({ setExportData }) {
               <SelectItem value="product">Product</SelectItem>
               <SelectItem value="quote">Quote</SelectItem>
               <SelectItem value="order">Order</SelectItem>
+              <SelectItem value="payment">Payment</SelectItem>
               <SelectItem value="sale">Sale</SelectItem>
               <SelectItem value="repair">Repair</SelectItem>
             </SelectContent>
@@ -404,7 +499,7 @@ export function ReportTable({ setExportData }) {
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[260px] justify-start text-left font-normal">
+              <Button variant="outline" className="w-[315px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {dateRange?.from && dateRange?.to
                   ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`
@@ -418,7 +513,6 @@ export function ReportTable({ setExportData }) {
                 selected={dateRange}
                 onSelect={(range) => {
                   setDateRange(range);
-                  // FIX 2: Removed the undefined handleFetchRangeData call
                 }}
                 numberOfMonths={2}
                 classNames={{
@@ -429,6 +523,69 @@ export function ReportTable({ setExportData }) {
               />
             </PopoverContent>
           </Popover>
+
+          <Select onValueChange={setOrderStatus} value={orderStatus}>
+            <SelectTrigger>
+              <SelectValue placeholder="Order status" />
+            </SelectTrigger>
+            <SelectContent>
+              <StatusOption value="Drafted" label="Drafted" description="Initial status, order is still being created." />
+              <StatusOption value="Cancelled" label="Cancelled" description="The order has been voided." />
+              <StatusOption value="Pending" label="Pending" description="Awaiting verification." />
+              <StatusOption value="Hold" label="Hold" description="Order paused for internal review." />
+              <StatusOption value="In Progress" label="In Progress" description="Currently being processed." />
+              <StatusOption value="Completed" label="Completed" description="Job is finished and ready." />
+              <StatusOption value="Delivered" label="Delivered" description="Handed over to the customer." />
+            </SelectContent>
+          </Select>
+
+          <Select onValueChange={setVat} value={vat}>
+            <SelectTrigger>
+              <SelectValue placeholder="VAT status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="True">VAT</SelectItem>
+              <SelectItem value="False">Non VAT</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select onValueChange={setSelectedSalesperson} value={selectedSalesperson}>
+            <SelectTrigger>
+              <SelectValue placeholder="Salesperson" />
+            </SelectTrigger>
+            <SelectContent>
+              {salespersons.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select onValueChange={setPaymentMode} value={PaymentMode}>
+            <SelectTrigger>
+              <SelectValue placeholder="Payment Mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Cash">Cash</SelectItem>
+              <SelectItem value="Card">Card</SelectItem>
+              <SelectItem value="Cheque">Cheque</SelectItem>
+              <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select onValueChange={setPaymentStatus} value={paymentStatus}>
+            <SelectTrigger>
+              <SelectValue placeholder="Payment Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <StatusOption value="Awaiting" label="Awaiting" description="Payment has not yet been received." />
+              <StatusOption value="Paid" label="Paid" description="Full payment received." />
+              <StatusOption value="Advanced" label="Advanced" description="Partial payment or deposit received." />
+            </SelectContent>
+          </Select>
+
+
         </div>
       </div>
 
@@ -448,7 +605,6 @@ export function ReportTable({ setExportData }) {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              // Generate skeleton rows based on the page limit
               Array.from({ length: limit }).map((_, rowIndex) => (
                 <TableRow key={`skeleton-row-${rowIndex}`}>
                   {columns.map((_, colIndex) => (
@@ -491,3 +647,12 @@ export function ReportTable({ setExportData }) {
     </div>
   )
 }
+
+const StatusOption = ({ value, label, description }) => (
+  <SelectItem value={value}>
+    <div className="flex flex-col">
+      <span>{label}</span>
+      <span className="text-xs text-muted-foreground">{description}</span>
+    </div>
+  </SelectItem>
+);

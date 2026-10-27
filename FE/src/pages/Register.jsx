@@ -43,7 +43,6 @@ const Register = () => {
         sessionStorage.setItem("userName", values.name);
         sessionStorage.setItem("userEmail", user.email);
 
-        console.log("User Registered:", user.displayName);
         resetForm();
         navigate("/dashboard");
       } else {

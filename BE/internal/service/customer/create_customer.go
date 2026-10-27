@@ -1,8 +1,8 @@
 package customer
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) CreateCustomer(ctx context.Context, customer *domain.Customer) (*domain.Customer, error) {

@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"

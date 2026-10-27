@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +19,7 @@ type CustomerModel struct {
 	PhoneNo2   string       `gorm:"type:varchar(20);not null" json:"phone_no2"`
 	Email      string       `gorm:"type:varchar(255);" json:"email"`
 	VatNo      string       `gorm:"type:varchar(255);" json:"VatNo"`
+	TinNo      string       `gorm:"type:varchar(255);" json:"TinNo"`
 	CreatedBy  string       `gorm:"type:varchar(255);not null" json:"created_by"`
 	CreatedAt  time.Time    `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt  time.Time    `gorm:"autoUpdateTime" json:"updated_at"`
@@ -52,6 +53,7 @@ func CustomerModelFromDomain(customer *domain.Customer) *CustomerModel {
 		PhoneNo2:   customer.PhoneNo2,
 		Email:      customer.Email,
 		VatNo:      customer.VatNo,
+		TinNo:      customer.TinNo,
 		CreatedBy:  customer.CreatedBy,
 	}
 }
@@ -67,17 +69,7 @@ func CustomerModelToDomain(model *CustomerModel) *domain.Customer {
 			Date: lastOrderModel.CreatedAt,
 		}
 	}
-	// var domainOrders []domain.OrderInfo
-	// for _, order := range model.Orders {
-	// 	domainOrders = append(domainOrders, domain.OrderInfo{
-	// 		Id:            order.OrderID,
-	// 		Type:          order.Type,
-	// 		No:            order.OrderNo,
-	// 		OrderStatus:   order.OrderStatus,
-	// 		PaymentStatus: order.PaymentStatus,
-	// 		Total:         order.Total,
-	// 	})
-	// }
+
 	var domainOrders []domain.OrderInfo
 	for _, order := range model.Orders {
 		var paidAmount float64
@@ -117,6 +109,7 @@ func CustomerModelToDomain(model *CustomerModel) *domain.Customer {
 		PhoneNo2:   model.PhoneNo2,
 		Email:      model.Email,
 		VatNo:      model.VatNo,
+		TinNo:      model.TinNo,
 		CreatedBy:  model.CreatedBy,
 		CreatedAt:  model.CreatedAt,
 		UpdatedAt:  model.UpdatedAt,

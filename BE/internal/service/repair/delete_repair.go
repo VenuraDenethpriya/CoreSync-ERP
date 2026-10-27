@@ -1,8 +1,8 @@
 package repair
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) DeleteRepair(ctx context.Context, repair *domain.Repair, actingClerkID string) (*domain.Repair, string, error) {

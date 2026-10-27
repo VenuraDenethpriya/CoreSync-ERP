@@ -1,8 +1,8 @@
 package order
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) UpdatePaymentType(ctx context.Context, payment *domain.Payment, actingClerkID string) (*domain.Payment, string, error) {

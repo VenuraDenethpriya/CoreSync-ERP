@@ -1,0 +1,404 @@
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { fetchInventoryItemsList, updateInventoryOrder } from "@/api/inventoryApi";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+
+const formSchema = z.object({
+    ItemCode: z.string().min(2, { message: "Item code is required" }),
+    ItemName: z.string().min(2, { message: "Item name is required" }),
+    Quantity: z.coerce.number({ required_error: "Quantity is required" }).min(0, { message: "Quantity must be a positive number" }),
+    Amount: z.coerce.number({ required_error: "Amount is required" }).min(0, { message: "Amount must be a positive number" }),
+    Date: z.date({ required_error: "Date is required" }),
+});
+
+export function EditItemOrder({ itemData, open, onOpenChange, onEditSuccess }) {
+    const { getToken } = useAuth();
+    const { user } = useUser();
+    const userID = user?.id;
+
+    const [searchCode, setSearchCode] = useState("");
+    const [limitCode, setLimitCode] = useState(10);
+    const [offsetCode, setOffsetCode] = useState(0);
+
+    const [inventoryData, setInventoryData] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+
+    const form = useForm({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            ItemCode: itemData?.itemCode || "",
+            ItemName: itemData?.itemName || "",
+            Quantity: itemData?.quantity || 0,
+            Amount: itemData?.amount || 0,
+            Date: itemData?.orderDate ? new Date(itemData.orderDate) : new Date(),
+        }
+    });
+
+    useEffect(() => {
+        if (itemData) {
+            form.reset({
+                ItemCode: itemData.itemCode || "",
+                ItemName: itemData.itemName || "",
+                Quantity: itemData.quantity || 0,
+                Amount: itemData.amount || 0,
+                Date: itemData.orderDate ? new Date(itemData.orderDate) : new Date(),
+            });
+            setIsCreatingNew(false);
+        }
+    }, [itemData, form]);
+
+    useEffect(() => {
+        const getInventoryItems = async () => {
+            try {
+                setIsLoading(true);
+                const token = await getToken();
+                if (!token) return;
+
+                const response = await fetchInventoryItemsList(token, searchCode, limitCode, offsetCode);
+                const apiData = response?.data?.items || [];
+
+                const mappedData = apiData
+                    .map((item) => ({
+                        id: item.id,
+                        itemCode: item.item_code,
+                        itemName: item.item_name,
+                        updatedAt: item.updated_at
+                    }))
+                    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+                setInventoryData(mappedData);
+            } catch (error) {
+                console.error("Failed to fetch inventory items:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (open) {
+            getInventoryItems();
+        }
+    }, [getToken, searchCode, limitCode, offsetCode, open]);
+
+    async function handleSubmit(values) {
+        try {
+            const token = await getToken();
+            const payload = {
+                id: itemData.id, 
+                item_code: values.ItemCode,
+                item_name: values.ItemName,
+                amount: values.Amount,
+                order_quantity: values.Quantity, 
+                order_date: values.Date
+            };
+
+            const response = await updateInventoryOrder(token, payload);
+            
+            if (response.message === "success" || response.code === "0") {
+                toast.success("Inventory item updated successfully!", { position: "bottom-right" });
+                
+                if (onEditSuccess) {
+                    onEditSuccess({
+                        itemCode: values.ItemCode,
+                        itemName: values.ItemName,
+                        amount: values.Amount,
+                        quantity: values.Quantity,
+                        orderDate: new Date(values.Date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric"
+                        }),
+                    });
+                }
+
+                onOpenChange(false);
+            } else {
+                throw new Error("Backend returned an error.");
+            }
+        } catch (error) {
+            console.error("Error updating form:", error);
+            toast.error("Error updating inventory item!", { position: "bottom-right" });
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[700px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <DialogHeader className="space-y-1.5">
+                    <DialogTitle className="text-xl font-extrabold text-slate-800">Edit Item Order</DialogTitle>
+                    <DialogDescription className="text-sm text-slate-500">
+                        Make changes to item order details. Click save when you're done.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pt-4">
+                        <div className="grid sm:grid-cols-2 grid-cols-1 gap-5">
+                            
+                            {/* --- LEFT COLUMN --- */}
+                            <div className="flex flex-col gap-5">
+                                
+                                {/* ITEM CODE */}
+                                <FormField
+                                    control={form.control}
+                                    name="ItemCode"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <FormLabel className="text-slate-700 font-semibold text-sm">Item Code</FormLabel>
+                                            {isCreatingNew ? (
+                                                <div className="flex flex-col gap-2">
+                                                    <FormControl>
+                                                        <Input className="bg-slate-50 border-blue-500 h-11 rounded-xl shadow-sm" placeholder="Type new item code..." {...field} />
+                                                    </FormControl>
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline text-left w-fit transition-colors"
+                                                        onClick={() => {
+                                                            setIsCreatingNew(false);
+                                                            form.setValue("ItemCode", itemData?.itemCode || "");
+                                                            form.setValue("ItemName", itemData?.itemName || "");
+                                                        }}
+                                                    >
+                                                        ← Back to select existing item
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <Select
+                                                    value={field.value} 
+                                                    onValueChange={(val) => {
+                                                        if (val === "CREATE_NEW") {
+                                                            setIsCreatingNew(true);
+                                                            form.setValue("ItemCode", "");
+                                                            form.setValue("ItemName", "");
+                                                            return;
+                                                        }
+
+                                                        field.onChange(val); 
+                                                        const matchedItem = inventoryData.find(i => i.itemCode === val);
+                                                        if (matchedItem) {
+                                                            form.setValue("ItemName", matchedItem.itemName, { shouldValidate: true });
+                                                        }
+                                                    }}
+                                                    onOpenChange={(isOpen) => {
+                                                        if (!isOpen) setSearchCode("");
+                                                    }}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                                                            <SelectValue placeholder="Select item code" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <div className="p-2">
+                                                            <Input
+                                                                placeholder="Search code…"
+                                                                value={searchCode}
+                                                                onChange={(e) => setSearchCode(e.target.value)}
+                                                                className="w-full h-9 text-sm"
+                                                            />
+                                                        </div>
+                                                        {field.value && !inventoryData.find(i => i.itemCode === field.value) && (
+                                                            <SelectItem value={field.value}>{field.value}</SelectItem>
+                                                        )}
+                                                        {inventoryData?.map((item) => (
+                                                            <SelectItem key={item.id} value={item.itemCode}>
+                                                                {item.itemCode}
+                                                            </SelectItem>
+                                                        ))}
+                                                        <SelectItem value="CREATE_NEW" className="text-blue-700 font-semibold bg-blue-50 mt-1 border-t hover:bg-blue-100 cursor-pointer">
+                                                            ➕ Create New Item
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                
+                                {/* QUANTITY */}
+                                <FormField
+                                    control={form.control}
+                                    name="Quantity"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-slate-700 font-semibold text-sm">Quantity</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Quantity" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* DATE */}
+                                <FormField
+                                    control={form.control}
+                                    name="Date"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel className="text-slate-700 font-semibold text-sm">Date</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant={"outline"}
+                                                            className={cn(
+                                                                "w-full pl-3 text-left font-normal bg-slate-50 border-slate-200 h-11 rounded-xl",
+                                                                !field.value && "text-muted-foreground"
+                                                            )}
+                                                        >
+                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={field.value || undefined}
+                                                        onSelect={(date) => field.onChange(date === null ? undefined : date)}
+                                                        initialFocus
+                                                        classNames={{
+                                                            head_cell: "w-8 font-normal text-[0.8rem]",
+                                                            cell: "h-8 w-8 text-center p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                                            day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
+                                                        }}
+                                                    />
+                                                </PopoverContent>
+                                                <FormMessage />
+                                            </Popover>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            {/* --- RIGHT COLUMN --- */}
+                            <div className="flex flex-col gap-5">
+                                
+                                {/* ITEM NAME */}
+                                <FormField
+                                    control={form.control}
+                                    name="ItemName"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <FormLabel className="text-slate-700 font-semibold text-sm">Item Name</FormLabel>
+                                            {isCreatingNew ? (
+                                                <FormControl>
+                                                    <Input className="bg-slate-50 border-blue-500 h-11 rounded-xl shadow-sm" placeholder="Type new item name..." {...field} />
+                                                </FormControl>
+                                            ) : (
+                                                <Select
+                                                    value={field.value} 
+                                                    onValueChange={(val) => {
+                                                        if (val === "CREATE_NEW") {
+                                                            setIsCreatingNew(true);
+                                                            form.setValue("ItemCode", "");
+                                                            form.setValue("ItemName", "");
+                                                            return;
+                                                        }
+
+                                                        field.onChange(val); 
+                                                        const matchedItem = inventoryData.find(i => i.itemName === val);
+                                                        if (matchedItem) {
+                                                            form.setValue("ItemCode", matchedItem.itemCode, { shouldValidate: true });
+                                                        }
+                                                    }}
+                                                    onOpenChange={(isOpen) => {
+                                                        if (!isOpen) setSearchCode("");
+                                                    }}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                                                            <SelectValue placeholder="Select item name" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <div className="p-2">
+                                                            <Input
+                                                                placeholder="Search name…"
+                                                                value={searchCode}
+                                                                onChange={(e) => setSearchCode(e.target.value)}
+                                                                className="w-full h-9 text-sm"
+                                                            />
+                                                        </div>
+                                                        {field.value && !inventoryData.find(i => i.itemName === field.value) && (
+                                                            <SelectItem value={field.value}>{field.value}</SelectItem>
+                                                        )}
+                                                        {inventoryData?.map((item) => (
+                                                            <SelectItem key={`name-${item.id}`} value={item.itemName}>
+                                                                {item.itemName}
+                                                            </SelectItem>
+                                                        ))}
+                                                        <SelectItem value="CREATE_NEW" className="text-blue-700 font-semibold bg-blue-50 mt-1 border-t hover:bg-blue-100 cursor-pointer">
+                                                            ➕ Create New Item
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                
+                                {/* AMOUNT */}
+                                <FormField
+                                    control={form.control}
+                                    name="Amount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-slate-700 font-semibold text-sm">Amount</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" step="0.01" className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Amount" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* --- FOOTER BUTTONS --- */}
+                        <DialogFooter className="pt-4 border-t border-slate-100 flex gap-3 sm:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6"
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                type="submit" 
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+                            >
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}

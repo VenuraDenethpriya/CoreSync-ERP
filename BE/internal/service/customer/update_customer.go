@@ -1,8 +1,8 @@
 package customer
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) UpdateCustomer(ctx context.Context, customer *domain.Customer, actingClerkID string) (*domain.Customer, string, error) {
@@ -15,6 +15,7 @@ func (s *service) UpdateCustomer(ctx context.Context, customer *domain.Customer,
 	if err != nil {
 		return nil, "", err
 	}
+
 	actorName := actor.FirstName + " " + actor.LastName
 	return updatedCustomer, actorName, nil
 

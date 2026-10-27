@@ -20,9 +20,11 @@ type Payment struct {
 	OrderID     uuid.UUID `json:"order_id"`
 	Order       *Order
 	PaymentType PaymentType `json:"payment_type"`
+	PaymentMode string      `json:"payment_mode"`
 	Amount      float64     `json:"amount"`
 	LoanAmount  float64     `json:"loan_amount"`
 	PaidDate    string      `json:"paid_date"`
 	Image       string      `json:"image"`
+	Status      string      `json:"status"`
 	CreatedBy   string      `json:"created_by"`
 }

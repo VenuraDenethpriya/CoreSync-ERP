@@ -14,9 +14,9 @@ export default defineConfig({
     //   },
     //   includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
     //   manifest: {
-    //     name: "Renewaa Inventory Management System",
-    //     short_name: "RIMS",
-    //     description: "Inventory Management System for Renewaa",
+    //     name: "CoreSync Inventory Management System",
+    //     short_name: "CoreSync",
+    //     description: "Inventory Management System for CoreSync",
     //     theme_color: "#ffffff",
     //     icons: [
     //       {
@@ -42,7 +42,7 @@ export default defineConfig({
   server: {
     // host: '0.0.0.0',
     port: 80,
-    allowedHosts: ["rims.renewaa.com"],
+    allowedHosts: ["CoreSync.CoreSync.com"],
   },
   resolve: {
     alias: {

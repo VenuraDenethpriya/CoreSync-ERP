@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useState } from "react"
 import {
   flexRender,
   getCoreRowModel,
@@ -12,17 +12,15 @@ import {
 
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useNavigate } from "react-router-dom"
-import { fetchInventoryItemsList } from "@/api/inventoryApi"
-import { ChangeItemStatusDropdownMenu } from "./ChangeStatusMenu"
+import { useNavigate, useLocation } from "react-router-dom"
 import { PaginationComponent } from "@/components/Pagination"
 import { useAuth } from "@clerk/clerk-react"
 import { useDebounce } from "@/hooks/useDebounce"
+import { fetchEmployeeList } from "@/api/hrApi"
 
-
-
-export function EmployeeTable({ setExportData }) {
+export function EmployeeTable() {
   const { getToken } = useAuth();
+  const location = useLocation();
   const [data, setData] = useState([])
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState("")
@@ -38,11 +36,10 @@ export function EmployeeTable({ setExportData }) {
   const navigate = useNavigate()
 
   useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const pageParam = parseInt(params.get("page") || "1", 10);
-        setOffset((pageParam - 1) * limit);
-      }, [location.search, limit]);
-      
+    const params = new URLSearchParams(location.search);
+    const pageParam = parseInt(params.get("page") || "1", 10);
+    setOffset((pageParam - 1) * limit);
+  }, [location.search, limit]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -55,12 +52,10 @@ export function EmployeeTable({ setExportData }) {
 
       const isInsideActionMenu = event.target.closest('.action-menu-wrapper');
 
-
       if (!isInsideDialog && !isInsideActionMenu) {
         setOpenRowId(null);
       }
     }
-
 
     const timeoutId = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside, true)
@@ -88,90 +83,86 @@ export function EmployeeTable({ setExportData }) {
 
   const columns = [
     {
-      accessorKey: "itemCode",
-      header: "Item Code",
+      accessorKey: "empID",
+      header: "EMP. ID",
       cell: ({ row }) => {
-        const { itemCode, id } = row.original
+        const { empID, id } = row.original
         return (
           <div
             className="capitalize cursor-pointer"
-            onClick={() => navigate(`/inventory/${id}`)}
+            onClick={() => navigate(`/hr/employees/${id}`)}
           >
-            {itemCode}
+            {empID}
           </div>
         )
       },
     },
     {
-      accessorKey: "itemName",
-      header: "Item Name",
+      accessorKey: "empName",
+      header: "Employee Name",
       cell: ({ row }) => {
-        const { itemName, id } = row.original
+        const { empName, id } = row.original
         return (
           <div
             className="capitalize cursor-pointer"
-            onClick={() => navigate(`/inventory/${id}`)}
+            onClick={() => navigate(`/hr/employees/${id}`)}
           >
-            {itemName}
+            {empName}
           </div>
         )
       },
     },
     {
-      accessorKey: "quantity",
-      header: "Quantity",
+      accessorKey: "jobTitle",
+      header: "Job Title",
       cell: ({ row }) => {
-        const { quantity, threshold, id } = row.original
-        // const quantity = row.getValue("quantity")
-        // const threshold = row.original.threshold
-        const isBelowQuantity = quantity < threshold
+        const { jobTitle, id } = row.original
         return (
           <div
-            onClick={() => navigate(`/inventory/${id}`)}
-            className={`capitalize font-medium text-sm px-3 py-1 rounded-full w-fit transition-colors duration-200
-    ${isBelowQuantity ? "bg-red-100 text-red-800 border border-red-300" : ""}`}>
-            {quantity}
+            className="capitalize cursor-pointer"
+            onClick={() => navigate(`/hr/employees/${id}`)}
+          >
+            {jobTitle}
           </div>
         )
       },
     },
     {
-      accessorKey: "hold",
-      header: "Hold",
+      accessorKey: "phoneNo",
+      header: "Phone Number",
       cell: ({ row }) => {
-        const { hold, id } = row.original
+        const { id } = row.original
         return (
           <div
-            onClick={() => navigate(`/inventory/${id}`)}
-            className="capitalize pl-5" >{row.getValue("hold")}</div>
+            onClick={() => navigate(`/hr/employees/${id}`)}
+            className="capitalize pl-5" >{row.getValue("phoneNo")}</div>
         )
       },
     },
     {
-      accessorKey: "threshold",
-      header: "Threshold",
+      accessorKey: "email",
+      header: "Email",
       cell: ({ row }) => {
-        const { threshold, id } = row.original
+        const { id } = row.original
         return (
           <div
-            onClick={() => navigate(`/inventory/${id}`)}
-            className="capitalize pl-5" >{row.getValue("threshold")}</div>
+            onClick={() => navigate(`/hr/employees/${id}`)}
+            className="capitalize pl-5" >{row.getValue("email")}</div>
         )
       },
     },
     {
-      accessorKey: "status",
-      header: () => <div className="pl-8">Status</div>,
+      accessorKey: "nic",
+      header: "NIC",
       cell: ({ row }) => {
-        const item = row.original
+        const { id } = row.original
         return (
-          <ChangeItemStatusDropdownMenu
-            item={item}
-          />
+          <div
+            onClick={() => navigate(`/hr/employees/${id}`)}
+            className="capitalize pl-5" >{row.getValue("nic")}</div>
         )
       },
     },
-
   ]
 
   useEffect(() => {
@@ -179,43 +170,37 @@ export function EmployeeTable({ setExportData }) {
       try {
         setIsLoading(true)
         const token = await getToken();
-        console.log(token)
-        const response = await fetchInventoryItemsList(token, debouncedSearch, limit, offset)
-        const apiData = response?.data?.items || []
-        const total = response.data.total_inventory;
+        const response = await fetchEmployeeList(token, debouncedSearch, limit, offset)
+        const apiData = response?.data?.employees || []
+        const total = response.data.total_employees;
         setTotal(total)
 
         const mappedData = apiData
-          .map((item) => ({
-            id: item.id,
-            itemCode: item.item_code,
-            itemName: item.item_name,
-            quantity: item.quantity_in_stock,
-            hold: item.hold,
-            unitPrice: item.unit_cost,
-            threshold: item.threshold,
-            status: item.status,
-            // allocated: item.allocated,
-            updatedAt: item.updated_at,
-            createdAt: item.created_at,
+          .map((emp) => ({
+            id: emp.id,
+            empID: emp.emp_id,
+            empName: emp.emp_name,
+            jobTitle: emp.job_title,
+            phoneNo: emp.phone,
+            email: emp.email,
+            nic: emp.nic,
+            createdAt: emp.created_at,
           }))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
         setData(mappedData)
-        setExportData(mappedData)
       } catch (error) {
         setIsError(true)
-        console.error("Error fetching inventory items:", error)
+        console.error("Error fetching employee list:", error)
         setErrorMessage(error.message)
       } finally {
         setIsLoading(false)
         setIsError(false)
       }
-
     }
 
     fetchData()
-  }, [getToken, debouncedSearch, limit, offset, setExportData]);
+  }, [getToken, debouncedSearch, limit, offset]);
 
   const [sorting, setSorting] = useState([])
   const [columnFilters, setColumnFilters] = useState([])
@@ -269,7 +254,6 @@ export function EmployeeTable({ setExportData }) {
             </TableHeader>
             <TableBody>
               {isLoading && !table.getRowModel().rows.length ? (
-                // Render multiple skeleton rows
                 Array.from({ length: limit }).map((_, index) => (
                   <TableRow key={`skeleton-${index}`}>
                     {table.getAllColumns().map((column) => (
@@ -380,7 +364,6 @@ export function EmployeeTable({ setExportData }) {
       </div>
     )
   }
-
 
   return (
     <div className="w-full bg-slate-50 px-4 rounded-md">

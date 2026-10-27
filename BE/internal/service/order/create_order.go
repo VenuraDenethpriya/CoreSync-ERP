@@ -1,12 +1,12 @@
 package order
 
 import (
+	"CoreSync-backend/internal/email"
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"fmt"
 	"os"
-	"rims-backend/internal/email"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/service/domain"
 	"strings"
 
 	"github.com/google/uuid"
@@ -42,7 +42,7 @@ func (s *service) CreateOrder(ctx context.Context, order *domain.Order) (*domain
 				zap.String("customer_email_in_goroutine", createdOrder.Customer.Email))
 
 			emailMsg := email.EmailMessage{
-				From:    "Renewaa <" + os.Getenv("FROM_EMAIL") + ">",
+				From:    "CoreSync <" + os.Getenv("FROM_EMAIL") + ">",
 				To:      []string{createdOrder.Customer.Email},
 				Subject: fmt.Sprintf("Your %s%s Order Confirmation", createdOrder.Type, createdOrder.OrderNo),
 				Html: fmt.Sprintf(`
@@ -65,8 +65,8 @@ func (s *service) CreateOrder(ctx context.Context, order *domain.Order) (*domain
 				<div class="order-details">
 					<p><strong>Order No:</strong> %s%s</p>
 				</div>
-				<p>If you have any questions, feel free to reply to this email. info@renewaa.com</p>
-				<p>Best regards,<br>Renewaa Team</p>
+				<p>If you have any questions, feel free to reply to this email. info@CoreSync.com</p>
+				<p>Best regards,<br>CoreSync Team</p>
 				<div class="footer">
 					<p>This is an automated email. Please do not reply directly.</p>
 				</div>
@@ -79,7 +79,7 @@ func (s *service) CreateOrder(ctx context.Context, order *domain.Order) (*domain
 					createdOrder.Customer.FirstName, createdOrder.OrderNo, createdOrder.Type),
 				Cc:      strings.Split(os.Getenv("CC_EMAIL"), ","),
 				Bcc:     strings.Split(os.Getenv("BCC_EMAIL"), ","),
-				ReplyTo: "info@renewaa.com",
+				ReplyTo: "info@CoreSync.com",
 			}
 			logger.Debug(ctx, "Attempting to send email", zap.Any("email_message", emailMsg))
 			err := s.emailSender.SendOrderConfirmation(emailMsg)
@@ -94,7 +94,7 @@ func (s *service) CreateOrder(ctx context.Context, order *domain.Order) (*domain
 	// WhatsApp sending logic
 	// if createdOrder.Customer != nil && createdOrder.Customer.PhoneNo != "" {
 	// 	waSender := whatsapp.NewWhatsAppSender()
-	// 	msg := fmt.Sprintf("Hi %s, thank you for your order %s%s. We're processing it and will update you soon. - Renewaa Team",
+	// 	msg := fmt.Sprintf("Hi %s, thank you for your order %s%s. We're processing it and will update you soon. - CoreSync Team",
 	// 		createdOrder.Customer.FirstName, createdOrder.Type, createdOrder.OrderNo)
 
 	// 	err := waSender.SendTextMessage(ctx, createdOrder.Customer.PhoneNo, msg)

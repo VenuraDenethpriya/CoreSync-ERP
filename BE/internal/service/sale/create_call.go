@@ -1,10 +1,10 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/helper/uploader"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/helper/uploader"
-	"rims-backend/internal/service/domain"
 
 	"go.uber.org/zap"
 )

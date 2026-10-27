@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,12 +11,14 @@ import (
 
 type TaskModel struct {
 	ID uuid.UUID `gorm:"primaryKey;autoIncrement" json:"id"`
-	// OrderId     uuid.UUID  `gorm:"foreignKey:OrderId;references:OrderID" json:"order_id"`
-	OrderId uuid.UUID   `gorm:"type:uuid" json:"order_id"`
-	JobId   *uuid.UUID  `gorm:"type:uuid" json:"job_id"`
-	User    UserModel   `gorm:"foreignKey:Assignee;references:ClerkID" json:"users"`
-	Order   OrderModel  `gorm:"foreignKey:OrderId;references:OrderID"`
-	Repair  RepairModel `gorm:"foreignKey:JobId;references:ID"`
+	// OrderId     uuid.UUID  `gorm:"foreignKey:OrderId;references:OrderID" json:"order_id"`a	OrderId   *uuid.UUID     `gorm:"type:uuid" json:"order_id"`
+	OrderId   *uuid.UUID     `gorm:"type:uuid" json:"order_id"`
+	JobId     *uuid.UUID     `gorm:"type:uuid" json:"job_id"`
+	PackId    *uuid.UUID     `gorm:"type:uuid" json:"pack_id"`
+	User      UserModel      `gorm:"foreignKey:Assignee;references:ClerkID" json:"users"`
+	Order     OrderModel     `gorm:"foreignKey:OrderId;references:OrderID"`
+	Repair    RepairModel    `gorm:"foreignKey:JobId;references:ID"`
+	OrderItem OrderItemModel `gorm:"foreignKey:PackId;references:ID"`
 	// OrderItems []OrderItemModel `gorm:"foreignKey:OrderId;references:OrderNo"`
 	OrderItems []OrderItemModel `gorm:"foreignKey:OrderNo;references:OrderId"`
 	// Order       OrderModel `gorm:"foreignKey:OrderID"`
@@ -55,10 +57,19 @@ func TaskFromDomain(task *domain.Task) *TaskModel {
 	if task.JobId != uuid.Nil {
 		jobIdPtr = &task.JobId
 	}
+	var packIdPtr *uuid.UUID
+	if task.PackId != uuid.Nil {
+		packIdPtr = &task.PackId
+	}
+	var orderIdPtr *uuid.UUID
+	if task.OrderId != uuid.Nil {
+		orderIdPtr = &task.OrderId
+	}
 	return &TaskModel{
 		ID:          task.ID,
-		OrderId:     task.OrderId,
+		OrderId:     orderIdPtr,
 		JobId:       jobIdPtr,
+		PackId:      packIdPtr,
 		Task:        task.Task,
 		Date:        task.Date,
 		Time:        task.Time,
@@ -76,17 +87,32 @@ func (t *TaskModel) TaskFromModelToDomain() *domain.Task {
 	var orderNo string
 	var orderType string
 	var domainJobId uuid.UUID
+	var domainOrderId uuid.UUID
 	var jobNo string
+	var domainPackId uuid.UUID
+	var serialNo string
 
+	// if t.Order.OrderID != uuid.Nil {
+	// 	orderNo = t.Order.OrderNo
+	// 	orderType = t.Order.Type
+
+	// 	if t.Order.OrderItems != nil {
+	// 		for _, item := range t.Order.OrderItems {
+	// 			if domainItem := item.OrderItemModelToDomain(); domainItem != nil {
+	// 				orderItems = append(orderItems, domainItem)
+	// 			}
+	// 		}
+	// 	}
+	// }
 	if t.Order.OrderID != uuid.Nil {
 		orderNo = t.Order.OrderNo
 		orderType = t.Order.Type
+	}
 
-		if t.Order.OrderItems != nil {
-			for _, item := range t.Order.OrderItems {
-				if domainItem := item.OrderItemModelToDomain(); domainItem != nil {
-					orderItems = append(orderItems, domainItem)
-				}
+	if t.OrderItems != nil {
+		for _, item := range t.OrderItems {
+			if domainItem := item.OrderItemModelToDomain(); domainItem != nil {
+				orderItems = append(orderItems, domainItem)
 			}
 		}
 	}
@@ -95,12 +121,32 @@ func (t *TaskModel) TaskFromModelToDomain() *domain.Task {
 		domainJobId = *t.JobId
 		jobNo = t.Repair.JobNo
 	}
+	// if t.PackId != nil {
+	// 	domainPackId = *t.PackId
+	// 	serialNo = t.OrderItem.SerialNo
+	// }
+	if t.PackId != nil {
+		domainPackId = *t.PackId
+		serialNo = t.OrderItem.SerialNo
+
+		if t.OrderItem.ID != uuid.Nil {
+			if domainItem := t.OrderItem.OrderItemModelToDomain(); domainItem != nil {
+				orderItems = append(orderItems, domainItem)
+			}
+		}
+	}
+	if t.OrderId != nil {
+		domainOrderId = *t.OrderId
+	}
+
 	return &domain.Task{
 		ID:             t.ID,
 		OrderItems:     orderItems,
-		OrderId:        t.OrderId,
+		OrderId:        domainOrderId,
 		JobId:          domainJobId,
+		PackId:         domainPackId,
 		JobNo:          jobNo,
+		SerialNo:       serialNo,
 		OrderNo:        orderNo,
 		OrderType:      orderType,
 		User:           t.User.UserModelToDomain(),

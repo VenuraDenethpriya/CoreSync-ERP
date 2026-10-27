@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/service/domain"
 )
 
 func SaleRequestToDomain(req *dto.CreateSaleRequest) *domain.Sale {
@@ -40,6 +40,7 @@ func SalespersonRequestToDomain(req *dto.CreateSalespersonRequest) *domain.Sales
 		LastName:  req.LastName,
 		PhoneNo:   req.PhoneNo,
 		Email:     req.Email,
+		Status:    req.Status,
 		CreatedBy: req.CreatedBy,
 	}
 }
@@ -50,8 +51,10 @@ func UpdateSalespersonRequestToDomain(req *dto.UpdateSalespersonRequest) *domain
 		LastName:  req.LastName,
 		PhoneNo:   req.PhoneNo,
 		Email:     req.Email,
+		Status:    req.Status,
 	}
 }
+
 func CallRequestToDomain(req *dto.CreateCallRequest) *domain.Call {
 	return &domain.Call{
 		CallFlowID:    req.CallFlowID,
@@ -63,5 +66,14 @@ func CallRequestToDomain(req *dto.CreateCallRequest) *domain.Call {
 		CallStartTime: req.CallStartTime,
 		CallEndTime:   req.CallEndTime,
 		RecordingURL:  req.RecordingURL,
+	}
+}
+func SaleTargetRequestToDomain(req *dto.CreateSalesTarget) *domain.SalesTarget {
+	return &domain.SalesTarget{
+		SalespersonID: req.SalespersonID,
+		Month:         req.Month,
+		Year:          req.Year,
+		TargetAmount:  req.Amount,
+		CreatedBy:     req.CreatedBy,
 	}
 }

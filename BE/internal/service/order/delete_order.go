@@ -1,17 +1,21 @@
 package order
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 )
 
-func (s *service) DeleteOrder(ctx context.Context, orderID uuid.UUID) (*domain.Order, error) {
+func (s *service) DeleteOrder(ctx context.Context, orderID uuid.UUID, actingClerkID string) (*domain.Order, string, error) {
 	deleteOrder, err := s.orderRepo.DeleteOrder(ctx, orderID)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	// s.bus.Publish(events.Event{Type: "order.deleted", Data: deleteOrder})
-	return deleteOrder, nil
+	actor, err := s.userRepo.FindByClerkID(ctx, actingClerkID)
+	if err != nil {
+		return nil, "", err
+	}
+	actorName := actor.FirstName + " " + actor.LastName
+	return deleteOrder, actorName, nil
 }

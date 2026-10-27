@@ -1,9 +1,9 @@
 package customer
 
 import (
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -20,7 +20,7 @@ func (ch *CustomerHandler) SearchCustomers(ctx *gin.Context) {
 		return
 	}
 
-	customers, totalCustomers, err := ch.customerService.SearchCustomers(ctx, searchParams.Query, searchParams.Limit, searchParams.Offset)
+	customers, totalCustomers, err := ch.customerService.SearchCustomers(ctx, searchParams.Query, searchParams.Limit, searchParams.Offset, searchParams.SortByTotal)
 
 	if err != nil {
 		logger.Error(ctx, "Error searching customers", zap.String("method", "GET"), zap.String("path", "/customers/search"), zap.Error(err))

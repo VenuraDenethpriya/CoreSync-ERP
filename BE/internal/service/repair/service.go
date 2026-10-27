@@ -1,11 +1,12 @@
 package repair
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"github.com/google/uuid"
-	"rims-backend/internal/service/domain"
 
-	"rims-backend/internal/storage/repository"
+	"github.com/google/uuid"
+
+	"CoreSync-backend/internal/storage/repository"
 
 	"gorm.io/gorm"
 )

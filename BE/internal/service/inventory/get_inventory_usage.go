@@ -1,8 +1,8 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 )
@@ -11,6 +11,7 @@ func (s *service) GetInventoryItemUsages(
 	ctx context.Context,
 	orderID uuid.UUID,
 	itemID uuid.UUID,
+	packID uuid.UUID,
 	limit int,
 	offset int,
 ) ([]*domain.InventoryItemUsage, int, string, error) {
@@ -25,5 +26,9 @@ func (s *service) GetInventoryItemUsages(
 		return rows, total, "inventory", err
 	}
 
+	if packID != uuid.Nil {
+		rows, total, err := s.usageRepo.GetUsageGroupedByPack(ctx, packID, limit, offset)
+		return rows, total, "pack", err
+	}
 	return nil, 0, "", nil
 }

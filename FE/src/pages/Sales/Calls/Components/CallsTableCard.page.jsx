@@ -24,46 +24,6 @@ import { fethchSalespersonNames } from "@/api/salespersonApi"
 
 
 export function CallsTable({ setExportData }) {
-
-  // const testData = [
-  //   {
-  //     id: "1",
-  //     agentName: "John Perera",
-  //     customerName: "Kasun Silva",
-  //     customerPhoneNo: "0771234567",
-  //     callStatus: "Completed",
-  //     callDuration: "00:45",
-  //     recording: "https://res.cloudinary.com/dlccif9no/video/upload/v1763708095/o36fnjktw5ddcskpnrok.mp3",
-  //     updatedAt: "2025-11-21T10:00:00Z",
-  //   },
-  //   {
-  //     id: "2",
-  //     agentName: "Amal Nuwan",
-  //     customerName: "Tharaka Fernando",
-  //     customerPhoneNo: "0719876543",
-  //     callStatus: "Missed",
-  //     callDuration: "00:00",
-  //     recording: "https://res.cloudinary.com/dlccif9no/video/upload/v1763708095/o36fnjktw5ddcskpnrok.mp3",
-  //     updatedAt: "2025-11-20T09:30:00Z",
-  //   },
-  //   {
-  //     id: "3",
-  //     agentName: "Sajith Kumara",
-  //     customerName: "Isuru Jayasinghe",
-  //     customerPhoneNo: "0754567890",
-  //     callStatus: "Completed",
-  //     callDuration: "01:15",
-  //     recording: "https://res.cloudinary.com/dlccif9no/video/upload/v1763708095/o36fnjktw5ddcskpnrok.mp3",
-  //     updatedAt: "2025-11-19T14:20:00Z",
-  //   },
-  // ];
-
-  // useEffect(() => {
-  //   setData(testData);
-  //   setExportData(testData);
-  // }, []);
-
-
   const { getToken } = useAuth();
 
   const [data, setData] = useState([])
@@ -74,6 +34,7 @@ export function CallsTable({ setExportData }) {
   const [isLoading, setIsLoading] = useState(false)
   const [isError, setIsError] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [status, setStatus] = useState("Active");
 
   const [openRowId, setOpenRowId] = useState(null)
   const [activeDialog, setActiveDialog] = useState({ type: null, call: null });
@@ -116,22 +77,21 @@ export function CallsTable({ setExportData }) {
 
 
   const columns = [
-    // {
-    //   accessorKey: "agentName",
-    //   header: "Salesperson",
-    //   cell: ({ row }) => (
-    //     <div>{row.getValue("agentName")}</div>
-    //   ),
-    // },
     {
       accessorKey: "agentName",
       header: "Salesperson",
       cell: ({ row }) => {
         const agentCli = row.getValue("agentName");
 
-
         const matchedSalesperson = salespersonsList.find(
-          (person) => person.phone_no === agentCli
+          (person) => {
+            if (!person.phone_no || !agentCli) return false;
+
+            const dbPhone = String(person.phone_no).slice(-9);
+            const callPhone = String(agentCli).slice(-9);
+
+            return dbPhone === callPhone;
+          }
         );
 
         return (
@@ -141,13 +101,6 @@ export function CallsTable({ setExportData }) {
         );
       },
     },
-    // {
-    //   accessorKey: "customerName",
-    //   header: "Customer Name",
-    //   cell: ({ row }) => (
-    //     <div>{row.getValue("customerName")}</div>
-    //   ),
-    // },
     {
       accessorKey: "customerPhoneNo",
       header: "Customer Phone No.",
@@ -191,32 +144,6 @@ export function CallsTable({ setExportData }) {
         )
       },
     },
-    // {
-    //   accessorKey: "recording",
-    //   header: "Recording",
-    //   cell: ({ row }) => {
-    //     const value = row.getValue("recording");
-
-    //     if (!value) return "No recording";
-
-    //     return (
-    //       <audio
-    //         controls
-    //         className="h-10"
-    //         preload="none"
-    //         onPlay={(e) => {
-    //           // pause all other players
-    //           document.querySelectorAll("audio").forEach((audio) => {
-    //             if (audio !== e.target) audio.pause();
-    //           });
-    //         }}
-    //       >
-    //         <source src={value} type="audio/mpeg" />
-    //         Your browser does not support the audio element.
-    //       </audio>
-    //     );
-    //   },
-    // },
     {
       accessorKey: "recording",
       header: () => <div className="text-center w-full">Recording</div>,
@@ -255,10 +182,6 @@ export function CallsTable({ setExportData }) {
         };
 
 
-        // const handleOpenSpecificDialog = (type, call) => {
-        //   setActiveDialog({ type, call });
-        //   handleMenuClose();
-        // };
 
         return (
           <div className="relative">
@@ -350,7 +273,7 @@ export function CallsTable({ setExportData }) {
     const loadSalespersons = async () => {
       try {
         const token = await getToken();
-        const response = await fethchSalespersonNames(token);
+        const response = await fethchSalespersonNames(token, status);
         const salespersonsList = response.data.salespersons;
 
         const formattedList = salespersonsList.map(item => ({
@@ -397,7 +320,7 @@ export function CallsTable({ setExportData }) {
       <div className="w-full bg-slate-50 px-4 rounded-md">
         <div className="flex items-center py-4">
           <Input
-            placeholder="Search items…"
+            placeholder="Search calls..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
@@ -471,7 +394,7 @@ export function CallsTable({ setExportData }) {
       <div className="w-full bg-slate-50 px-4 rounded-md">
         <div className="flex items-center py-4">
           <Input
-            placeholder="Search items…"
+            placeholder="Search calls..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
@@ -522,7 +445,7 @@ export function CallsTable({ setExportData }) {
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:space-x-2 py-4">
           <div className="text-sm text-muted-foreground mb-2 sm:mb-0">
-            Total: {total} items.
+            Total: {total} calls.
           </div>
           <div className="flex justify-center">
             <PaginationComponent total={total} limit={limit} offset={offset} setOffset={setOffset} />
@@ -594,7 +517,7 @@ export function CallsTable({ setExportData }) {
         <AddtToSale
           saleData={activeDialog.call}
           open={true}
-          setOpen={() => setActiveDialog({ type: null, call: null })}  
+          setOpen={() => setActiveDialog({ type: null, call: null })}
         />
       )}
     </div>

@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/service/domain"
 )
 
 // ProductRequestToDomain converts a CreateProductRequest to a domain.Product
@@ -61,4 +61,25 @@ func UpdateProductResponseToDomain(req *dto.UpdateProductResponse) *domain.Produ
 
 type GetSearchProductResponse struct {
 	Data []*domain.Product `json:"data"`
+}
+
+func ProductBomRequestToDomainList(req *dto.CreateProductBomRequest) []*domain.Bom {
+	var boms []*domain.Bom
+
+	for _, item := range req.Items {
+		bom := &domain.Bom{
+			ProductID:   item.ProductID,
+			InventoryID: item.InventoryID,
+			Quantity:    item.Quantity,
+			CreatedBy:   item.CreatedBy,
+		}
+		boms = append(boms, bom)
+	}
+
+	return boms
+}
+func UpdateProductBomRequestToDomain(req *dto.UpdateProductBomRequest) *domain.Bom {
+	return &domain.Bom{
+		Quantity: req.Quantity,
+	}
 }

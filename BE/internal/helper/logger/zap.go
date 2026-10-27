@@ -1,10 +1,10 @@
 package logger
 
 import (
+	"CoreSync-backend/internal/config"
+	"CoreSync-backend/internal/helper/ctxkey"
 	"context"
 	"os"
-	"rims-backend/internal/config"
-	"rims-backend/internal/helper/ctxkey"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"

@@ -104,7 +104,7 @@ export default function BarcodeSection({ orderData }) {
 
                     ctx.fillStyle = "#1e272e";
                     ctx.font = "bold 26px Poppins, Arial";
-                    ctx.fillText("Renewaa", 180, 65);
+                    ctx.fillText("CoreSync", 180, 65);
 
                     ctx.font = "16px Poppins, Arial";
                     ctx.fillStyle = "#636e72";

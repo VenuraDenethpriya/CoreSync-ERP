@@ -1,15 +1,15 @@
 package order
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"errors"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/events"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/service/domain"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +28,7 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 		return
 	}
 	fmt.Println("SalesID received:", req.Order.SalesID)
+	// actingClerkID := ctx.GetString("user_id")
 
 	// Map DTOs to domain models
 	customerDomain := mapper.CustomerRequestToDomain(&req.Customer)
@@ -38,7 +39,6 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 	var customerID uuid.UUID
 	var customerToUse *domain.Customer
 
-	// Attempt to get customer by phone number
 	existingCustomer, err := ch.customerService.GetCustomerByPhoneNo(ctx, customerDomain.PhoneNo1)
 
 	switch {
@@ -73,21 +73,6 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 			logger.Info(ctx, "New customer created successfully (after nil lookup)", zap.Any("customer", createdCustomer))
 			customerToUse = createdCustomer
 		} else {
-			// logger.Info(ctx, "Customer found by phone number, updating existing customer", zap.Any("customer_id", existingCustomer.CustomerID))
-			// actingClerkID := ctx.GetString("user_id")
-			// updatedCustomer, actorName, updateErr := ch.customerService.UpdateCustomer(ctx, existingCustomer, actingClerkID) // existingCustomer now has updated fields
-			// if updateErr != nil {
-			// 	common.HandleError(ctx, updateErr)
-			// 	logger.Error(ctx, "Failed to update customer", zap.Error(updateErr))
-			// 	return
-			// }
-			// common.SetAuditInfo(ctx, common.AuditLogDetails{
-			// 	Headers:     map[string]string{"X-Response-Message": "Customer updated"},
-			// 	Description: fmt.Sprintf("%s update a  customer %s %s", actorName, updatedCustomer.FirstName, updatedCustomer.LastName),
-			// })
-			// logger.Info(ctx, "Existing customer updated successfully", zap.Any("customer", updatedCustomer))
-			// customerToUse = updatedCustomer
-
 			logger.Info(ctx, "Customer found by phone number, updating existing customer", zap.Any("customer_id", existingCustomer.CustomerID))
 			customerDomain.CustomerID = existingCustomer.CustomerID
 
@@ -117,7 +102,72 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 	customerID = customerToUse.CustomerID
 
 	// Create Order
+	order.OrderID = uuid.New()
 	order.CustomerID = customerID
+
+	var preparedItems []*domain.OrderItem
+	var batteryPackSummaries []domain.OrderItemSummary
+
+	isBatteryPackMap := make(map[uuid.UUID]bool)
+	batteryPackBOMs := make(map[uuid.UUID][]*domain.Bom)
+
+	for _, requestedItem := range orderItems {
+
+		// Fetch the product details to inspect its category
+		product, err := ch.productService.GetOrderProductByID(ctx, requestedItem.ProductID)
+		if err != nil {
+			common.HandleError(ctx, err)
+			logger.Error(ctx, "Failed to retrieve product details", zap.Error(err))
+			return
+		}
+
+		isBatteryPack := product != nil && product.Category == "BATTERY_PACK"
+		isBatteryPackMap[requestedItem.ProductID] = isBatteryPack
+
+		if isBatteryPack {
+			if batteryPackBOMs[requestedItem.ProductID] == nil {
+				boms, err := ch.productService.GetProductBomByID(ctx, product)
+				if err != nil {
+					logger.Error(ctx, "Failed to fetch BOMs for battery pack", zap.Error(err), zap.String("product_id", requestedItem.ProductID.String()))
+				} else {
+					batteryPackBOMs[requestedItem.ProductID] = boms
+				}
+			}
+
+			batteryPackSummaries = append(batteryPackSummaries, domain.OrderItemSummary{
+				ProductID:   requestedItem.ProductID,
+				ProductName: product.Name,
+				UnitPrice:   requestedItem.UnitPrice,
+				Quantity:    requestedItem.Quantity,
+				Note:        requestedItem.Note,
+			})
+
+			continue
+		}
+
+		for i := 0; i < requestedItem.Quantity; i++ {
+			itemID := uuid.New()
+			orderIDRef := order.OrderID
+
+			singleOrderItem := &domain.OrderItem{
+				ID:        itemID,
+				ProductID: requestedItem.ProductID,
+				Quantity:  1,
+				UnitPrice: requestedItem.UnitPrice,
+				Note:      requestedItem.Note,
+				Status:    "",
+				SerialNo:  "",
+				OrderNo:   &orderIDRef,
+			}
+
+			preparedItems = append(preparedItems, singleOrderItem)
+		}
+	}
+
+	if len(batteryPackSummaries) > 0 {
+		order.Items = batteryPackSummaries
+	}
+
 	createOrder, err := ch.orderService.CreateOrder(ctx, order)
 	if err != nil {
 		common.HandleError(ctx, err)
@@ -126,17 +176,50 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 	}
 	logger.Info(ctx, "Order created", zap.Any("order", createOrder))
 
-	// Create Order Items
-	for _, orderItem := range orderItems {
-		orderItem.OrderNo = createOrder.OrderID
-		createOrderItem, err := ch.orderService.CreateOrderItem(ctx, orderItem)
+	for _, itemToSave := range preparedItems {
+		createOrderItem, err := ch.orderService.CreateOrderItem(ctx, itemToSave)
 		if err != nil {
 			common.HandleError(ctx, err)
-			logger.Error(ctx, "Failed to create order item", zap.Error(err))
+			logger.Error(ctx, "Failed to create individual order item record", zap.Error(err))
 			return
 		}
-		logger.Info(ctx, "Order item created", zap.Any("order item", createOrderItem))
+		logger.Info(ctx, "Single order item record created", zap.Any("order_item", createOrderItem))
 	}
+
+	// for _, requestedItem := range orderItems {
+	// 	if isBatteryPackMap[requestedItem.ProductID] {
+	// 		boms := batteryPackBOMs[requestedItem.ProductID]
+
+	// 		for i := 0; i < requestedItem.Quantity; i++ {
+	// 			for _, bom := range boms {
+	// 				logger.Info(ctx, "Auto-allocating BOM item",
+	// 					zap.String("inventory_id", bom.InventoryID.String()),
+	// 					zap.Int("bom_quantity", bom.Quantity),
+	// 				)
+
+	// 				allocationReq := dto.CreateInventoryItemAllocationRequest{
+	// 					ItemID: bom.InventoryID,
+	// 					Count:  bom.Quantity,
+	// 				}
+
+	// 				allocation := mapper.InventoryItemAllocationRequestToDomain(
+	// 					&allocationReq,
+	// 					createOrder.OrderID,
+	// 					uuid.Nil,
+	// 					actingClerkID,
+	// 				)
+
+	// 				_, allocErr := ch.inventoryService.CreateInventoryItemAllocation(ctx, allocation)
+	// 				if allocErr != nil {
+	// 					logger.Error(ctx, "Failed to auto-allocate BOM item for battery pack",
+	// 						zap.Error(allocErr),
+	// 						zap.String("inventory_id", bom.InventoryID.String()),
+	// 					)
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	// Create Payment
 	payments.OrderID = createOrder.OrderID
@@ -148,17 +231,18 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 	}
 	logger.Info(ctx, "Order payment created", zap.Any("order payment", createPayment))
 
-	// // Custom description
+	// Custom description
 	userName := createOrder.CreatedBy
 	if createOrder.User != nil {
-		userName = strings.TrimSpace(createOrder.User.FirstName + " " + createOrder.User.LastName)
+		userName = strings.TCoreSyncpace(createOrder.User.FirstName + " " + createOrder.User.LastName)
 	}
 
-	// Helper function to set audit info
+	// Set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Order created"},
 		Description: fmt.Sprintf("%s created a new Order %s/%s", userName, createOrder.Type, createOrder.OrderNo),
 	})
+
 	// Respond Success
 	common.HandleSuccess(ctx, common.StatusCreated, dto.NewOrderResponse(createOrder))
 	logger.Info(ctx, "Order created successfully", zap.Any("order", createOrder))
@@ -167,7 +251,7 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 		var message string
 		if createPayment.Amount > 0 {
 			message = fmt.Sprintf(
-				"Your order %s%s is confirmed.\nTotal: LKR %.2f\nPayment received: %.2f\nWe’ll notify you when it’s ready. Thanks for choosing Renewaa!",
+				"Your order %s%s is confirmed.\nTotal: LKR %.2f\nPayment received: %.2f\nWe’ll notify you when it’s ready. Thanks for choosing CoreSync!",
 				createOrder.Type,
 				createOrder.OrderNo,
 				createOrder.Total,
@@ -175,7 +259,7 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 			)
 		} else {
 			message = fmt.Sprintf(
-				"Your order %s%s is confirmed.\nTotal: LKR %.2f\nWe’ll notify you when it’s ready. Thanks for choosing Renewaa!",
+				"Your order %s%s is confirmed.\nTotal: LKR %.2f\nWe’ll notify you when it’s ready. Thanks for choosing CoreSync!",
 				createOrder.Type,
 				createOrder.OrderNo,
 				createOrder.Total,
@@ -197,6 +281,7 @@ func (ch *OrderHandler) CreateOrder(ctx *gin.Context) {
 			}
 		}
 	}()
+
 	go ch.bus.Publish("orders", events.Event{
 		Type: "order.created",
 		Data: createOrder,

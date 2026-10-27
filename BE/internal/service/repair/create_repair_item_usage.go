@@ -1,8 +1,8 @@
 package repair
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) CreateRepairItemUsage(ctx context.Context, usageReq domain.RepairItemUsage) (*domain.RepairItemUsage, error) {

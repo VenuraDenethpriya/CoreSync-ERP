@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"

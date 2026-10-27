@@ -1,10 +1,10 @@
 package user
 
 import (
-	dto "rims-backend/internal/controller/http/dto/const"
-	"rims-backend/internal/controller/http/middleware"
-	auditlogs "rims-backend/internal/service/audit_logs"
-	"rims-backend/internal/service/user"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
+	"CoreSync-backend/internal/service/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,7 +35,7 @@ func SetupUserRoutes(
 		)
 		adminUser.GET("",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF), string(dto.HR_HEAD)),
 			userHandler.GetUsers,
 		)
 		adminUser.PUT("",

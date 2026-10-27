@@ -1,12 +1,15 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
 	"context"
 	"errors"
 	"fmt"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
+
+	"github.com/google/uuid"
+
+	"CoreSync-backend/internal/service/domain"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -173,4 +176,98 @@ func (ur *ProductRepository) GetBasicProductInfo(ctx context.Context) ([]*domain
 		domainProducts = append(domainProducts, p.ProductModelToDomain())
 	}
 	return domainProducts, nil
+}
+func (ur *ProductRepository) GetOrderProductByID(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
+	// Find the existing product by ID
+	var existingProduct models.ProductModel
+	err := ur.db.First(&existingProduct, "product_id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("product with ID %s not found", id)
+		}
+		return nil, err
+	}
+
+	// Return the product from the database
+	return existingProduct.ProductModelToDomain(), nil
+}
+
+func (ur *ProductRepository) CreateProductBom(ctx context.Context, boms []*domain.Bom) ([]*domain.Bom, error) {
+	var bomModels []*models.BomModel
+
+	for _, bom := range boms {
+		bomModels = append(bomModels, models.BomModelFromDomain(bom))
+	}
+
+	if err := ur.db.Create(&bomModels).Error; err != nil {
+		logger.Error(ctx, "Error creating product BOMs", zap.String("method", "POST"), zap.String("path", "/products/boms"), zap.Error(err))
+		return nil, err
+	}
+	var createdBoms []*domain.Bom
+	for _, bm := range bomModels {
+		createdBoms = append(createdBoms, bm.BomModelToDomain())
+	}
+
+	logger.Info(ctx, "Product BOMs created successfully", zap.String("method", "POST"), zap.String("path", "/products/boms"), zap.Int("count", len(createdBoms)))
+
+	return createdBoms, nil
+}
+
+func (ur *ProductRepository) GetProductBomByID(ctx context.Context, product *domain.Product) ([]*domain.Bom, error) {
+	var bomModels []*models.BomModel
+	err := ur.db.Preload("Inventory").Preload("User").Preload("Product").Where("product_id = ?", product.ProductID).Find(&bomModels).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("BOMs for product with ID %s not found", product.ProductID)
+		}
+		return nil, err
+	}
+	var domainBoms []*domain.Bom
+	for _, bm := range bomModels {
+		domainBoms = append(domainBoms, bm.BomModelToDomain())
+	}
+	return domainBoms, nil
+}
+
+func (ur *ProductRepository) DeleteProductBom(ctx context.Context, bom *domain.Bom) (*domain.Bom, error) {
+	var bomModel models.BomModel
+
+	if err := ur.db.Preload("Inventory").First(&bomModel, "id = ?", bom.ID).Error; err != nil {
+		logger.Error(ctx, "Product BOM not found for deletion", zap.Error(err), zap.Any("bom_id", bom.ID))
+		return nil, err
+	}
+
+	if err := ur.db.Delete(&bomModel).Error; err != nil {
+		logger.Error(ctx, "Error deleting product BOM", zap.Error(err), zap.Any("bom_id", bom.ID))
+		return nil, err
+	}
+
+	logger.Info(ctx, "Product BOM successfully deleted", zap.String("bom_id", bomModel.ID.String()))
+	return bomModel.BomModelToDomain(), nil
+}
+
+func (ur *ProductRepository) UpdateProductBom(ctx context.Context, bom *domain.Bom) (*domain.Bom, error) {
+	var bomModel models.BomModel
+
+	err := ur.db.WithContext(ctx).
+		Model(&bomModel).
+		Where("id = ?", bom.ID).
+		Update("quantity", bom.Quantity).Error
+
+	if err != nil {
+		logger.Error(ctx, "Failed to update product BOM quantity", zap.Error(err), zap.String("bom_id", bom.ID.String()))
+		return nil, err
+	}
+
+	err = ur.db.WithContext(ctx).
+		Preload("Inventory").
+		First(&bomModel, "id = ?", bom.ID).Error
+
+	if err != nil {
+		logger.Error(ctx, "Failed to fetch updated product BOM", zap.Error(err), zap.String("bom_id", bom.ID.String()))
+		return nil, err
+	}
+
+	logger.Info(ctx, "Product BOM quantity updated successfully", zap.String("bom_id", bom.ID.String()), zap.Int("new_quantity", bomModel.Quantity))
+	return bomModel.BomModelToDomain(), nil
 }

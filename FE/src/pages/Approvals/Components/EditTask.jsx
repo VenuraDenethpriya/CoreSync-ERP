@@ -15,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TaskSelect } from "./TaskSelect";
 import { DateTime } from "./DateTime";
+import { Textarea } from "@/components/ui/textarea";
 
 const taskFormSchema = z.object({
     Assignee: z.string().min(2, { message: "Assignee is required" }),
@@ -61,6 +62,8 @@ export function EditTask({ Data, open, onOpenChange, onUpdate }) {
             setIsLoading(true);
             try {
                 const token = await getToken();
+                
+                // Fetch Employees
                 const usersResponse = await fetchUsersList(token, "WAREHOUSE_STAFF", 100, 0);
                 if (usersResponse?.data?.items) {
                     const validUsers = usersResponse.data.items.filter(emp => emp.clerk_id).map(emp => ({
@@ -68,11 +71,25 @@ export function EditTask({ Data, open, onOpenChange, onUpdate }) {
                     }));
                     setWarehouseEmployees(validUsers);
                 }
+                
+                // Fetch Orders
                 const ordersResponse = await featchAllOrders(token, "", "", "", "", 10, 0);
                 if (ordersResponse?.data?.orders) {
                     const validOrders = ordersResponse.data.orders.filter(order => order.id).map(order => ({
-                        value: order.id, label: `${order.type}${order.order_no}`,
+                        value: order.id, 
+                        label: `${order.type}${order.order_no}`,
                     }));
+
+                    if (Data?.orderID && Data?.orderNO) {
+                        const orderExists = validOrders.some(o => o.value === Data.orderID);
+                        if (!orderExists) {
+                            validOrders.unshift({
+                                value: Data.orderID,
+                                label: Data.orderNO 
+                            });
+                        }
+                    }
+
                     setOrders(validOrders);
                 }
             } catch (error) {
@@ -85,8 +102,7 @@ export function EditTask({ Data, open, onOpenChange, onUpdate }) {
         if (isLoaded && open) {
             fetchDropdownData();
         }
-    }, [isLoaded, open, getToken]);
-
+    }, [isLoaded, open, getToken, Data]); 
 
     useEffect(() => {
         if (Data && open && warehouseEmployees.length > 0) {
@@ -167,22 +183,26 @@ export function EditTask({ Data, open, onOpenChange, onUpdate }) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[1200px]">
-                <DialogHeader>
-                    <DialogTitle>Edit Task</DialogTitle>
-                    <DialogDescription>
-                        Make changes to user details. Click save when you're done.
+            <DialogContent className="sm:max-w-[900px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl">
+                <DialogHeader className="space-y-1.5">
+                    <DialogTitle className="text-xl font-extrabold text-slate-800">Edit Task</DialogTitle>
+                    <DialogDescription className="text-sm text-slate-500">
+                        Make changes to task details. Click save when you're done.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <div className="grid sm:grid-cols-2 grid-cols-1 gap-4 py-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+                        <div className="grid sm:grid-cols-2 grid-cols-1 gap-5">
+                            
+                            {/* Assignee */}
                             <FormField control={form.control} name="Assignee" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Assignee</FormLabel>
+                                    <FormLabel className="text-slate-700 font-semibold text-sm">Assignee</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Select assignee" /></SelectTrigger>
+                                            <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                                                <SelectValue placeholder="Select assignee" />
+                                            </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             {isLoading ? (
@@ -198,12 +218,13 @@ export function EditTask({ Data, open, onOpenChange, onUpdate }) {
                                 </FormItem>
                             )} />
 
+                            {/* Task */}
                             <FormField
                                 control={form.control}
                                 name="Task"
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
-                                        <FormLabel>Task</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Task</FormLabel>
                                         <FormControl>
                                             <TaskSelect value={field.value} onChange={field.onChange} />
                                         </FormControl>
@@ -212,12 +233,15 @@ export function EditTask({ Data, open, onOpenChange, onUpdate }) {
                                 )}
                             />
 
+                            {/* Order No */}
                             <FormField control={form.control} name="OrderID" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Order No</FormLabel>
+                                    <FormLabel className="text-slate-700 font-semibold text-sm">Order No</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Select order" /></SelectTrigger>
+                                            <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                                                <SelectValue placeholder="Select order" />
+                                            </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             {isLoading ? (
@@ -233,20 +257,38 @@ export function EditTask({ Data, open, onOpenChange, onUpdate }) {
                                 </FormItem>
                             )} />
 
+                            {/* Date & Time */}
                             <DateTime control={form.control} />
 
+                            {/* Description */}
                             <FormField control={form.control} name="Description" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
+                                <FormItem className="sm:col-span-2">
+                                    <FormLabel className="text-slate-700 font-semibold text-sm">Description</FormLabel>
                                     <FormControl>
-                                        <textarea className="w-full min-h-5 border-2 rounded-md border-gray-200 p-2 overflow-hidden" placeholder="Description" {...field} />
+                                        <Textarea 
+                                            className="bg-slate-50 border-slate-200 rounded-xl p-3 h-24 focus:bg-white transition-all resize-none" 
+                                            placeholder="Description" 
+                                            {...field} 
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
                         </div>
-                        <DialogFooter>
-                            <Button type="submit" className="bg-blue-800 hover:bg-blue-900">
+
+                        <DialogFooter className="pt-4 border-t border-slate-100 flex gap-3 sm:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6"
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                type="submit" 
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+                            >
                                 Save changes
                             </Button>
                         </DialogFooter>

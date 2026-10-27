@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 
@@ -14,10 +14,12 @@ type PaymentModel struct {
 	OrderID     uuid.UUID          `gorm:"type:uuid;not null REFERENCES orders(order_id)"`
 	Order       OrderModel         `gorm:"foreignKey:OrderID;references:OrderID" json:"order"`
 	PaymentType domain.PaymentType `gorm:"not null"`
+	PaymentMode string             `gorm:"not null"`
 	Amount      float64            `gorm:"not null"`
 	LoanAmount  float64            `gorm:"default:0"`
 	PaidDate    string             `gorm:"not null"`
 	Image       string             `gorm:"null"`
+	Status      string             `gorm:"default:'Pending'"`
 	CreatedBy   string             `gorm:"not null"`
 }
 
@@ -43,10 +45,12 @@ func PaymentModelFromDomain(payment *domain.Payment) *PaymentModel {
 		ID:          payment.ID,
 		OrderID:     payment.OrderID,
 		PaymentType: payment.PaymentType,
+		PaymentMode: payment.PaymentMode,
 		Amount:      payment.Amount,
 		LoanAmount:  payment.LoanAmount,
 		PaidDate:    payment.PaidDate,
 		Image:       payment.Image,
+		Status:      payment.Status,
 		CreatedBy:   payment.CreatedBy,
 	}
 
@@ -60,10 +64,12 @@ func PaymentModelToDomain(model *PaymentModel) *domain.Payment {
 		OrderID:     model.OrderID,
 		Order:       model.Order.OrderModelToDomain(),
 		PaymentType: model.PaymentType,
+		PaymentMode: model.PaymentMode,
 		Amount:      model.Amount,
 		LoanAmount:  model.LoanAmount,
 		PaidDate:    model.PaidDate,
 		Image:       model.Image,
+		Status:      model.Status,
 		CreatedBy:   model.CreatedBy,
 	}
 }

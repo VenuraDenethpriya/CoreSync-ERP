@@ -1,9 +1,9 @@
 package user
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"fmt"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) DeleteUser(ctx context.Context, user *domain.User, actingClerkID string) (*domain.User, string, error) {

@@ -1,15 +1,15 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
 	"context"
 	"errors"
 	"fmt"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
 
 	"github.com/google/uuid"
 
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -44,43 +44,44 @@ func (ur *QuoteRepository) CreateQuote(ctx context.Context, quote *domain.Quote)
 	return quoteModel.QuoteModelToDomain(), nil
 }
 
-func (ur *QuoteRepository) GetQuotes(ctx context.Context, searchQuery string, limit int, offset int) ([]*domain.Quote, int, error) {
-	searchPattern := "%" + searchQuery + "%"
-
+func (ur *QuoteRepository) GetQuotes(ctx context.Context, searchQuery string, limit int, offset int, userRole string, clerkID string, userEmail string) ([]*domain.Quote, int, error) {
 	var quotes []*models.QuoteModel
 	var totalCount int64
 
-	// Count query with joins for accurate filtering
-	if err := ur.db.Model(&models.QuoteModel{}).
-		Joins("LEFT JOIN customers c ON c.customer_id = quotes.customer_id").
-		Where(`
-			quotes.quote_no ILIKE ? OR 
-			c.first_name ILIKE ? OR 
-			c.last_name ILIKE ? OR 
-			quotes.status ILIKE ?`,
-			searchPattern, searchPattern, searchPattern, searchPattern).
-		Count(&totalCount).Error; err != nil {
+	tx := ur.db.Model(&models.QuoteModel{}).
+		Joins("LEFT JOIN customers c ON c.customer_id = quotes.customer_id")
+
+	if userRole == "SALES_TEAM" {
+		tx = tx.
+			Joins("LEFT JOIN sales ON sales.sales_id = quotes.sales_id").
+			Joins("LEFT JOIN salespersons AS salesperson_data ON salesperson_data.id = sales.salesperson").
+			Where("salesperson_data.email = ?", userEmail)
+	}
+
+	if searchQuery != "" {
+		searchPattern := "%" + searchQuery + "%"
+		tx = tx.Where(`
+            quotes.quote_no ILIKE ? OR 
+            c.first_name ILIKE ? OR 
+            c.last_name ILIKE ? OR 
+            quotes.status ILIKE ?`,
+			searchPattern, searchPattern, searchPattern, searchPattern)
+	}
+
+	if err := tx.Count(&totalCount).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Main query using Preload to get Customer relationship
-	if err := ur.db.
+	if err := tx.
 		Preload("Customer").
-		Joins("LEFT JOIN customers c ON c.customer_id = quotes.customer_id").
-		Where(`
-		c.first_name ILIKE ? OR 
-        c.last_name ILIKE ? OR 
-			quote_no ILIKE ? OR 
-			status ILIKE ?`,
-			searchPattern, searchPattern, searchPattern, searchPattern).
-		Order("created_at DESC").
+		Preload("User").
+		Order("quotes.created_at DESC").
 		Limit(limit).
 		Offset(offset).
 		Find(&quotes).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Convert to domain
 	var domainQuotes []*domain.Quote
 	for _, q := range quotes {
 		domainQuotes = append(domainQuotes, q.QuoteModelToDomain())

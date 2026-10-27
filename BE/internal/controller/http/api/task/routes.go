@@ -1,11 +1,11 @@
 package task
 
 import (
-	dto "rims-backend/internal/controller/http/dto/const"
-	"rims-backend/internal/controller/http/middleware"
-	"rims-backend/internal/events"
-	auditlogs "rims-backend/internal/service/audit_logs"
-	"rims-backend/internal/service/task"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	"CoreSync-backend/internal/events"
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
+	"CoreSync-backend/internal/service/task"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,7 +38,7 @@ func SetupTaskRoutes(
 		)
 		adminTask.GET("",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			taskHandler.GetTasks,
 		)
 		adminTask.PUT("",
@@ -55,12 +55,12 @@ func SetupTaskRoutes(
 		)
 		adminTask.GET("/card",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF), string(dto.WAREHOUSE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF), string(dto.WAREHOUSE_STAFF), string(dto.READ_ONLY)),
 			taskHandler.GetCardTasks,
 		)
 		adminTask.GET("/report",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF), string(dto.READ_ONLY)),
 			taskHandler.GetTaskByDateOrAssignee,
 		)
 	}

@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/models"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/models"
 	"time"
 
 	"gorm.io/gorm"

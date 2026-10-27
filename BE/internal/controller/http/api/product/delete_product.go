@@ -1,12 +1,11 @@
 package product
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/service/domain"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/service/domain"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -41,19 +40,18 @@ func (ch *ProductHandler) DeleteProduct(ctx *gin.Context) {
 	}
 	var product domain.Product
 	product.ProductID = parsedUUID
-	deleteProduct, err := ch.productService.DeleteProduct(ctx, &product)
+
+	actingClerkID := ctx.GetString("user_id")
+	deleteProduct, actorName, err := ch.productService.DeleteProduct(ctx, &product, actingClerkID)
 	if err != nil {
 		common.HandleError(ctx, err)
 		return
 	}
-	userName := deleteProduct.CreatedBy
-	if deleteProduct.User != nil {
-		userName = strings.TrimSpace(deleteProduct.User.FirstName + " " + deleteProduct.User.LastName)
-	}
+
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Product deleted"},
-		Description: fmt.Sprintf("%s deleted a product %s", userName, deleteProduct.Name),
+		Description: fmt.Sprintf("%s deleted a product %s", actorName, deleteProduct.Name),
 	})
 	logger.Info(ctx, "Product deleted", zap.Any("product", deleteProduct))
 	common.HandleSuccess(ctx, common.StatusNoContent, dto.NewDeleteProductResponse(deleteProduct))

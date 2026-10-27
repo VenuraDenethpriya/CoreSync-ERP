@@ -1,9 +1,9 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
+	"CoreSync-backend/internal/storage/repository"
 	"context"
-	"rims-backend/internal/service/domain"
-	"rims-backend/internal/storage/repository"
 	"time"
 
 	"github.com/cloudinary/cloudinary-go/v2"
@@ -13,7 +13,7 @@ import (
 type Service interface {
 	// Sale Services
 	CreateSale(ctx context.Context, sale *domain.Sale, actingClerkID string) (*domain.Sale, string, error)
-	GetSales(ctx context.Context, query string, status string, limit int, offset int) ([]*domain.Sale, int64, error)
+	GetSales(ctx context.Context, query string, status string, limit int, offset int, userRole string, clerkID string, userEmail string) ([]*domain.Sale, int64, error)
 	GetSalesList(ctx context.Context, query string, limit int, offset int) ([]*domain.Sale, error)
 	UpdateSale(ctx context.Context, sale *domain.Sale, actingClerkID string) (*domain.Sale, string, error)
 	DeleteSale(ctx context.Context, sale *domain.Sale, actingClerkID string) (*domain.Sale, string, error)
@@ -25,12 +25,19 @@ type Service interface {
 	UpdateSalesperson(ctx context.Context, salesperson *domain.Salesperson, actingClerkID string) (*domain.Salesperson, string, error)
 	DeleteSalesperson(ctx context.Context, salesperson *domain.Salesperson, actingClerkID string) (*domain.Salesperson, string, error)
 	GetSalespersonByID(ctx context.Context, salesperson *domain.Salesperson) (*domain.Salesperson, int, float64, int, float64, error)
-	GetSalespersonsList(ctx context.Context) ([]*domain.Salesperson, error)
+	GetSalespersonsList(ctx context.Context, status string) ([]*domain.Salesperson, error)
 	GetSalesAndCommissionByDateRange(ctx context.Context, SalespersonID uuid.UUID, StartDate time.Time, EndDate time.Time) (int, float64, error)
 
 	// Call Services
 	CreateCall(ctx context.Context, call *domain.Call) (*domain.Call, error)
-	GetCalls(ctx context.Context, query string, limit int, offset int) ([]*domain.Call, int, error)
+	GetCalls(ctx context.Context, query string, limit int, offset int, userRole string, clerkID string, userEmail string) ([]*domain.Call, int, error)
+
+	CreateSalesTarget(ctx context.Context, salesTarget *domain.SalesTarget, actingClerkID string) (*domain.SalesTarget, string, error)
+	GetSalesTargetsForSalespersons(ctx context.Context, SalespersonID uuid.UUID, StartDate time.Time, EndDate time.Time) ([]domain.SalesTarget, error)
+	DeleteSalesTarget(ctx context.Context, salesTarget *domain.SalesTarget, actingClerkID string) (*domain.SalesTarget, string, error)
+
+	GetSalesDashboardData(ctx context.Context) (*domain.SalesDashboard, error)
+	GetSingleSalespersonDashboard(ctx context.Context, email string) (*domain.SingleSalespersonDashboard, error)
 }
 
 type service struct {

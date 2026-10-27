@@ -82,6 +82,10 @@ func ClerkAuthMiddleware() gin.HandlerFunc {
 	clerk.SetKey(secretKey)
 
 	return func(c *gin.Context) {
+		// Trusted internal tools (the Claude connector) log in with a service key instead of Clerk.
+		if handleServiceLogin(c) {
+			return
+		}
 		log.Println("ClerkAuthMiddleware triggered")
 
 		authHeader := c.Request.Header.Get("Authorization")

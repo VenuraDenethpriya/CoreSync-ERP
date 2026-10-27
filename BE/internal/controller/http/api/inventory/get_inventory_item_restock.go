@@ -1,9 +1,9 @@
 package inventory
 
 import (
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

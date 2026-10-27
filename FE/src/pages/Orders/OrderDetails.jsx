@@ -2,7 +2,7 @@ import OrderView from "./Components/OrderView";
 
 function OrderDetails() {
     return (
-        <div className="max-w-screen sm:px-3 bg-slate-50 rounded-md">
+        <div className="w-full space-y-6">
             <OrderView />
         </div>
     );

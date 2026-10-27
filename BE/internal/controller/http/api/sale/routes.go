@@ -1,12 +1,12 @@
 package sale
 
 import (
-	"rims-backend/internal/controller/http/api/sale/call"
-	"rims-backend/internal/controller/http/api/sale/salesperson"
-	dto "rims-backend/internal/controller/http/dto/const"
-	"rims-backend/internal/controller/http/middleware"
-	auditlogs "rims-backend/internal/service/audit_logs"
-	"rims-backend/internal/service/sale"
+	"CoreSync-backend/internal/controller/http/api/sale/call"
+	"CoreSync-backend/internal/controller/http/api/sale/salesperson"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
+	"CoreSync-backend/internal/service/sale"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,30 +41,57 @@ func SetupSaleRoutes(
 		)
 		adminSale.GET("",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.SALES_TEAM), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			saleHandler.GetSales,
 		)
 		adminSale.PUT("",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.FINANCE_HEAD)),
 			saleHandler.UpdateSale,
 			middleware.AuditMiddleware(auditSvc),
 		)
 		adminSale.DELETE("/:sale-id",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.FINANCE_HEAD)),
 			saleHandler.DeleteSale,
 			middleware.AuditMiddleware(auditSvc),
 		)
 		adminSale.GET("/:sale-id",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.SALES_TEAM), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			saleHandler.GetSaleByID,
 		)
 		adminSale.GET("/sale-list",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			saleHandler.GetSalesList,
+		)
+		adminSale.POST("/sales-target",
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.FINANCE_HEAD)),
+			saleHandler.CreateSalesTarget,
+			middleware.AuditMiddleware(auditSvc),
+		)
+		adminSale.GET("/sales-target",
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.SALES_TEAM), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
+			saleHandler.GetSalesTargetsForSalespersons,
+		)
+		adminSale.DELETE("/sales-target/:id",
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.FINANCE_HEAD)),
+			saleHandler.DeleteSalesTarget,
+			middleware.AuditMiddleware(auditSvc),
+		)
+		adminSale.GET("/dashboard",
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.SALES_TEAM), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
+			saleHandler.GetSalesDashboardData,
+		)
+		adminSale.GET("/dashboard/:email",
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.SALES_TEAM), string(dto.READ_ONLY)),
+			saleHandler.GetSingleSalespersonDashboard,
 		)
 	}
 

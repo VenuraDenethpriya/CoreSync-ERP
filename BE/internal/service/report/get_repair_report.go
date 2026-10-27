@@ -1,7 +1,7 @@
 package report
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 )
 

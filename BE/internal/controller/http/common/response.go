@@ -1,11 +1,11 @@
 package common
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/service/domain"
 	"errors"
 	"fmt"
 	"net/http"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/service/domain"
 	"strings"
 
 	"github.com/gin-gonic/gin"

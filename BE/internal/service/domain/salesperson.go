@@ -13,6 +13,7 @@ type Salesperson struct {
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email"`
 	PhoneNo   string    `json:"phone_no"`
+	Status    string    `json:"status"`
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

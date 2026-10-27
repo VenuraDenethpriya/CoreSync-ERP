@@ -42,44 +42,8 @@ function OrderCards() {
 
 
 
-    // useEffect(() => {
-    //     wsService.connect(import.meta.env.VITE_WS_URL);
-
-    //     const handleUpdate = (data) => {
-    //         console.log("WS event received:", data);
-
-    //         if (data.type === "order.created") {
-    //             setOrders(prev => [data.order, ...prev]);
-
-    //         } else if (data.type === "order.updated") {
-    //             setOrders(prev =>
-    //                 prev.map(o => (o.id === data.order.id ? data.order : o))
-    //             );
-
-    //         } else if (data.type === "order.deleted") {
-    //             setOrders(prev =>
-    //                 prev.filter(o => o.id !== data.order.id)
-    //             );
-    //         }
-    //     };
-
-    //     wsService.subscribe(handleUpdate);
-
-    //     return () => {
-    //         wsService.unsubscribe(handleUpdate);
-    //     };
-    // }, []);
-
     useEffect(() => {
-        // REMOVED: wsService.connect() is no longer needed here.
-        // The service connects automatically when you subscribe to a topic.
-
         const handleUpdate = (data) => {
-            console.log("WS event received for orders:", data);
-
-            // Your existing logic for updating state is perfect.
-            // Note: The new service sends data as { type: "...", data: {...} }
-            // So you'll access the order via 'data.data' instead of 'data.order'
             const orderData = data.data;
 
             if (data.type === "order.created") {
@@ -95,11 +59,9 @@ function OrderCards() {
             }
         };
 
-        // CHANGED: Specify the 'orders' topic when subscribing.
         wsService.subscribe('orders', handleUpdate);
 
         return () => {
-            // CHANGED: Specify the 'orders' topic when unsubscribing.
             wsService.unsubscribe('orders', handleUpdate);
         };
     }, []);
@@ -397,8 +359,6 @@ function OrderCards() {
                     </div>
                 ))}
             </div>
-
-
         </section>
     );
 }

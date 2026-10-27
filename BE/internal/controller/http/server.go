@@ -1,15 +1,15 @@
 package http
 
 import (
+	"CoreSync-backend/internal/config"
+	"CoreSync-backend/internal/controller/http/api"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/service"
+	"CoreSync-backend/pkg/sms"
 	"context"
 	"fmt"
 	"log"
-	"rims-backend/internal/config"
-	"rims-backend/internal/controller/http/api"
-	"rims-backend/internal/events"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/service"
-	"rims-backend/pkg/sms"
 
 	"go.uber.org/zap"
 )

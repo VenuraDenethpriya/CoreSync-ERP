@@ -1,9 +1,9 @@
 package report
 
 import (
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -18,7 +18,7 @@ func (h *ReportHandler) GetOrdersReport(c *gin.Context) {
 		common.ValidationError(c, err)
 		return
 	}
-	getReports, err := h.reportService.GetOrdersReport(searchParams.StartDate, searchParams.EndDate)
+	getReports, err := h.reportService.GetOrdersReport(searchParams.StartDate, searchParams.EndDate, searchParams.Vat, searchParams.OrderStatus, searchParams.PaymentStatus, searchParams.Salesperson, searchParams.PaymentMode)
 	if err != nil {
 		logger.Error(c, "Error getting order report", zap.Error(err))
 		common.HandleError(c, err)

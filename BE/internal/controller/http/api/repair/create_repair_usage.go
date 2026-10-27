@@ -1,11 +1,11 @@
 package repair
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/helper/logger"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +35,7 @@ func (ri *RepairHandler) CreateRepairItemUsage(ctx *gin.Context) {
 
 		userName := createdUsage.UserName
 		if createdUsage.User != nil {
-			userName = strings.TrimSpace(createdUsage.User.FirstName + " " + createdUsage.User.LastName)
+			userName = strings.TCoreSyncpace(createdUsage.User.FirstName + " " + createdUsage.User.LastName)
 		}
 
 		common.SetAuditInfo(ctx, common.AuditLogDetails{

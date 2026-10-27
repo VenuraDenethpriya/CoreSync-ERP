@@ -1,9 +1,9 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"fmt"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) CreateSalesperson(ctx context.Context, salesperson *domain.Salesperson, actingClerkID string) (*domain.Salesperson, string, error) {

@@ -1,7 +1,9 @@
 package dashboard
 
 import (
-	"rims-backend/internal/service/dashboard"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	"CoreSync-backend/internal/service/dashboard"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,8 +22,8 @@ func SetupDashboardRoutes(router *gin.RouterGroup, dashboardHandler *DashboardHa
 	{
 		authorizationRouter := dashboard.Group("")
 		authorizationRouter.GET("",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF), string(dto.OFFICE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF), string(dto.OFFICE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			dashboardHandler.GetDashboardData)
 	}
 }

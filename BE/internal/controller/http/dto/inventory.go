@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 )
 
 // CreateInventoryRequest represents the request body for creating a new inventory
@@ -14,8 +14,8 @@ type CreateInventoryRequest struct {
 	ItemName string `json:"item_name" binding:"required"`
 	// QuantityInStock int     `json:"quantity_in_stock" binding:"required"`
 	UnitCost  float64 `json:"unit_cost" binding:"required"`
-	Threshold float64 `json:"threshold" binding:"required"`
-	Status    string  `json:"status" binding:"required"`
+	Threshold float64 `json:"threshold"`
+	Status    string  `json:"status"`
 	CreatedBy string  `json:"created_by" binding:"required"`
 }
 
@@ -50,9 +50,10 @@ func NewCreateInventoryResponse(inventory *domain.Inventory) *CreateInventoryRes
 }
 
 type GetInventoryRequest struct {
-	Query  string `form:"query"`
-	Limit  int    `form:"limit"`
-	Offset int    `form:"offset"`
+	Query    string `form:"query"`
+	Limit    int    `form:"limit"`
+	Offset   int    `form:"offset"`
+	Sellable *bool  `form:"sellable"`
 }
 
 // GetInventoryResponse represents the response body for getting an inventory
@@ -77,22 +78,6 @@ type GetAllInventoryResponse struct {
 	TotalInventory int                    `json:"total_inventory"`
 }
 
-// NewGetInventoryResponse creates a new GetInventoryResponse instance from a domain.Inventory
-//
-//	func NewGetInventoryResponse(inventory *domain.Inventory) *GetInventoryResponse {
-//		return &GetInventoryResponse{
-//			ID:              inventory.ID,
-//			ItemCode:        inventory.ItemCode,
-//			ItemName:        inventory.ItemName,
-//			QuantityInStock: inventory.QuantityInStock,
-//			UnitCost:        inventory.UnitCost,
-//			Threshold:       inventory.Threshold,
-//			Status:          inventory.Status,
-//			Allocated:       inventory.InventoryItemAllocate.Count,
-//			CreatedAt:       inventory.CreatedAt.String(),
-//			UpdatedAt:       inventory.UpdatedAt.String(),
-//		}
-//	}
 func NewGetInventoryResponse(inventory *domain.Inventory) *GetInventoryResponse {
 	// allocated := 0
 	// if inventory.InventoryItemAllocate != nil {
@@ -104,10 +89,11 @@ func NewGetInventoryResponse(inventory *domain.Inventory) *GetInventoryResponse 
 		ItemCode:        inventory.ItemCode,
 		ItemName:        inventory.ItemName,
 		QuantityInStock: inventory.QuantityInStock,
-		Hold:            inventory.Hold,
-		UnitCost:        inventory.UnitCost,
-		Threshold:       inventory.Threshold,
-		Status:          inventory.Status,
+		// Hold:            inventory.Hold,
+		Hold:      float64(inventory.Allocated),
+		UnitCost:  inventory.UnitCost,
+		Threshold: inventory.Threshold,
+		Status:    inventory.Status,
 		// Allocated:       inventory.Allocated,
 		CreatedAt: inventory.CreatedAt.String(),
 		UpdatedAt: inventory.UpdatedAt.String(),
@@ -218,8 +204,9 @@ func NewGetInventoryByIdResponse(inventory *domain.Inventory) *GetInventoryByIdR
 }
 
 type CreateInventoryItemUsageRequest struct {
-	ItemID  uuid.UUID `binding:"required" json:"item_id"`
-	OrderID uuid.UUID `binding:"required" json:"order_id"`
+	ItemID  uuid.UUID  `binding:"required" json:"item_id"`
+	OrderID *uuid.UUID `json:"order_id"`
+	PackID  *uuid.UUID `json:"pack_id"`
 	// UsageCount int       `binding:"required" json:"usage_count"`
 	UserName string `binding:"required" json:"user_name"`
 }
@@ -229,19 +216,34 @@ type CreateInventoryItemUsageListRequest struct {
 }
 
 type CreateInventoryItemUsageResponse struct {
-	ID      uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-	ItemID  uuid.UUID `gorm:"type:uuid;foreignKey:ItemID;references:ID" json:"item_id"`
-	OrderID uuid.UUID `gorm:"type:uuid;foreignKey:OrderID;references:OrderID" json:"order_id"`
+	ID       uuid.UUID  `json:"id"`
+	ItemID   uuid.UUID  `json:"item_id"`
+	ItemCode string     `json:"item_code"`
+	OrderID  *uuid.UUID `json:"order_id"`
+	PackID   *uuid.UUID `json:"pack_id"`
 	// UsageCount int       `gorm:"type:int;not null" json:"usage_count"`
-	UserName  string    `gorm:"type:varchar(100);not null" json:"user_name"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UserName  string    `json:"user_name"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func NewGetCreateInventoryItemUsageResponse(inventoryItemUsage *domain.InventoryItemUsage) *CreateInventoryItemUsageResponse {
+	var orderIDPtr *uuid.UUID
+	if inventoryItemUsage.OrderID != uuid.Nil {
+		val := inventoryItemUsage.OrderID
+		orderIDPtr = &val
+	}
+
+	var packIDPtr *uuid.UUID
+	if inventoryItemUsage.PackID != uuid.Nil {
+		val := inventoryItemUsage.PackID
+		packIDPtr = &val
+	}
 	return &CreateInventoryItemUsageResponse{
-		ID:      inventoryItemUsage.ID,
-		ItemID:  inventoryItemUsage.ItemID,
-		OrderID: inventoryItemUsage.OrderID,
+		ID:       inventoryItemUsage.ID,
+		ItemID:   inventoryItemUsage.ItemID,
+		ItemCode: inventoryItemUsage.ItemCode,
+		OrderID:  orderIDPtr,
+		PackID:   packIDPtr,
 		// UsageCount: inventoryItemUsage.UsageCount,
 		UserName:  inventoryItemUsage.UserName,
 		CreatedAt: inventoryItemUsage.CreatedAt,
@@ -253,6 +255,7 @@ func NewGetCreateInventoryItemUsageResponse(inventoryItemUsage *domain.Inventory
 //	}
 type GetInventoryItemUsageQuery struct {
 	OrderID string `form:"order_id"`
+	PackID  string `form:"pack_id"`
 	ItemID  string `form:"item_id"`
 	Limit   int    `form:"limit"`
 	Offset  int    `form:"offset"`
@@ -268,6 +271,8 @@ type GetInventoryItemUsageResponse struct {
 	OrderID       uuid.UUID `json:"order_id"`
 	OrderType     string    `json:"order_type"`
 	OrederNo      string    `json:"order_no"`
+	PackID        uuid.UUID `json:"pack_id"`
+	SerialNo      string    `json:"serial_no"`
 	// UsageCount    int       `json:"usage_count"`
 	UserName  string    `json:"user_name"`
 	CreatedAt time.Time `json:"created_at"`
@@ -298,6 +303,8 @@ func NewGetInventoryItemUsageResponse(usage *domain.InventoryItemUsage) *GetInve
 		OrderID:   usage.OrderID,
 		OrderType: usage.OrderType,
 		OrederNo:  usage.OrederNo,
+		PackID:    usage.PackID,
+		SerialNo:  usage.SerialNo,
 		// UsageCount: usage.UsageCount,
 		UserName:  userName,
 		CreatedAt: usage.CreatedAt,
@@ -328,7 +335,11 @@ type GroupedUsageResponse struct {
 	OrderID   *uuid.UUID `json:"order_id,omitempty"`
 	OrderType string     `json:"order_type,omitempty"`
 	OrderNo   string     `json:"order_no,omitempty"`
-	UserName  string     `json:"user_name,omitempty"`
+
+	PackID   *uuid.UUID `json:"pack_id,omitempty"`
+	SerialNo string     `json:"serial_no,omitempty"`
+
+	UserName string `json:"user_name,omitempty"`
 
 	InventoryID   *uuid.UUID `json:"inventory_id,omitempty"`
 	InventoryCode string     `json:"inventory_code,omitempty"`
@@ -357,13 +368,21 @@ func NewGetInventoryItemUsageGroupedListResponse(
 		var key uuid.UUID
 
 		if mode == "order" {
-			key = u.OrderID
+			if u.PackID != uuid.Nil {
+				key = u.PackID
+			} else if u.OrderID != uuid.Nil {
+				key = u.OrderID
+			} else {
+				key = u.ID
+			}
+		} else if mode == "pack" {
+			key = u.InventoryID
 		} else {
 			key = u.InventoryID
 		}
 
 		if key == uuid.Nil {
-
+			// Handle nil UUIDs if necessary
 		}
 
 		if _, exists := groups[key]; !exists {
@@ -374,9 +393,21 @@ func NewGetInventoryItemUsageGroupedListResponse(
 			}
 
 			if mode == "order" {
-				g.OrderID = &u.OrderID
-				g.OrderNo = u.OrederNo
-				g.OrderType = u.OrderType
+				if u.OrderID != uuid.Nil {
+					g.OrderID = &u.OrderID
+					g.OrderNo = u.OrederNo
+					g.OrderType = u.OrderType
+				}
+
+				if u.PackID != uuid.Nil {
+					g.PackID = &u.PackID
+					g.SerialNo = u.SerialNo
+				}
+
+				g.InventoryID = &u.InventoryID
+				g.InventoryCode = u.InventoryCode
+				g.InventoryName = u.InventoryName
+
 				if u.User != nil {
 					g.UserName = u.User.FirstName + " " + u.User.LastName
 				} else {
@@ -386,7 +417,6 @@ func NewGetInventoryItemUsageGroupedListResponse(
 				g.InventoryID = &u.InventoryID
 				g.InventoryCode = u.InventoryCode
 				g.InventoryName = u.InventoryName
-
 				if u.User != nil {
 					g.UserName = u.User.FirstName + " " + u.User.LastName
 				} else {
@@ -598,7 +628,8 @@ type CreateInventoryItemAllocaationListRequest struct {
 // AllocationWrapper matches the object under "allocation"
 type AllocationWrapper struct {
 	Items     []CreateInventoryItemAllocationRequest `json:"items"`
-	OrderID   uuid.UUID                              `binding:"required" json:"order_id"`
+	OrderID   *uuid.UUID                             `json:"order_id"`
+	PackID    *uuid.UUID                             `json:"pack_id"`
 	Allocator string                                 `binding:"required" json:"user_name"`
 }
 
@@ -609,19 +640,32 @@ type CreateInventoryItemAllocationRequest struct {
 }
 
 type CreateInventoryItemAllocateResponse struct {
-	ID        uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-	ItemID    uuid.UUID `gorm:"type:uuid;foreignKey:ItemID;references:ID" json:"item_id"`
-	OrderID   uuid.UUID `gorm:"type:uuid;foreignKey:OrderID;references:OrderID" json:"order_id"`
-	Count     int       `gorm:"type:int;not null" json:"count"`
-	Allocator string    `gorm:"type:varchar(100);not null" json:"user_name"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	ID        uuid.UUID  `gorm:"type:uuid;primary_key" json:"id"`
+	ItemID    uuid.UUID  `gorm:"type:uuid;foreignKey:ItemID;references:ID" json:"item_id"`
+	OrderID   *uuid.UUID `gorm:"type:uuid;foreignKey:OrderID;references:OrderID" json:"order_id"`
+	PackID    *uuid.UUID `json:"pack_id"`
+	Count     int        `gorm:"type:int;not null" json:"count"`
+	Allocator string     `gorm:"type:varchar(100);not null" json:"user_name"`
+	CreatedAt time.Time  `gorm:"autoCreateTime" json:"created_at"`
 }
 
 func NewGetCreateInventoryItemAllocateResponse(inventoryItemAllocate *domain.InventoryItemAllocate) *CreateInventoryItemAllocateResponse {
+	var orderIDPtr *uuid.UUID
+	if inventoryItemAllocate.OrderID != uuid.Nil {
+		val := inventoryItemAllocate.OrderID
+		orderIDPtr = &val
+	}
+
+	var packIDPtr *uuid.UUID
+	if inventoryItemAllocate.PackID != uuid.Nil {
+		val := inventoryItemAllocate.PackID
+		packIDPtr = &val
+	}
 	return &CreateInventoryItemAllocateResponse{
 		ID:        inventoryItemAllocate.ID,
 		ItemID:    inventoryItemAllocate.ItemID,
-		OrderID:   inventoryItemAllocate.OrderID,
+		OrderID:   orderIDPtr,
+		PackID:    packIDPtr,
 		Count:     inventoryItemAllocate.Count,
 		Allocator: inventoryItemAllocate.Allocator,
 		CreatedAt: inventoryItemAllocate.CreatedAt,
@@ -631,22 +675,11 @@ func NewGetCreateInventoryItemAllocateResponse(inventoryItemAllocate *domain.Inv
 type GetInventoryItemAllocationQuery struct {
 	OrderID string `form:"order_id"`
 	ItemID  string `form:"item_id"`
+	PackID  string `form:"pack_id"`
 	Limit   int    `form:"limit"`
 	Offset  int    `form:"offset"`
 }
 
-//	type GetInventoryItemAllocationResponse struct {
-//		ID        uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
-//		ItemID    uuid.UUID `gorm:"type:uuid;foreignKey:ItemID;references:ID" json:"item_id"`
-//		ItemCode  string    `gorm:"type:varchar(100);not null" json:"item_code"`
-//		ItemName  string    `gorm:"type:varchar(100);not null" json:"item_name"`
-//		OrderID   uuid.UUID `gorm:"type:uuid;foreignKey:OrderID;references:OrderID" json:"order_id"`
-//		OrderType string    `gorm:"type:varchar(100);not null" json:"order_type"`
-//		OrederNo  string    `gorm:"type:varchar(100);not null" json:"order_no"`
-//		Count     int       `gorm:"type:int;not null" json:"usage_count"`
-//		Allocator string    `gorm:"type:varchar(100);not null" json:"user_name"`
-//		CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-//	}
 type GetInventoryItemAllocationResponse struct {
 	ID        uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
 	ItemID    uuid.UUID `gorm:"type:uuid;foreignKey:ItemID;references:ID" json:"item_id"`
@@ -655,6 +688,8 @@ type GetInventoryItemAllocationResponse struct {
 	OrderID   uuid.UUID `gorm:"type:uuid;foreignKey:OrderID;references:OrderID" json:"order_id"`
 	OrderType string    `gorm:"type:varchar(100);not null" json:"order_type"`
 	OrederNo  string    `gorm:"type:varchar(100);not null" json:"order_no"`
+	PackID    uuid.UUID `json:"pack_id"`
+	SerialNo  string    `json:"serial_no"`
 	Count     int       `gorm:"type:int;not null" json:"usage_count"`
 	Allocator string    `gorm:"type:varchar(100);not null" json:"user_name"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
@@ -673,6 +708,8 @@ func NewGetInventoryItemAllocationoResponse(allocation *domain.InventoryItemAllo
 		OrderID:   allocation.OrderID,
 		OrderType: allocation.OrderType,
 		OrederNo:  allocation.OrderNo,
+		PackID:    allocation.PackID,
+		SerialNo:  allocation.SerialNo,
 		Count:     allocation.Count,
 		Allocator: allocation.User.FirstName + " " + allocation.User.LastName,
 		CreatedAt: allocation.CreatedAt,
@@ -733,7 +770,6 @@ type GetInventoryItemByCodeResponse struct {
 
 func NewGetInventoryItemByCodeResponse(inventory *domain.InventoryItem) *GetInventoryItemByCodeResponse {
 	itemName := ""
-	// Check if the nested struct exists before accessing it
 	if inventory.Inventory != nil {
 		itemName = inventory.Inventory.ItemName
 	}
@@ -741,5 +777,148 @@ func NewGetInventoryItemByCodeResponse(inventory *domain.InventoryItem) *GetInve
 		ID:       inventory.ID,
 		ItemCode: inventory.ItemCode,
 		ItemName: itemName,
+	}
+}
+
+type CreateInventoryOrderRequest struct {
+	ItemCode      string  `json:"item_code" binding:"required"`
+	ItemName      string  `json:"item_name" binding:"required"`
+	OrderQuantity int     `json:"order_quantity" binding:"required"`
+	Quantity      int     `json:"quantity"`
+	Amount        float64 `json:"amount" binding:"required"`
+	OrderDate     string  `json:"order_date"`
+	CreatedBy     string  `json:"created_by" binding:"required"`
+}
+type CreateInventoryOrderResponse struct {
+	ID            uuid.UUID `json:"id"`
+	OrderNo       string    `json:"order_no"`
+	ItemCode      string    `json:"item_code" `
+	OrderQuantity int       `json:"order_quantity" binding:"required"`
+	CreatedBy     string    `json:"created_by" binding:"required"`
+}
+
+func NewCreateInventoryOrderResponse(inventoryOrder *domain.InventoryOrder) *CreateInventoryOrderResponse {
+	return &CreateInventoryOrderResponse{
+		ID:            inventoryOrder.ID,
+		OrderNo:       inventoryOrder.OrderNo,
+		ItemCode:      inventoryOrder.ItemCode,
+		OrderQuantity: inventoryOrder.OrderQuantity,
+		CreatedBy:     inventoryOrder.CreatedBy,
+	}
+}
+
+type GetInventoryOrdersRequest struct {
+	Query  string `form:"query"`
+	Limit  int    `form:"limit"`
+	Offset int    `form:"offset"`
+}
+
+type GetInventoryOrdersResponse struct {
+	ID            uuid.UUID `json:"id"`
+	OrderNo       string    `json:"order_no"`
+	ItemCode      string    `json:"item_code"`
+	ItemName      string    `json:"item_name"`
+	OrderQuantity int       `json:"order_quantity"`
+	Quantity      int       `json:"quantity"`
+	Amount        float64   `json:"amount"`
+	OrderDate     string    `json:"order_date"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type GetAllInventoryOrderResponse struct {
+	Orders               []GetInventoryOrdersResponse `json:"orders"`
+	Total                int                          `json:"total"`
+	TotalInventoryOrders int                          `json:"total_inventory_orders"`
+}
+
+func NewGetInventoryOrdersResponse(inventoryOrder *domain.InventoryOrder) *GetInventoryOrdersResponse {
+	return &GetInventoryOrdersResponse{
+		ID:            inventoryOrder.ID,
+		OrderNo:       inventoryOrder.OrderNo,
+		ItemCode:      inventoryOrder.ItemCode,
+		ItemName:      inventoryOrder.ItemName,
+		OrderQuantity: inventoryOrder.OrderQuantity,
+		Quantity:      inventoryOrder.Quantity,
+		Amount:        inventoryOrder.Amount,
+		OrderDate:     inventoryOrder.OrderDate,
+		Status:        inventoryOrder.Status,
+		CreatedAt:     inventoryOrder.CreatedAt,
+		UpdatedAt:     inventoryOrder.UpdatedAt,
+	}
+}
+func NewGetAllInventoryOrdersResponse(inventoryOrders []*domain.InventoryOrder, totalInventoryOrders int) *GetAllInventoryOrderResponse {
+	items := make([]GetInventoryOrdersResponse, len(inventoryOrders))
+	for i, inventory := range inventoryOrders {
+		items[i] = *NewGetInventoryOrdersResponse(inventory)
+	}
+	return &GetAllInventoryOrderResponse{
+		Orders:               items,
+		TotalInventoryOrders: totalInventoryOrders,
+		Total:                len(items),
+	}
+}
+
+type DeleteInventoryOrderIdRequest struct {
+	OrderId string `uri:"order-id" binding:"required" json:"order_id"`
+}
+
+type DeleteInventoryOrderResponse struct {
+	ID      uuid.UUID `json:"id"`
+	OrderNo string    `json:"order_no"`
+}
+
+func NewDeleteInventoryOrderResponse(inventoryOrder *domain.InventoryOrder) DeleteInventoryOrderResponse {
+	return DeleteInventoryOrderResponse{
+		ID:      inventoryOrder.ID,
+		OrderNo: inventoryOrder.OrderNo,
+	}
+}
+
+type UpdateInventoryOrderRequest struct {
+	ID            string  `uri:"order-id" binding:"required" json:"id"`
+	ItemCode      string  `json:"item_code"`
+	ItemName      string  `json:"item_name"`
+	OrderQuantity int     `json:"order_quantity"`
+	Quantity      int     `json:"quantity"`
+	Amount        float64 `json:"amount"`
+	Status        string  `json:"status"`
+	OrderDate     string  `json:"order_date"`
+}
+
+type UpdateInventoryOrderResponse struct {
+	ID      uuid.UUID `uri:"order-id" binding:"required" json:"id"`
+	OrderNo string    `json:"order_no"`
+}
+
+func NewUpdateInventoryOrderResponse(inventoryOrder *domain.InventoryOrder) *UpdateInventoryOrderResponse {
+	return &UpdateInventoryOrderResponse{
+		ID:      inventoryOrder.ID,
+		OrderNo: inventoryOrder.OrderNo,
+	}
+}
+
+type CreateInventoryFromOrderRequest struct {
+	OrderID  uuid.UUID `json:"order_id"`
+	ItemCode string    `json:"item_code" binding:"required"`
+	ItemName string    `json:"item_name" binding:"required"`
+	UnitCost float64   `json:"unit_cost" binding:"required"`
+	Quantity int       `json:"quantity" binding:"required"`
+	Amount   float64   `json:"amount" binding:"required"`
+	UserName string    `json:"user_name" binding:"required"`
+	Codes    []string  `json:"codes" binding:"required"`
+	Remark   string    `json:"remark"`
+}
+type CreateInventoryFromOrderResponse struct {
+	ItemCode string `json:"item_code"`
+	ItemName string `json:"item_name"`
+	Quantity int    `json:"quantity"`
+}
+
+func NewCreateInventoryFromOrderResponse(inventory *domain.Inventory) *CreateInventoryFromOrderResponse {
+	return &CreateInventoryFromOrderResponse{
+		ItemCode: inventory.ItemCode,
+		ItemName: inventory.ItemName,
 	}
 }

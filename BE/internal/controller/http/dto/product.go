@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -287,4 +287,107 @@ func NewGetBasicProductInfoListResponse(products []*domain.Product) []*GetBasicP
 		})
 	}
 	return responses
+}
+
+type BomItemRequest struct {
+	ProductID   uuid.UUID `json:"product_id"`
+	InventoryID uuid.UUID `json:"inventory_id" binding:"required"`
+	Quantity    int       `json:"quantity" binding:"required,gt=0"`
+	CreatedBy   string    `json:"created_by" binding:"required"`
+}
+type CreateProductBomRequest struct {
+	Items []BomItemRequest `json:"items" binding:"required,min=1,dive"`
+}
+type CreateProductBomResponse struct {
+	ID          uuid.UUID `json:"id"`
+	ProductID   uuid.UUID `json:"product_id"`
+	InventoryID uuid.UUID `json:"inventory_id"`
+	Quantity    int       `json:"quantity"`
+	CreatedBy   string    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+func NewCreateProductBomResponse(bom *domain.Bom) *CreateProductBomResponse {
+	return &CreateProductBomResponse{
+		ID:          bom.ID,
+		ProductID:   bom.ProductID,
+		InventoryID: bom.InventoryID,
+		Quantity:    bom.Quantity,
+		CreatedBy:   bom.User.FirstName + " " + bom.User.LastName,
+		CreatedAt:   bom.CreatedAt,
+	}
+}
+
+func NewCreateProductBomResponseList(boms []*domain.Bom) []CreateProductBomResponse {
+	var responses []CreateProductBomResponse
+	for _, bom := range boms {
+		responses = append(responses, *NewCreateProductBomResponse(bom))
+	}
+	return responses
+}
+
+type GetProductBomByIdRequest struct {
+	ProductID string `uri:"product-id" binding:"required"`
+}
+type GetProductBomByIdResponse struct {
+	ID            uuid.UUID `json:"id"`
+	InventoryID   uuid.UUID `json:"inventory_id"`
+	InventoryName string    `json:"inventory_name"`
+	Quantity      int       `json:"quantity"`
+	CreatedBy     string    `json:"created_by"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+type GetProductBomByIdResponseList struct {
+	Items []GetProductBomByIdResponse `json:"items"`
+}
+
+func NewGetProductBomByIdResponse(bom *domain.Bom) *GetProductBomByIdResponse {
+	return &GetProductBomByIdResponse{
+		ID:            bom.ID,
+		InventoryID:   bom.InventoryID,
+		InventoryName: bom.Inventory.ItemName,
+		Quantity:      bom.Quantity,
+		CreatedBy:     bom.User.FirstName + " " + bom.User.LastName,
+		CreatedAt:     bom.CreatedAt,
+	}
+}
+func NewGetProductBomByIdResponseList(boms []*domain.Bom) *GetProductBomByIdResponseList {
+	var responses []GetProductBomByIdResponse
+	for _, bom := range boms {
+		responses = append(responses, *NewGetProductBomByIdResponse(bom))
+	}
+	return &GetProductBomByIdResponseList{
+		Items: responses,
+	}
+}
+
+type DeleteProductBomIdRequest struct {
+	ProductBomID string `uri:"product-bom-id" binding:"required" json:"product_bom_id"`
+}
+type DeleteProductBomResponse struct {
+	ID uuid.UUID `json:"id"`
+}
+
+func NewDeleteProductBomResponse(bom *domain.Bom) *DeleteProductBomResponse {
+	return &DeleteProductBomResponse{
+		ID: bom.ID,
+	}
+}
+
+type UpdateProductBomRequest struct {
+	ID       string `json:"bom_id" binding:"required"`
+	Quantity int    `json:"quantity"`
+}
+type UpdateProductBomResponse struct {
+	ID            uuid.UUID `json:"id"`
+	InventoryID   uuid.UUID `json:"inventory_id"`
+	InventoryName string    `json:"inventory_name"`
+}
+
+func NewUpdateProductBomResponse(bom *domain.Bom) *UpdateProductBomResponse {
+	return &UpdateProductBomResponse{
+		ID:            bom.ID,
+		InventoryID:   bom.InventoryID,
+		InventoryName: bom.Inventory.ItemName,
+	}
 }

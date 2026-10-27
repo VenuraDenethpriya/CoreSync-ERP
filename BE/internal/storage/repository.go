@@ -1,7 +1,7 @@
 package storage
 
 import (
-	repository "rims-backend/internal/storage/repository"
+	repository "CoreSync-backend/internal/storage/repository"
 )
 
 // Repository storage of all repositories.
@@ -14,6 +14,7 @@ type Repository struct {
 	ProductRepository                 *repository.ProductRepository
 	UserRepository                    *repository.UserRepository
 	InventoryRepository               *repository.InventoryRepository
+	InventoryOrderRepository          *repository.InventoryOrderRepository
 	DashboardRepository               *repository.DashboardRepository
 	InventoryItemUsageRepository      *repository.InventoryItemUsageRepository
 	InventoryItemRestockRepository    *repository.InventoryItemRestockRepository
@@ -27,6 +28,10 @@ type Repository struct {
 	CallRepository                    *repository.CallRepository
 	RepairRepository                  *repository.RepairRepository
 	ReportRepository                  *repository.ReportRepository
+	SiteRepository                    *repository.SiteRepository
+	FinanceRepository                 *repository.FinanceRepository
+	HrRepository                      *repository.HrRepository
+	ProductionRepository              *repository.ProductionRepository
 }
 
 // NewRepository postgres implementation for storage of all repositories.
@@ -41,6 +46,7 @@ func NewRepository(db *DB) *Repository {
 		ProductRepository:                 repository.NewProductRepository(db.DB),
 		UserRepository:                    userRepo,
 		InventoryRepository:               repository.NewInventoryRepository(db.DB),
+		InventoryOrderRepository:          repository.NewInventoryOrderRepository(db.DB),
 		DashboardRepository:               repository.NewDashboardRepository(db.DB),
 		InventoryItemUsageRepository:      repository.NewInventoryItemUsageRepository(db.DB),
 		InventoryItemRestockRepository:    repository.NewInventoryItemRestockRepository(db.DB),
@@ -54,5 +60,9 @@ func NewRepository(db *DB) *Repository {
 		CallRepository:                    repository.NewCallRepository(db.DB),
 		RepairRepository:                  repository.NewRepairRepository(db.DB),
 		ReportRepository:                  repository.NewReportRepository(db.DB),
+		SiteRepository:                    repository.NewSiteRepository(db.DB, userRepo),
+		FinanceRepository:                 repository.NewFinanceRepository(db.DB),
+		HrRepository:                      repository.NewHrRepository(db.DB, userRepo),
+		ProductionRepository:              repository.NewProductionRepository(db.DB),
 	}
 }

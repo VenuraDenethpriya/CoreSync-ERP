@@ -18,6 +18,8 @@ import { ChangeStatusDropdownMenu } from "./ChangeStatusMenu"
 import { PaginationComponent } from "@/components/Pagination"
 import { useAuth } from "@clerk/clerk-react"
 import { useDebounce } from "@/hooks/useDebounce"
+import { fechTalentPoolList } from "@/api/hrApi"
+import { email } from "zod"
 
 
 
@@ -178,10 +180,10 @@ export function TalentTable({ setExportData }) {
       accessorKey: "status",
       header: () => <div className="pl-8">Status</div>,
       cell: ({ row }) => {
-        const item = row.original
+        const member = row.original
         return (
           <ChangeStatusDropdownMenu
-            item={item}
+            member={member}
           />
         )
       },
@@ -206,24 +208,22 @@ export function TalentTable({ setExportData }) {
       try {
         setIsLoading(true)
         const token = await getToken();
-        console.log(token)
-        const response = await fetchInventoryItemsList(token, debouncedSearch, limit, offset)
-        const apiData = response?.data?.items || []
-        const total = response.data.total_inventory;
+        const response = await fechTalentPoolList(token, debouncedSearch, limit, offset)
+        const apiData = response?.data?.talent_pool || []
+        const total = response.data.total_talent_pool;
         setTotal(total)
 
         const mappedData = apiData
           .map((item) => ({
             id: item.id,
-            name: item.item_name,
-            dateOfApplication: item.date_of_application,
+            name: item.candidate_name,
+            dateOfApplication:new Date(item.date_of_application).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }),
             positionApplied: item.position_applied,
-            department: item.department,
             evaluationScore: item.evaluation_score,
             comments: item.comments,
+            phoneNumber: item.phone,
+            email: item.email,
             status: item.status,
-            // allocated: item.allocated,
-            updatedAt: item.updated_at,
             createdAt: item.created_at,
           }))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))

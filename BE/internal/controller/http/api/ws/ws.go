@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

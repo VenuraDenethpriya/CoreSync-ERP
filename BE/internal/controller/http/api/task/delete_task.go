@@ -1,12 +1,12 @@
 package task
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/service/domain"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/events"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 
@@ -29,14 +29,16 @@ func (th *TaskHandler) DeleteTask(ctx *gin.Context) {
 	}
 	var task domain.Task
 	task.ID = parsedUUID
-	deleteTask, err := th.taskService.DeleteTask(ctx, &task)
+
+	actingClerkID := ctx.GetString("user_id")
+	deleteTask, actorName, err := th.taskService.DeleteTask(ctx, &task, actingClerkID)
 	if err != nil {
 		common.HandleError(ctx, err)
 		return
 	}
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Task deleted"},
-		Description: "Deleted a task ",
+		Description: fmt.Sprintf("%s deleted a task", actorName),
 	})
 	logger.Info(ctx, "Task deleted", zap.Any("task", deleteTask))
 	common.HandleSuccess(ctx, common.StatusOK, dto.NewDeleteTaskResponse(deleteTask))

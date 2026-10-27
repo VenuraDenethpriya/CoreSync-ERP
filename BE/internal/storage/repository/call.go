@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -36,26 +36,33 @@ func (cr *CallRepository) CreateCall(ctx context.Context, call *domain.Call) (*d
 	return createdCallModel.CallFromModelToDomain(), nil
 }
 
-func (cr *CallRepository) GetCalls(ctx context.Context, query string, limit int, offset int) ([]*domain.Call, int, error) {
+func (cr *CallRepository) GetCalls(ctx context.Context, query string, limit int, offset int, userRole string, clerkID string, userEmail string) ([]*domain.Call, int, error) {
 	var callModels []models.CallModel
-	search := "%" + query + "%"
 
 	tx := cr.db.Model(&models.CallModel{}).
-		Preload("Salesperson").
-		Joins("LEFT JOIN salespersons as salesperson ON salesperson.phone_no = calls.agent_cli").
-		Where(`
+		Joins("LEFT JOIN salespersons as salesperson ON salesperson.phone_no = calls.agent_cli")
+
+	if userRole == "SALES_TEAM" {
+		tx = tx.Where("salesperson.email = ?", userEmail)
+	}
+
+	if query != "" {
+		search := "%" + query + "%"
+		tx = tx.Where(`
             calls.customer_cli ILIKE ? 
             OR calls.status ILIKE ? 
             OR salesperson.first_name ILIKE ? 
             OR salesperson.last_name ILIKE ?`,
 			search, search, search, search)
+	}
 
 	var totalCalls int64
 	if err := tx.Count(&totalCalls).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err := tx.Limit(limit).
+	if err := tx.Preload("Salesperson").
+		Limit(limit).
 		Offset(offset).
 		Order("calls.created_at DESC").
 		Find(&callModels).Error; err != nil {
@@ -66,5 +73,6 @@ func (cr *CallRepository) GetCalls(ctx context.Context, query string, limit int,
 	for _, c := range callModels {
 		domainCalls = append(domainCalls, c.CallFromModelToDomain())
 	}
+
 	return domainCalls, int(totalCalls), nil
 }

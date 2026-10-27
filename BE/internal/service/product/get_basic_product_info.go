@@ -1,8 +1,8 @@
 package product
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetBasicProductInfo(ctx context.Context) ([]*domain.Product, error) {

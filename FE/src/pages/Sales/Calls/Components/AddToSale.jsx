@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 
 export function AddtToSale({ saleData, open, setOpen }) {
   const { getToken } = useAuth();
@@ -41,7 +41,6 @@ export function AddtToSale({ saleData, open, setOpen }) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [description, setDescription] = useState("");
 
-  // Separate state for existing URL and new File upload
   const [existingRecording, setExistingRecording] = useState(null);
   const [newRecording, setNewRecording] = useState(null);
 
@@ -65,11 +64,10 @@ export function AddtToSale({ saleData, open, setOpen }) {
     };
 
     loadSalespersons();
-  }, []);
+  }, [getToken]);
 
   useEffect(() => {
     if (open && saleData) {
-      // 1. Handle Date
       if (saleData.createdAt) {
         const formattedDate = saleData.createdAt.split("T")[0];
         setDate(formattedDate);
@@ -77,18 +75,13 @@ export function AddtToSale({ saleData, open, setOpen }) {
         setDate(saleData.date);
       }
 
-      // 2. Handle Text Fields
       setCustomerName(saleData.customerName || "");
       setCustomerPhone(saleData.customerPhoneNo || "");
-
-      // 3. Handle Recording (Check if URL exists)
       setExistingRecording(saleData.recording || null);
-      setNewRecording(null); // Reset new file input
+      setNewRecording(null);
 
-      // 4. Handle Salesperson Matching
       if (salespersonsList.length > 0 && saleData.agentName) {
         const agentCli = saleData.agentName;
-        // Try to match by ID or Phone or Name depending on what saleData provides
         const matchedAgent = salespersonsList.find(
           (person) => person.phone_no === agentCli || person.name === agentCli
         );
@@ -105,17 +98,14 @@ export function AddtToSale({ saleData, open, setOpen }) {
       const token = await getToken();
       setIsSubmitting(true);
 
-      let recordingUrl = existingRecording; // Default to the existing URL
+      let recordingUrl = existingRecording;
 
-      // If a NEW file has been selected, upload it and use that URL instead
       if (newRecording instanceof File) {
         try {
           recordingUrl = await uploadAudioToCloudinary(newRecording);
         } catch (err) {
           console.error("Upload error:", err);
-          toast.error("Failed to upload call recording.", {
-            position: "bottom-right",
-          });
+          toast.error("Failed to upload call recording.", { position: "bottom-right" });
           setIsSubmitting(false);
           return;
         }
@@ -134,26 +124,22 @@ export function AddtToSale({ saleData, open, setOpen }) {
         customer_name: customerName,
         customer_phone: customerPhone,
         description: description,
-        recording_url: recordingUrl, // Send whichever URL is valid (new or old)
+        recording_url: recordingUrl,
         updated_by: userID,
       };
 
       const response = await createSale(token, payload);
 
       if (response.message === "success") {
-        toast.success("Sale updated successfully!", {
-          position: "bottom-right",
-        });
+        toast.success("Sale created/updated successfully!", { position: "bottom-right" });
         setOpen(false);
         setTimeout(() => {
           window.location.reload();
-        }, 1000); // Reduced timeout for better UX
+        }, 1000);
       }
     } catch (error) {
       console.error("Error updating sale:", error);
-      toast.error("Error updating sale! Please try again.", {
-        position: "bottom-right",
-      });
+      toast.error("Error updating sale! Please try again.", { position: "bottom-right" });
     } finally {
       setIsSubmitting(false);
     }
@@ -162,26 +148,24 @@ export function AddtToSale({ saleData, open, setOpen }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit</Button>
+        <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">
+           <Plus className="w-4 h-4 mr-2" /> Add to Sale
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[1200px]">
-        <DialogHeader>
-          <DialogTitle>Edit Sale</DialogTitle>
-          <DialogDescription>
-            Make changes to sale details. Click save when you're done.
+      <DialogContent className="sm:max-w-[900px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl">
+        <DialogHeader className="space-y-1.5">
+          <DialogTitle className="text-xl font-extrabold text-slate-800">Add to Sale</DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
+            Fill in the details to add this lead to sales. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid sm:grid-cols-2 grid-cols-1 gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Salespereson" className="justify-self-start text-left">
-              Salesperson
-            </Label>
-            <Select
-              value={selectedSalesperson}
-              onValueChange={setSelectedSalesperson}
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a saleperson" />
+
+        <div className="grid sm:grid-cols-2 grid-cols-1 gap-5 pt-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Salesperson" className="text-slate-700 font-semibold text-sm">Salesperson</Label>
+            <Select value={selectedSalesperson} onValueChange={setSelectedSalesperson}>
+              <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                <SelectValue placeholder="Select a salesperson" />
               </SelectTrigger>
               <SelectContent>
                 {salespersonsList.map((p) => (
@@ -193,12 +177,10 @@ export function AddtToSale({ saleData, open, setOpen }) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Type" className="justify-self-start text-left">
-              Type
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Type" className="text-slate-700 font-semibold text-sm">Type</Label>
             <Select value={type} onValueChange={setType}>
-              <SelectTrigger className="col-span-3">
+              <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
                 <SelectValue placeholder="Select a type" />
               </SelectTrigger>
               <SelectContent>
@@ -209,97 +191,96 @@ export function AddtToSale({ saleData, open, setOpen }) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Commission" className="justify-self-start text-left">
-              Commission
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Commission" className="text-slate-700 font-semibold text-sm">Commission</Label>
             <Input
               id="Commission"
               value={commission}
               onChange={(e) => setCommission(e.target.value)}
-              className="col-span-3"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Date" className="justify-self-start text-left">
-              Date
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Date" className="text-slate-700 font-semibold text-sm">Date</Label>
             <Input
               id="Date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="col-span-3 w-full"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="CustomerPhone" className="justify-self-start text-left">
-              Customer Phone No.
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="CustomerName" className="text-slate-700 font-semibold text-sm">Customer Name</Label>
+            <Input
+              id="CustomerName"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="CustomerPhone" className="text-slate-700 font-semibold text-sm">Customer Phone No.</Label>
             <Input
               id="CustomerPhone"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
-              className="col-span-3"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
             />
           </div>
 
-          {/* RECORDING FIELD START */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Recording" className="justify-self-start text-left">
-              Recording
-            </Label>
-            <div className="col-span-3 w-full">
-              {/* If we have an existing URL and no new file selected, show the player */}
-              {existingRecording && !newRecording ? (
-                <div className="flex items-center gap-2 border p-2 rounded-md bg-slate-50">
-                  <audio
-                    controls
-                    src={existingRecording}
-                    className="h-8 w-full"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100"
-                    onClick={() => setExistingRecording(null)} // User wants to remove/replace
-                    title="Remove/Replace Recording"
-                  >
-                    X
-                  </Button>
-                </div>
-              ) : (
-                /* Else show the file input */
-                <Input
-                  type="file"
-                  accept="audio/*"
-                  className="bg-white"
-                  onChange={(e) => setNewRecording(e.target.files?.[0])}
-                />
-              )}
-            </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="Recording" className="text-slate-700 font-semibold text-sm">Recording</Label>
+            {existingRecording && !newRecording ? (
+              <div className="flex items-center gap-2 border border-slate-200 p-2 rounded-xl bg-slate-50">
+                <audio controls src={existingRecording} className="h-9 w-full" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg"
+                  onClick={() => setExistingRecording(null)}
+                  title="Remove/Replace Recording"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Input
+                type="file"
+                accept="audio/*"
+                className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+                onChange={(e) => setNewRecording(e.target.files?.[0])}
+              />
+            )}
           </div>
-          {/* RECORDING FIELD END */}
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Description" className="justify-self-start text-left">
-              Description
-            </Label>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="Description" className="text-slate-700 font-semibold text-sm">Description</Label>
             <Textarea
               id="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3"
+              className="w-full min-h-[90px] border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+              rows={3}
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-4 border-t border-slate-100 flex gap-3 sm:justify-end">
           <Button
-            className="bg-blue-800 hover:bg-blue-900"
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6"
+          >
+            Cancel
+          </Button>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
             onClick={handleEditSaleSubmit}
             disabled={isSubmitting}
           >

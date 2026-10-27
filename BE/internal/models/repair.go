@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +21,7 @@ type RepairModel struct {
 	Price               float64     `json:"price"`
 	CustomerName        string      `json:"customer_name"`
 	CustomerPhoneNumber string      `json:"customer_phone"`
+	Tasks               []TaskModel `gorm:"foreignKey:JobId;references:ID" json:"tasks"`
 	CreatedBy           string      `gorm:"type:varchar(255);column:created_by" json:"created_by"`
 	CreatedAt           time.Time   `json:"created_at"`
 	UpdatedAt           time.Time   `json:"updated_at"`
@@ -73,6 +74,15 @@ func (r *RepairModel) RepairFromModelToDomain() *domain.Repair {
 			CreatedAt:     r.CreatedAt,
 			UpdatedAt:     r.UpdatedAt,
 		}
+	for _, task := range r.Tasks {
+		// Check if the AssigneeUser struct is populated (e.g., has an ID or Name)
+		// Adjust the condition based on your UserModel fields (e.g., ClerkID or FirstName)
+		if task.AssigneeUser.ClerkID != "" {
+			domainRepair.Assignee = task.AssigneeUser.FirstName + " " + task.AssigneeUser.LastName
+			// Once we find the first task with an assignee, we can stop
+			break
+		}
+	}
 	if r.User != nil {
 		domainRepair.User = r.User.UserModelToDomain()
 	}

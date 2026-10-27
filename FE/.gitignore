@@ -24,9 +24,3 @@ dist-ssr
 *.sw?
 
 .env
-
-.github
-/docker
-docker-compose.yml
-Dockerfile
-nginx.conf

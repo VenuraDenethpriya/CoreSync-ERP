@@ -38,6 +38,7 @@ export function CustomerTable({ setExportData }) {
   const [isLoading, setIsLoading] = useState(false)
   const [isError, setIsError] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const sort_by_total = true;
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -51,7 +52,7 @@ export function CustomerTable({ setExportData }) {
       try {
         setIsLoading(true)
         const token = await getToken();
-        const response = await searchCustomers(token, search, limit, offset);
+        const response = await searchCustomers(token, search, limit, offset, sort_by_total);
         const total = response.data.totalCustomers;
         setTotal(total);
         const mapped = response.data.customers
@@ -61,6 +62,7 @@ export function CustomerTable({ setExportData }) {
             customerName: `${c.first_name} ${c.last_name}`,
             phoneNo: c.phone_no,
             lastOrderNo: `${c.last_order_type} ${c.last_order_no}`,
+            totalOrderValue: c.total_order_value,
             lastOrderDate:
               new Date(c.last_order_date).getFullYear() === 1
                 ? ""
@@ -68,7 +70,7 @@ export function CustomerTable({ setExportData }) {
             updatedAt: c.updated_at,
             createdAt: c.created_at,
           }))
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          .sort((a, b) => (b.totalOrderValue) - (a.totalOrderValue));
         setData(mapped);
         setExportData(mapped);
       } catch (err) {
@@ -107,8 +109,13 @@ export function CustomerTable({ setExportData }) {
     },
     {
       accessorKey: "lastOrderDate",
-      header: "Order Date",
+      header: "Last Order Date",
       cell: ({ row }) => <div className="font-semibold">{row.getValue("lastOrderDate")}</div>,
+    },
+    {
+      accessorKey: "totalOrderValue",
+      header: "Total Order Value(LKR)",
+      cell: ({ row }) => <div className="font-semibold">{row.getValue("totalOrderValue")}</div>,
     },
   ]
 

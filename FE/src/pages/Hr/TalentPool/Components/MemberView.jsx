@@ -1,276 +1,182 @@
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { useNavigate, useParams } from "react-router";
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import BreadCrumbs from "@/components/ui/BreadCrumbs";
-import { deleteCustomer, getCustomerById } from "@/api/customerApi";
 import { Copy, ExternalLink } from "lucide-react";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { ErrorState, SkeletonDetailRow, SkeletonUsageRow, SkeletonUsageRow3 } from "@/components/Skeleton";
-import { createAuditLog } from "@/api/settingApi";
+import { ErrorState } from "@/components/Skeleton"; 
+import { featchTalentPoolById } from "@/api/hrApi";
+import { Badge } from "@/components/ui/badge";
 
 function MemberView() {
     const { user } = useUser();
     const { getToken } = useAuth();
-    const { memberId } = useParams();
-    const breadcrumbs = [
-        { name: "Dashboard", link: "/" },
-        { name: "Talent Pool", link: "/talent-pool" },
-        { name: " ", link: `/talent-pool/${memberId}` },
-    ];
+    const { talentPoolId } = useParams();
 
-    const [customerData, setCustomerData] = useState({});
+    const [memberData, setmemberData] = useState({});
     const navigate = useNavigate();
-    const pdfRef = useRef();
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    const fetchCustomerData = async () => {
+    const fetchmemberData = async () => {
         try {
             const token = await getToken();
-            const res = await getCustomerById(token, memberId);
-            const customer = res.data;
-            setCustomerData({
-                ...customer,
-                name: `${customer.first_name} ${customer.last_name}`.trim(),
-            });
+            const res = await featchTalentPoolById(token, talentPoolId);
+            const talentPool = res.data;
+            setmemberData(talentPool);
         } catch (error) {
             setIsError(true);
-            setErrorMessage("Error fetching customer data: " + error.message);
-            toast.error("Couldn't load customer", { position: "bottom-right" });
+            setErrorMessage("Error fetching talent pool data: " + error.message);
+            toast.error("Couldn't load talent pool", { position: "bottom-right" });
         }
     };
 
-    // 2. Initial Load
     useEffect(() => {
         setIsLoading(true);
-        fetchCustomerData().finally(() => {
+        fetchmemberData().finally(() => {
             setIsLoading(false);
             setIsError(false);
         });
-    }, [memberId, getToken]);
+    }, [talentPoolId, getToken]);
 
-    const handleDelete = async () => {
-        try {
-            const token = await getToken();
-            const response = await deleteCustomer(token, memberId);
-            if (response.message === "success") {
-                toast.success("Member deleted successfully!", { position: "bottom-right" });
-                navigate("/talent-pool");
-            }
-        } catch (error) {
-            toast.error("Error deleting member! Please try again.", { position: "bottom-right" });
-        }
-    };
-    const totals = customerData.orders?.reduce(
-        (acc, order) => {
-            acc.total += order.total;
-            acc.paid += order.paid_amount;
-            acc.remaining += order.total - order.paid_amount;
-            return acc;
-        },
-        { total: 0, paid: 0, remaining: 0 }
-    );
-
-    const handleDownloadLog = async () => {
-        try {
-            const token = await getToken();
-            await createAuditLog(token, {
-                action: "PDF Downloaded",
-                status_code: 200,
-                user: user.id,
-                description: `${user.firstName} ${user.lastName} downloaded the member's  ${customerData?.name || "Unknown Member"} report as a PDF file.`,
-            });
-        } catch (error) {
-            console.error("Failed to log download action:", error);
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case "Appiled":
+                return <Badge className="rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-100 font-bold text-xs px-3 py-1 border-0">Applied</Badge>;
+            case "Rejected":
+                return <Badge className="rounded-full bg-rose-100 text-rose-700 hover:bg-rose-100 font-bold text-xs px-3 py-1 border-0">Rejected</Badge>;
+            case "Interview Stage":
+                return <Badge className="rounded-full bg-blue-100 text-blue-700 hover:bg-blue-100 font-bold text-xs px-3 py-1 border-0">Interview Stage</Badge>;
+            case "Hold for Future":
+                return <Badge className="rounded-full bg-amber-100 text-amber-700 hover:bg-amber-100 font-bold text-xs px-3 py-1 border-0">Hold for Future</Badge>;
+            default:
+                return <Badge className="rounded-full bg-slate-100 text-slate-600 hover:bg-slate-100 font-bold text-xs px-3 py-1 border-0">{status || "No Status"}</Badge>;
         }
     };
 
     if (isLoading) {
         return (
-            <>
-                {/* Breadcrumbs Skeleton */}
-                <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4 mx-3 sm:mx-16"></div>
-
-                <div className="sm:p-8 p-4 space-y-6 bg-gray-50 min-h-screen">
-                    {/* Header Skeleton */}
-                    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                        <div className="h-10 w-48 bg-gray-200 rounded animate-pulse sm:text-4xl text-2xl"></div>
-                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-                            <div className="h-9 w-28 bg-gray-200 rounded animate-pulse"></div>
-                            <div className="h-9 w-28 bg-gray-200 rounded animate-pulse"></div>
-                            <div className="h-9 w-28 bg-gray-200 rounded animate-pulse"></div>
-                        </div>
+            <div className="w-full space-y-6 animate-pulse">
+                {/* Header Skeleton */}
+                <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/70 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="h-8 w-48 bg-slate-200 rounded-xl"></div>
+                        <div className="h-6 w-24 bg-slate-100 rounded-full"></div>
                     </div>
+                </div>
 
-                    {/* Overview Header Skeleton */}
-                    <div className="space-y-4">
-                        <div className="h-8 w-36 bg-gray-200 rounded animate-pulse text-2xl font-semibold"></div>
-                        <Separator className="my-4 bg-gray-200 h-1 animate-pulse" />
-                    </div>
-
-                    {/* Primary Details Skeleton */}
-                    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                        <div className="h-7 w-48 bg-gray-200 rounded animate-pulse mb-5 text-xl font-bold"></div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-                            <div>
-                                <SkeletonDetailRow />
-                                <SkeletonDetailRow />
-                                <SkeletonDetailRow />
-                                <SkeletonDetailRow />
-                            </div>
-                            <div>
-                                <SkeletonDetailRow />
-                                <SkeletonDetailRow />
-                                <SkeletonDetailRow />
-                                <SkeletonDetailRow />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Items Usage Skeleton */}
-                    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                        <div className="flex gap-6 mb-5 items-center">
-                            <div className="h-7 w-36 bg-gray-200 rounded animate-pulse text-xl font-bold"></div>
-                        </div>
-
-                        <div className="space-y-2">
-                            {/* Usage header */}
-                            <div className="grid sm:grid-cols-3 grid-cols-1 text-xs text-gray-500 font-semibold border-b pb-1">
-                                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                            </div>
-
-                            {/* Multiple usage rows */}
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <SkeletonUsageRow3 key={i} />
+                <div className="space-y-6">
+                    {/* Member Details Skeleton */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="h-6 w-40 bg-slate-200 rounded-lg mb-5"></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8">
+                            {Array.from({ length: 9 }).map((_, i) => (
+                                <div key={i} className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline py-1.5">
+                                    <div className="h-4 w-28 bg-slate-200 rounded"></div>
+                                    <div className="h-4 w-40 bg-slate-100 rounded mt-2 sm:mt-0"></div>
+                                </div>
                             ))}
-
-
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                        <div className="flex gap-6 mb-5 items-center">
-                            <div className="h-7 w-36 bg-gray-200 rounded animate-pulse text-xl font-bold"></div>
-                        </div>
-
-                        <div className="space-y-2">
-                            {/* Usage header */}
-                            <div className="grid sm:grid-cols-3 grid-cols-1 text-xs text-gray-500 font-semibold border-b pb-1">
-                                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                            </div>
-
-                            {/* Multiple usage rows */}
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <SkeletonUsageRow3 key={i} />
-                            ))}
-
-
                         </div>
                     </div>
 
                     {/* Timestamps Skeleton */}
-                    <div className="flex justify-end mt-8">
-                        <div className="bg-gray-100 rounded-xl p-5 text-xs sm:text-sm text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-16">
-                            <SkeletonDetailRow />
-                            <SkeletonDetailRow />
+                    <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-16">
+                            {Array.from({ length: 2 }).map((_, i) => (
+                                <div key={i} className="flex flex-col space-y-2">
+                                    <div className="h-3 w-20 bg-slate-200 rounded"></div>
+                                    <div className="h-4 w-36 bg-slate-100 rounded"></div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
-            </>
+            </div>
         );
     }
+
     if (isError) {
-        return (
-            <ErrorState errorMessage={errorMessage} />
-        )
+        return <ErrorState errorMessage={errorMessage} />;
     }
 
     return (
-        <>
-            <BreadCrumbs breadcrumbs={breadcrumbs} />
-            <div className="sm:p-8 p-4 space-y-6 bg-gray-50 min-h-screen">
-                <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                    <h1 className="sm:text-4xl text-2xl font-extrabold text-gray-800">{customerData.name}</h1>
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-                        {/* <EditCustomer customerData={customerData} onUpdate={fetchCustomerData} />
-                        <DeleteAlert handleDelete={handleDelete} customerData={customerData} /> */}
-                        {/* <PDFDownloadLink
-                            document={<CustomerTemplate customerData={customerData} />}
-                            fileName={`Customer-Report-${customerData.name}.pdf`}
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium
-                                               ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2
-                                               focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50
-                                               border border-blue-700 bg-blue-700 text-blue-50 hover:bg-blue-800
-                                               h-9 px-4 py-2"
-                            onClick={handleDownloadLog}
-                        >
-                            {({ loading }) =>
-                                loading ? "Generating..." : "Download"
-                            }
-                        </PDFDownloadLink> */}
+        <div className="w-full space-y-6">
+            {/* Header Card */}
+            <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/70 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">
+                        {memberData.candidate_name}
+                    </h1>
+                    {getStatusBadge(memberData?.status)}
+                </div>
+            </div>
+
+            <div className="space-y-6">
+                {/* Member Details */}
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <h3 className="text-lg font-bold mb-5 text-slate-800">Member Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8">
+                        <DetailRow label="Candidate Name" value={memberData.candidate_name} />
+                        <DetailRow label="Phone No." value={memberData.phone} />
+                        <DetailRow label="Email" value={memberData.email} />
+                        <DetailRow label="Position Applied" value={memberData.position_applied} />
+                        <DetailRow label="Date of Application" value={memberData.date_of_application ? new Date(memberData.date_of_application).toLocaleDateString() : undefined} />
+                        <DetailRow label="Evaluation Score" value={memberData.evaluation_score} />
+                        
+                        <DetailRow 
+                            label="Resume" 
+                            value={
+                                memberData.resume ? (
+                                    <a 
+                                        href={memberData.resume} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-semibold"
+                                    >
+                                        View Document <ExternalLink size={14} />
+                                    </a>
+                                ) : undefined
+                            } 
+                        />
+
+                        <DetailRow label="Comments" value={memberData.comments} />
+                        <DetailRow label="Created By" value={memberData.created_by} />
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <h2 className="text-2xl font-semibold text-gray-700">Overview</h2>
-                    <Separator className="my-4 bg-gray-300" />
-                </div>
-
-                <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                    <h3 className="text-xl font-bold mb-5 text-gray-700">Member Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-                        <DetailRow label="Candidate Name" value={customerData.first_name} />
-                        <DetailRow label="Phone No ." value={customerData.phone_no} />
-                        <DetailRow label="Email" value={customerData.email} />
-                        <DetailRow label="Position Applied" value={customerData.position_applied} />
-                        <DetailRow label="Date of Application" value={customerData.date_of_application ? new Date(customerData.date_of_application).toLocaleDateString() : "N/A"} />
-                        <DetailRow label="Evaluation Score" value={customerData.evaluation_score} />
-                        <DetailRow label="Resume" value={customerData.resume} />
-                        <DetailRow label="Comments" value={customerData.comments} />
-                    </div>
-                </div>
-
-        
                 {/* Timestamps */}
-                <div className="flex justify-end mt-8">
-                    <div className="bg-gray-100 rounded-xl p-5 text-xs sm:text-sm text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-16">
-                        <Timestamp label="Created At" value={customerData.created_at} />
-                        <Timestamp label="Last Updated At" value={customerData.updated_at} />
+                <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200/70">
+                    <div className="text-xs sm:text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-16">
+                        <Timestamp label="Created At" value={memberData.created_at} />
+                        <Timestamp label="Last Updated At" value={memberData.Updated_at} />
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 
-
 function DetailRow({ label, value }) {
     const handleCopy = () => {
-        if (value) {
+        if (typeof value === "string" && value) {
             navigator.clipboard.writeText(value);
-            toast.success("Phone number copied!", { position: "bottom-right" });
+            toast.success("Copied to clipboard!", { position: "bottom-right" });
         }
     };
 
-    const isPhoneField = label === "Phone No 1." || label === "Phone No 2.";
+    const isPhoneField = label.includes("Phone No");
 
     return (
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline py-1">
-            <span className="text-gray-600 text-sm font-medium">{label}:</span>
-            <span className="text-sm text-gray-600 mt-1 sm:mt-0 flex items-center gap-1">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline py-1.5">
+            <span className="text-slate-500 text-sm font-semibold">{label}:</span>
+            <span className="text-sm text-slate-800 font-medium mt-1 sm:mt-0 flex items-center gap-1.5">
                 {value || "N/A"}
-                {isPhoneField && value && (
+                {isPhoneField && value && value !== "N/A" && (
                     <Copy
-                        size={16}
-                        className="cursor-pointer text-gray-500 hover:text-black"
+                        size={15}
+                        className="cursor-pointer text-slate-400 hover:text-slate-700 transition-colors"
                         onClick={handleCopy}
+                        title="Copy phone number"
                     />
                 )}
             </span>
@@ -278,13 +184,11 @@ function DetailRow({ label, value }) {
     );
 }
 
-
-
 function Timestamp({ label, value }) {
     return (
         <div className="flex flex-col">
-            <span className="uppercase tracking-wide text-[10px] text-gray-500 font-semibold mb-1">{label}</span>
-            <span className="font-medium text-gray-800 text-sm">{value ? new Date(value).toLocaleString() : "N/A"}</span>
+            <span className="uppercase tracking-wider text-[10px] text-slate-400 font-bold mb-1">{label}</span>
+            <span className="font-semibold text-slate-700 text-sm">{value ? new Date(value).toLocaleString() : "N/A"}</span>
         </div>
     );
 }

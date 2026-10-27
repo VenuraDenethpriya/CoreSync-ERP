@@ -1,4 +1,4 @@
-import { fetchBasicProductsList, fetchProductsList } from "@/api/productApi";
+import { fetchProductsList } from "@/api/productApi";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,47 +24,33 @@ import { toast } from "sonner";
 import { updateOrder } from "@/api/orderApi";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { uploadImageToCloudinary } from "@/api/cloudinaryApi";
-import { MdDelete } from "react-icons/md";
-import { MinusCircleIcon, PlusCircle, PlusCircleIcon } from "lucide-react";
+import { MinusCircleIcon, PlusCircle, PlusCircleIcon, Trash2, Pencil } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchSalesNoList } from "@/api/saleApi";
-import { FormLabel } from "@/components/ui/form";
+
+
+const generateLocalId = () => Math.random().toString(36).substring(7);
 
 const getNoteFromSpecification = (spec) => {
   switch (spec) {
     case '6.2kW Solar Ongrid System Complete Installation':
-      return `Inverter Capacity : 5kW 
-Inverter Model : Solax X1-BOOST G4 
-Panels Capacity : 6.2kW 
-Panel Model : 620W -JA N-Type Solar 
-DC Switchgear - Zbeny 
-DC Cable - LAPP (German) 
-AC Switchgear - Kripal 
-AC Cable - ACL/Kelani`;
-
+      return `Inverter Capacity : 5kW \nInverter Model : Solax X1-BOOST G4 \nPanels Capacity : 6.2kW \nPanel Model : 620W -JA N-Type Solar \nDC Switchgear - Zbeny \nDC Cable - LAPP (German) \nAC Switchgear - Kripal \nAC Cable - ACL/Kelani`;
     case '5kW Solar Ongrid System Complete Installation':
-      return `Inverter Capacity : 5kW
-Inverter Model : Solax X1-BOOST G4
-Panels Capacity : 5kW
-Panel Model : 620W -JA N-Type Solar
-DC Switchgear - Zbeny
-DC Cable - LAPP (German)
-AC Switchgear - Kripal
-AC Cable - ACL/Kelani `;
+      return `Inverter Capacity : 5kW\nInverter Model : Solax X1-BOOST G4\nPanels Capacity : 5kW\nPanel Model : 620W -JA N-Type Solar\nDC Switchgear - Zbeny\nDC Cable - LAPP (German)\nAC Switchgear - Kripal\nAC Cable - ACL/Kelani `;
     default:
       return '';
   }
 };
 
-export function EditOrder({ onUpdate, ...props }) {
+export function EditOrder({ onUpdate, orderData: initialOrderData, totalLoanAmount: propTotalLoanAmount }) {
   const { getToken } = useAuth();
 
-  const [search, setSearch] = useState("")
-  const [limit, setLimit] = useState(15)
-  const [offset, setOffset] = useState(0)
+  const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(15);
+  const [offset, setOffset] = useState(0);
 
-  const orderId = props.orderData?.id;
+  const orderId = initialOrderData?.id;
   const { user } = useUser();
 
   const [products, setProducts] = useState([]);
@@ -73,60 +59,56 @@ export function EditOrder({ onUpdate, ...props }) {
   const [paymentType, setPaymentType] = useState("Partial");
 
   const [salesList, setSalesList] = useState([]);
-  const [searchSales, setSearchSales] = useState("")
+  const [searchSales, setSearchSales] = useState("");
+  const [paymentMode, setPaymentMode] = useState("");
 
 
-  const [addProduct, setAddProduct] = useState([{ id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '' }]);
-  console.log("Add Product:", addProduct);
+  const [addProduct, setAddProduct] = useState([{ id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '', localId: generateLocalId() }]);
+
   const handleAddProductChange = () => {
-    setAddProduct([...addProduct, { id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '' }]);
-  }
+    setAddProduct([...addProduct, { id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '', localId: generateLocalId() }]);
+  };
 
   useEffect(() => {
-    const feachSalesList = async () => {
+    const fetchSales = async () => {
       try {
         const token = await getToken();
         const response = await fetchSalesNoList(token, searchSales, 15, 0);
-
         let list = response?.data?.sales || [];
-
-        if (props.orderData?.sales_id &&
-          !list.some(item => item.id === props.orderData.sales_id)) {
-
+        if (initialOrderData?.sales_id && !list.some(item => item.id === initialOrderData.sales_id)) {
           list = [
-            { id: props.orderData.sales_id, sale_no: props.orderData.sales_no || "Current Sale" },
+            { id: initialOrderData.sales_id, sale_no: initialOrderData.sales_no || "Current Sale" },
             ...list
           ];
         }
-
         setSalesList(list);
       } catch (err) {
         console.error(err);
       }
     };
-
-    feachSalesList();
-  }, [getToken, searchSales]);
-
+    fetchSales();
+  }, [getToken, searchSales, initialOrderData]);
 
   const handleRemoveProduct = (index) => {
     const updated = [...addProduct];
     updated.splice(index, 1);
     setAddProduct(updated);
-  }
+  };
+
   const handleIncrementQty = (index) => {
     const updated = [...addProduct];
     updated[index].qty++;
     updated[index].subtotal = updated[index].qty * updated[index].unitprice;
     setAddProduct(updated);
-  }
+  };
+
   const handleDecrementQty = (index) => {
     if (addProduct[index].qty <= 1) return;
     const updated = [...addProduct];
     updated[index].qty--;
     updated[index].subtotal = updated[index].qty * updated[index].unitprice;
     setAddProduct(updated);
-  }
+  };
 
   useEffect(() => {
     let updated = [...addProduct];
@@ -149,13 +131,12 @@ export function EditOrder({ onUpdate, ...props }) {
     }
   }, [addProduct.map(p => p.specifications).join('|')]);
 
-
-  const [additionalCharges, setAdditionalCharges] = useState([{ type: '', value: '' }]);
+  // FIX: Track option type and custom value
+  const [additionalCharges, setAdditionalCharges] = useState([{ option: '', type: '', value: '', localId: generateLocalId() }]);
 
   const handleAddAdditionalCharge = () => {
-    setAdditionalCharges([...additionalCharges, { type: '', value: '' }]);
+    setAdditionalCharges([...additionalCharges, { option: '', type: '', value: '', localId: generateLocalId() }]);
   };
-
 
   const handleRemoveCharge = (index) => {
     const updated = [...additionalCharges];
@@ -163,7 +144,6 @@ export function EditOrder({ onUpdate, ...props }) {
     setAdditionalCharges(updated);
   };
 
-  // Form state
   const [subTotal, setSubTotal] = useState("");
   const [discount, setDiscount] = useState("");
   const [total, setTotal] = useState("");
@@ -173,8 +153,6 @@ export function EditOrder({ onUpdate, ...props }) {
   const [vatAmount, setVatAmount] = useState();
   const [saleNo, setSaleNo] = useState();
   const [loanAmount, setLoanAmount] = useState(0);
-  console.log("Loan Amount:", loanAmount);
-
 
   const [title, setTitle] = useState("");
   const [fisrtName, setFisrtName] = useState("");
@@ -184,14 +162,16 @@ export function EditOrder({ onUpdate, ...props }) {
   const [phoneNo2, setPhoneNo2] = useState("");
   const [address, setAddress] = useState("");
   const [poNo, setPoNo] = useState("");
-  const [vatNo, setVatNo] = useState("")
+  const [vatNo, setVatNo] = useState("");
 
-
-
-  const [paidDate, setPaidDate] = useState("");
+  const [paidDate, setPaidDate] = useState(() => {
+    const today = new Date();
+    const localOffset = today.getTimezoneOffset() * 60000;
+    const localDate = new Date(today.getTime() - localOffset);
+    return localDate.toISOString().slice(0, 10);
+  });
   const [paidAmount, setPaidAmount] = useState("");
-  // const [newPaidAmount, setNewPaidAmount] = useState("");
-  const [paidRecipt, setPaidRecipt] = useState("");
+  const [paidReceipt, setPaidReceipt] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -226,20 +206,12 @@ export function EditOrder({ onUpdate, ...props }) {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, open, limit, offset]);
-
-  useEffect(() => {
-    if (open) {
-      initializeFormData();
-    }
-  }, [open]);
-
+  }, [search, open, limit, offset, getToken]);
 
   const initializeFormData = () => {
-    if (!props.orderData) return;
+    if (!initialOrderData) return;
 
-    const items = props.orderData.order_items || [];
-
+    const items = initialOrderData.order_items || [];
 
     const normalizedItems = items.map((item) => ({
       id: item.id || null,
@@ -248,39 +220,61 @@ export function EditOrder({ onUpdate, ...props }) {
       unitprice: item.unitprice || item.unit_price || 0,
       qty: item.quantity,
       subtotal: item.subtotal || 0,
-      note: item.note || ""
+      note: item.note || "",
+      localId: generateLocalId() 
     }));
     setAddProduct(normalizedItems);
 
-    setAdditionalCharges(props.orderData.additional_charges || []);
-
-    setSubTotal(props.orderData.subtotal || 0);
-    setDiscount(props.orderData.discount || 0);
-    setTotal(props.orderData.total || 0);
-    setVat(props.orderData.vat || false);
-    setTitle(props.orderData.title || "");
-    setFisrtName(props.orderData.first_name || "");
-    setLastName(props.orderData.last_name || "");
-    setEmail(props.orderData.email || "");
-    setPhoneNo1(props.orderData.phone_no1 || "");
-    setPhoneNo2(props.orderData.phone_no2 || "");
-    setAddress(props.orderData.address || "");
-    setPoNo(props.orderData.po_no || "");
-    setVatNo(props.orderData.vat_no || "");
+    // FIX: Parse existing additional charges to separate "Others(value)" correctly
+    const parsedCharges = (initialOrderData.additional_charges || []).map(charge => {
+        let optionType = charge.type;
+        let customType = charge.type;
+        
+        const match = charge.type?.match(/^Others\((.*)\)$/);
+        if (match) {
+            optionType = "Others";
+            customType = match[1];
+        } else if (!["Delivery Charges", "Installation Charges", "Installation Material Charges"].includes(charge.type)) {
+            // Fallback if it's a completely unformatted custom string
+            optionType = "Others";
+        }
+  
+        return {
+            id: charge.id || null,
+            option: optionType,
+            type: customType,
+            value: charge.value,
+            localId: generateLocalId()
+        };
+      });
+  
+    setAdditionalCharges(parsedCharges);
+    
+    setSubTotal(initialOrderData.subtotal || 0);
+    setDiscount(initialOrderData.discount || 0);
+    setTotal(initialOrderData.total || 0);
+    setVat(initialOrderData.vat || false);
+    setTitle(initialOrderData.title || "");
+    setFisrtName(initialOrderData.first_name || "");
+    setLastName(initialOrderData.last_name || "");
+    setEmail(initialOrderData.email || "");
+    setPhoneNo1(initialOrderData.phone_no1 || "");
+    setPhoneNo2(initialOrderData.phone_no2 || "");
+    setAddress(initialOrderData.address || "");
+    setPoNo(initialOrderData.po_no || "");
+    setVatNo(initialOrderData.vat_no || "");
     setPaidDate("");
-    setPaymentStatus(props.orderData.PaymentStatus || "");
-    // setNewPaidAmount("");
-    setPaidRecipt(props.orderData.paid_recipt || "");
-    setSaleNo(props.orderData.sales_id || "")
-    setLoanAmount(props.totalLoanAmount || 0);
+    setPaymentStatus(initialOrderData.PaymentStatus || "");
+    setPaidReceipt(initialOrderData.paid_recipt || "");
+    setSaleNo(initialOrderData.sales_id || "");
+    setLoanAmount(propTotalLoanAmount || 0);
   };
 
   useEffect(() => {
-    if (open && props.orderData) {
+    if (open && initialOrderData) {
       initializeFormData();
     }
-  }, [open, props.orderData]);
-
+  }, [open, initialOrderData]);
 
   useEffect(() => {
     const subtotal = (addProduct || []).reduce((acc, item) => {
@@ -288,73 +282,43 @@ export function EditOrder({ onUpdate, ...props }) {
       return acc + (isNaN(value) ? 0 : value);
     }, 0);
 
-    // const discountP = parseFloat(discount) || 0;
-
     const additionalChargesTotal = (additionalCharges || []).reduce((acc, charge) => {
       const value = parseFloat(charge.value || "0");
       return acc + (isNaN(value) ? 0 : value);
     }, 0);
 
     const subTotalWithCharges = subtotal + additionalChargesTotal;
-    // const discountAmount = subTotalWithCharges * (discountP / 100);
-    const total = (subTotalWithCharges) - (discount);
+    const totalCalc = subTotalWithCharges - (parseFloat(discount) || 0);
 
-    const vatAmount = total * 0.18;
-    const netTotal = total + vatAmount;
+    const vatCalc = totalCalc * 0.18;
+    const netTotalCalc = totalCalc + vatCalc;
 
     setSubTotal(subtotal.toFixed(2));
-    setTotal(total.toFixed(2));
-    setNetTotal(netTotal.toFixed(2));
-    setVatAmount(vatAmount.toFixed(2));
-
+    setTotal(totalCalc.toFixed(2));
+    setNetTotal(netTotalCalc.toFixed(2));
+    setVatAmount(vatCalc.toFixed(2));
   }, [addProduct, additionalCharges, discount]);
 
-
-  const currentTotalPaid = props.orderData?.payments?.map(payment => payment.amount).reduce((acc, amount) => acc + amount, 0);
+  const currentTotalPaid = initialOrderData?.payments?.map(payment => payment.amount).reduce((acc, amount) => acc + amount, 0) || 0;
   const paid = parseFloat(currentTotalPaid || 0) + parseFloat(paidAmount || 0);
   const totalPaid = parseFloat(paid || 0) + parseFloat(loanAmount || 0);
 
-  // useEffect(() => {
-
-  //   const totalAmount = parseFloat(total || 0);
-  //   const netAmount = parseFloat(netTotal || 0);
-  //   const paidValue = parseFloat(totalPaid || "0");
-
-  //   if (paidValue === totalAmount || paidValue === netAmount) {
-  //     console.log("Setting status to Paid");
-  //     setPaymentStatus("Paid");
-  //     setPaymentType("Partial");
-  //   } else if (paidValue > 0 && paidValue < netAmount || paidValue < totalAmount) {
-  //     console.log("Setting status to Advanced");
-  //     setPaymentStatus("Advanced");
-  //     setPaymentType("Partial");
-  //   }
-  // }, [totalPaid, netTotal, total, currentTotalPaid, addProduct, additionalCharges, vat]);
-
   useEffect(() => {
-  const totalAmount = parseFloat(total || 0);
-  const netAmount = parseFloat(netTotal || 0);
-  const paidValue = parseFloat(totalPaid || "0");
+    const totalAmount = parseFloat(total || 0);
+    const netAmount = parseFloat(netTotal || 0);
+    const paidValue = parseFloat(totalPaid || "0");
 
-  if (paidValue > 0 && (paidValue === totalAmount || paidValue === netAmount)) {
-    console.log("Setting status to Paid");
-    setPaymentStatus("Paid");
-    setPaymentType("Partial"); 
-  } 
-
-  else if (paidValue > 0 && (paidValue < netAmount || paidValue < totalAmount)) {
-    console.log("Setting status to Advanced");
-    setPaymentStatus("Advanced");
-    setPaymentType("Partial");
-  } 
-
-  else if (paidValue === 0) {
-    console.log("Setting status to Awaiting");
-    setPaymentStatus("Awaiting"); 
-    setPaymentType("None");
-  }
-}, [totalPaid, netTotal, total, currentTotalPaid, addProduct, additionalCharges, vat]);
-
+    if (paidValue > 0 && (paidValue === totalAmount || paidValue === netAmount)) {
+      setPaymentStatus("Paid");
+      setPaymentType("Partial");
+    } else if (paidValue > 0 && (paidValue < netAmount || paidValue < totalAmount)) {
+      setPaymentStatus("Advanced");
+      setPaymentType("Partial");
+    } else if (paidValue === 0) {
+      setPaymentStatus("Awaiting");
+      setPaymentType("None");
+    }
+  }, [totalPaid, netTotal, total, currentTotalPaid, addProduct, additionalCharges, vat]);
 
   useEffect(() => {
     if (!paidAmount || paidAmount === 0) {
@@ -363,23 +327,23 @@ export function EditOrder({ onUpdate, ...props }) {
   }, [paidAmount, total]);
 
   useEffect(() => {
-    if (props.totalLoanAmount === 0) {
+    if (propTotalLoanAmount === 0) {
       setIncludeLoan(false);
-    }
-    else
+    } else {
       setIncludeLoan(true);
-  }, [props.totalLoanAmount]);
+    }
+  }, [propTotalLoanAmount]);
 
-  const handleEditBatteryPackQuoteSubmit = async () => {
+  const handleEditBatteryPackQuoteSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     setIsSubmitting(true);
     try {
       const token = await getToken();
       let receiptUrl = "";
-      if (paidRecipt && paidRecipt.length > 0) {
+      if (paidReceipt && paidReceipt.length > 0) {
         try {
-          const file = paidRecipt[0];
+          const file = paidReceipt[0];
           receiptUrl = await uploadImageToCloudinary(file);
-          console.log("Upload successful, URL:", receiptUrl);
         } catch (uploadError) {
           console.error("Failed to upload receipt:", uploadError);
           toast.error("Failed to upload receipt image. Please try again.", { position: "bottom-right" });
@@ -387,9 +351,10 @@ export function EditOrder({ onUpdate, ...props }) {
           return;
         }
       }
-      const orderData = {
+
+      const orderPayload = {
         customer: {
-          customer_id: props.orderData.customer_id,
+          customer_id: initialOrderData.customer_id,
           Title: title,
           PhoneNo1: phoneNo1,
           PhoneNo2: phoneNo2,
@@ -400,24 +365,28 @@ export function EditOrder({ onUpdate, ...props }) {
           VatNo: vatNo,
         },
         order: {
-          OrderNo: props.orderData.order_no,
+          OrderNo: initialOrderData.order_no,
           SubTotal: parseFloat(subTotal) || 0,
-          additional_charges: additionalCharges.map(charge => ({
-            type: charge.type,
-            value: parseFloat(charge.value) || 0,
-          })),
+          // FIX: Format "Others" before sending
+          additional_charges: additionalCharges.map(charge => {
+            const finalType = charge.option === "Others" 
+                ? `Others(${charge.type})` 
+                : (charge.option || charge.type);
+            
+            return {
+                type: finalType,
+                value: parseFloat(charge.value) || 0,
+            };
+          }),
           Discount: parseFloat(discount) || 0,
           Total: parseFloat(total) || 0,
           Vat: vat,
-          // FullAmountPaidDate: paidDate,
-          // PaidAmount: parseFloat(currentTotalPaid) || 0,
-          OrderStatus: props.orderData.OrderStatus,
+          OrderStatus: initialOrderData.OrderStatus,
           PaymentStatus: paymentStatus,
           CreatedBy: user?.id,
           paidRecipt: receiptUrl,
           PoNo: poNo,
           SalesID: saleNo,
-
         },
         order_items: {
           items: addProduct
@@ -433,16 +402,16 @@ export function EditOrder({ onUpdate, ...props }) {
         },
         payments: {
           payment_type: paymentType,
-          amount: parseFloat(paidAmount),
-          loan_amount: parseFloat(loanAmount),
+          amount: parseFloat(paidAmount) || 0,
+          loan_amount: parseFloat(loanAmount) || 0,
           paid_date: paidDate,
+          payment_mode: paymentMode,
           image: receiptUrl,
           created_by: user?.id
         }
       };
 
-      const response = await updateOrder(token, orderId, orderData);
-
+      const response = await updateOrder(token, orderId, orderPayload);
       const isSuccess = response && (response.message === "success" || response.status === "success");
 
       if (isSuccess) {
@@ -464,45 +433,46 @@ export function EditOrder({ onUpdate, ...props }) {
   };
 
   return (
-    <Dialog className="" open={open} onOpenChange={(newOpen) => {
-      if (newOpen && !props.orderData) {
-        console.error("orderData is not available");
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (newOpen && !initialOrderData) {
         return;
       }
       setOpen(newOpen);
     }}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit</Button>
+        <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-10 px-4">
+          <Pencil className="w-4 h-4 mr-2" /> Edit
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[1200px] sm:h-screen h-[800px] overflow-y-auto my-8">
-        <DialogHeader>
-          <DialogTitle>{props.orderData?.type}{props.orderData?.order_no}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl">
+        <DialogHeader className="space-y-1.5">
+          <DialogTitle className="text-xl font-extrabold text-slate-800">{initialOrderData?.type}{initialOrderData?.order_no}</DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
             Make changes to order details. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
 
-
-        <>
-          <div className="flex items-center gap-2 w-fit">
-            <Label htmlFor="SaleNo" className="text-left">
+        <form onSubmit={handleEditBatteryPackQuoteSubmit} className="space-y-6 pt-4">
+          
+          <div className="flex items-center gap-3 w-fit">
+            <Label htmlFor="SaleNo" className="text-slate-700 font-semibold text-sm">
               Sale No.
             </Label>
-            <Select value={saleNo} onValueChange={setSaleNo}>
-              <SelectTrigger className="bg-white min-w-[150px]">
+            <Select value={saleNo?.toString() || undefined} onValueChange={setSaleNo}>
+              <SelectTrigger className="bg-slate-50 border-slate-200 h-10 rounded-xl min-w-[180px]">
                 <SelectValue placeholder="Select sale no" />
               </SelectTrigger>
-
               <SelectContent>
-                <Input
-                  placeholder="Search sales…"
-                  value={searchSales}
-                  onChange={(e) => setSearchSales(e.target.value)}
-                  className="w-full"
-                />
-
+                <div className="p-2">
+                  <Input
+                    placeholder="Search sales…"
+                    value={searchSales}
+                    onChange={(e) => setSearchSales(e.target.value)}
+                    className="w-full h-9 text-sm"
+                  />
+                </div>
                 {salesList?.map((sale) => (
-                  <SelectItem key={sale.id} value={sale.id}>
+                  <SelectItem key={sale.id} value={sale.id?.toString()}>
                     {sale.sale_no}
                   </SelectItem>
                 ))}
@@ -510,28 +480,21 @@ export function EditOrder({ onUpdate, ...props }) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2">
-            <div>
-              <h1 className="font-semibold text-2xl text-gray-800">Product Details</h1>
+          {/* Product Details Section */}
+          <div className="p-6 border border-slate-200/70 rounded-2xl shadow-sm bg-slate-50/50 space-y-6">
+            <h2 className="font-bold text-lg text-slate-800">Product Details</h2>
 
-            </div>
-            <div className="flex justify-between mt-6 mx-6">
-              <h1 className="">Unit Price</h1>
-              <h1 className="">Qty.</h1>
-              <h1 className="">Total Price</h1>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 grid-cols-1 gap-x-4">
-            <div>
-              {/* Product  */}
-              {
-                addProduct.map((product, index) => (
-                  <div key={index} className=" items-center py-2">
-                    <div>
+            <div className="space-y-4">
+              {addProduct.map((product, index) => (
+                <div key={product.localId || index} className="p-4 border border-slate-200/70 rounded-2xl bg-white shadow-sm space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    
+                    {/* Product Select */}
+                    <div className="md:col-span-5">
                       <Select
-                        value={addProduct[index].product_id.toString()}
+                        value={addProduct[index].product_id ? addProduct[index].product_id.toString() : undefined}
                         onValueChange={(value) => {
-                          const selectedProduct = products.find(p => p.productId.toString() === value);
+                          const selectedProduct = products.find(p => p.productId?.toString() === value?.toString());
                           const specs = selectedProduct?.specifications || '';
                           const note = getNoteFromSpecification(specs);
 
@@ -539,13 +502,14 @@ export function EditOrder({ onUpdate, ...props }) {
                             const updated = [...prev];
                             const qty = 1;
                             const price = selectedProduct?.price || 0;
+
                             updated[index] = {
                               ...updated[index],
-                              id: selectedProduct?.id || 0,
+                              id: selectedProduct?.id || null,
                               product_id: selectedProduct?.productId || 0,
                               product_name: selectedProduct?.productName || '',
                               unitprice: price,
-                              specifications: selectedProduct?.specifications || '',
+                              specifications: specs,
                               note: note,
                               qty,
                               subtotal: price * qty,
@@ -557,8 +521,7 @@ export function EditOrder({ onUpdate, ...props }) {
                           if (!isOpen) setSearch("");
                         }}
                       >
-
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl w-full">
                           <SelectValue placeholder="Select product">
                             {product.product_name || "Select product"}
                           </SelectValue>
@@ -569,317 +532,282 @@ export function EditOrder({ onUpdate, ...props }) {
                               placeholder="Search products…"
                               value={search}
                               onChange={(e) => setSearch(e.target.value)}
-                              className="w-full"
+                              className="w-full h-9 text-sm"
                             />
                           </div>
 
                           {isLoading ? (
-                            <div className="p-2 text-sm text-gray-500">Loading...</div>
+                            <div className="p-2 text-sm text-slate-400">Loading...</div>
                           ) : products.length > 0 ? (
-                            products.map((product) => (
-                              <SelectItem key={product.productId} value={product.productId.toString()}>
-                                {product.productName}
+                            products.map((prod) => (
+                              <SelectItem key={prod.productId} value={prod.productId?.toString()}>
+                                {prod.productName}
                               </SelectItem>
                             ))
                           ) : (
-                            <div className="p-2 text-sm text-gray-500">No products found</div>
+                            <div className="p-2 text-sm text-slate-400">No products found</div>
                           )}
                         </SelectContent>
-
                       </Select>
                     </div>
-                    <div>
-                      <Textarea
-                        id="Product1Price"
-                        type="text"
-                        value={addProduct[index]?.note}
+
+                    {/* Unit Price */}
+                    <div className="md:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Unit Price"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl text-right font-medium"
+                        value={product.unitprice}
                         onChange={(e) => {
+                          const value = Number(e.target.value) || 0;
                           const updated = [...addProduct];
-                          updated[index].note = e.target.value;
+                          const qty = updated[index].qty || 1;
+                          updated[index].unitprice = value;
+                          updated[index].subtotal = value * qty;
                           setAddProduct(updated);
                         }}
-                        placeholder={`**Note for product ${index + 1}**`}
-                        className="col-span-3 w-full mt-1"
                       />
+                    </div>
+
+                    {/* Qty */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className={`p-1.5 rounded-lg border border-slate-200 ${product.qty > 1 ? 'text-slate-700 hover:bg-slate-50' : 'text-slate-300'}`}
+                          onClick={() => handleDecrementQty(index)}
+                        >
+                          <MinusCircleIcon size={16} />
+                        </button>
+                        <Input
+                          type="number"
+                          placeholder="Qty"
+                          className="bg-slate-50 border-slate-200 h-11 rounded-xl text-center font-medium flex-1"
+                          value={product.qty}
+                          onChange={(e) => {
+                            let qty = Number(e.target.value) || 1;
+                            if (qty < 1) qty = 1;
+                            const updated = [...addProduct];
+                            updated[index].qty = qty;
+                            updated[index].subtotal = qty * updated[index].unitprice;
+                            setAddProduct(updated);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+                          onClick={() => handleIncrementQty(index)}
+                        >
+                          <PlusCircleIcon size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Subtotal & Delete */}
+                    <div className="md:col-span-3 flex items-center gap-3">
+                      <Input
+                        type="number"
+                        placeholder="Subtotal"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl text-right font-bold flex-1"
+                        value={product.subtotal}
+                        readOnly
+                      />
+                      {addProduct.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleRemoveProduct(index)}
+                          className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-2 h-11 w-11 rounded-xl shrink-0"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
                     </div>
 
                   </div>
-                ))
-              }
 
-              <div
-                className="flex items-center text-blue-600 hover:underline cursor-pointer mt-1 gap-x-1"
-              >
-                <PlusCircle size={12} onClick={handleAddProductChange} />
-                <span className="text-xs" onClick={handleAddProductChange}>Add</span>
-              </div>
-            </div>
-            <div className="justify-between items-center">
-              {
-                addProduct.map((product, index) => (
-                  <div key={index} className="grid grid-cols-3 py-2 pb-8">
-                    <div>
-                      <Input
-                        id={addProduct[index].unitprice}
-                        type="number"
-                        value={addProduct[index]?.unitprice}
-                        onChange={(e) => {
-                          const updated = [...addProduct];
-                          updated[index].unitprice = e.target.value;
-                          updated[index].subtotal = e.target.value * addProduct[index].qty;
-                          setAddProduct(updated);
-                        }}
-                        className="col-span-3 w-fit text-right"
-                      />
-                    </div>
-                    <div className="flex gap-x-2  justify-center">
-                      <button
-                        type="button"
-                        className={`text-black hover:text-black-700 mb-9 ${addProduct[index].qty > 1 ? '' : 'text-slate-300 hover:text-black-700 mb-9'}`}
-                        onClick={() => handleDecrementQty(index)}
-                      >
-                        <MinusCircleIcon size={18} />
-                      </button>
-                      <Input
-                        id="Product1Price"
-                        type="number"
-                        value={addProduct[index]?.qty}
-                        onChange={(e) => {
-                          const updated = [...addProduct];
-                          updated[index].qty = e.target.value;
-                          updated[index].subtotal = e.target.value * addProduct[index].unitprice;
-                          setAddProduct(updated);
-                        }}
-                        className="col-span-3 w-20 text-center"
-                      />
-                      <button
-                        type="button"
-                        className="text-black hover:text-black-700 mb-9"
-                        onClick={() => handleIncrementQty(index)}
-                      >
-                        <PlusCircleIcon size={18} />
-                      </button>
-                    </div>
-                    <div className="flex mr-8 mb-10">
-                      <Input
-                        id="Product1Price"
-                        type="number"
-                        value={addProduct[index]?.subtotal}
-                        onChange={(e) => {
-                          const updated = [...addProduct];
-                          updated[index].subtotal = e.target.value;
-                          setAddProduct(updated);
-                        }}
-                        className="col-span-3 w-fit text-right"
-                      />
-                      <button
-                        type="button"
-                        className="text-zinc-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-                        onClick={() => handleRemoveProduct(index)}
-                      >
-                        <MdDelete size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              }
-
-
-            </div>
-          </div>
-
-          <Separator className="mt-2" />
-          <div className="grid grid-cols-2">
-            {/* Labels */}
-            <div className="pt-2 space-y-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="subTotal" className="justify-self-start text-right">
-                  Sub Total
-                </Label>
-              </div>
-
-              <div>
-                <Label className="justify-self-start text-right">
-                  Additional Charges
-                </Label>
-                <div className={additionalCharges.length === 0 ? "hidden" : ""}>
-                  {additionalCharges.map((charge, index) => (
-                    <div key={index} className="flex items-center py-2 w-[430px]">
-                      <Select
-                        value={charge.type}
-                        onValueChange={(value) => {
-                          const updated = [...additionalCharges];
-                          updated[index].id = charge.id;
-                          updated[index].type = value;
-                          setAdditionalCharges(updated);
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select charge type">
-                            {charge.type || "Select charge type"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Delivery Charges">Delivery Charges</SelectItem>
-                          <SelectItem value="Installation Charges">Installation Charges</SelectItem>
-                          <SelectItem value="Installation Material Charges">Installation Material Charges</SelectItem>
-                          <SelectItem value="Others">Others</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-
-                <div
-                  className="flex items-center text-blue-600 hover:underline cursor-pointer gap-x-1"
-
-                >
-                  <PlusCircle size={12} onClick={handleAddAdditionalCharge} />
-                  <span className="text-xs" onClick={handleAddAdditionalCharge}>Add</span>
-                </div>
-              </div>
-
-
-              <div className="grid grid-cols-4 items-center gap-4 pt-3">
-                <Label htmlFor="discount" className="justify-self-start text-right">
-                  Discount (%)
-                </Label>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4 pt-4">
-                <Label htmlFor="total" className="justify-self-start text-right">
-                  Total
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 pt-6">
-                <Checkbox
-                  id="vat"
-                  checked={vat}
-                  onCheckedChange={() => setVat(!vat)}
-                />
-                <Label htmlFor="vat" className="text-xs font-normal italic">
-                  Include VAT (18%)
-                </Label>
-              </div>
-              {
-                vat && (
-                  <div className="flex items-center gap-3 pt-8">
-                    <Label htmlFor="NetTotal" className="">
-                      Net Total
-                    </Label>
-                  </div>
-                )
-              }
-
-            </div>
-
-            <div className="space-y-4">
-              {/* <Input
-                id="subtotal"
-                type="number"
-                value={subTotal}
-                onChange={(e) => setSubTotal(e.target.value)}
-                className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right  mb-6 mr-4"
-              /> */}
-              <Input
-                id="subtotal"
-                type="number"
-                value={subTotal}
-                readOnly
-                className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mb-6 mr-4 bg-gray-100"
-              />
-
-              {additionalCharges.map((charge, index) => (
-                <div
-                  key={index}
-                  className="flex justify-end items-center"
-                >
-                  <Input
-                    id={`additionalCharge-${index}.value`}
-                    type="number"
-                    value={additionalCharges[index]?.value}
+                  {/* Note */}
+                  <Textarea
+                    value={product.note}
                     onChange={(e) => {
-                      const updated = [...additionalCharges];
-                      updated[index].value = e.target.value;
-                      updated[index].id = charge.id;
-                      setAdditionalCharges(updated);
+                      const updated = [...addProduct];
+                      updated[index].note = e.target.value;
+                      setAddProduct(updated);
                     }}
-                    className="w-[185px] text-right"
+                    placeholder={`Note for product ${index + 1}`}
+                    className="bg-slate-50/50 border-slate-200 text-xs rounded-xl p-3"
+                    rows={2}
                   />
-                  <button
-                    type="button"
-                    className="text-zinc-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-                    onClick={() => handleRemoveCharge(index)}
-                  >
-                    <MdDelete size={18} />
-                  </button>
                 </div>
               ))}
 
-              <div className="space-y-4 pt-7">
-                <Input
-                  id="discount"
-                  type="number"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4"
-                />
-                {/* <Input
-                  id="total"
-                  type="number"
-                  value={total}
-                  onChange={(e) => setTotal(e.target.value)}
-                  className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4"
-                  readOnly
-                /> */}
-                <Input
-                  id="total"
-                  type="number"
-                  value={total}
-                  className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4 bg-gray-100"
-                  readOnly
-                />
-                {
-                  vat && (<>
-                    <Input
-                      id="vat"
-                      type="number"
-                      value={vatAmount}
-                      className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4 bg-gray-100"
-                      readOnly
-                    />
-                    <Input
-                      id="netTotal"
-                      type="number"
-                      value={netTotal}
-                      className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4 bg-gray-100"
-                      readOnly
-                    />
-                  </>
-                  )
-                }
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddProductChange}
+                className="border-slate-200 text-blue-600 hover:bg-blue-50 rounded-xl h-10 px-4 w-full"
+              >
+                <PlusCircle className="w-4 h-4 mr-2" /> Add Another Product
+              </Button>
+            </div>
 
+            <Separator className="my-6" />
+
+            {/* Totals & Calculations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-slate-200/70">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Additional Charges</Label>
+                  {additionalCharges.map((charge, index) => (
+                    <div key={charge.localId || index} className="flex items-start gap-2">
+                      <div className="flex-1 flex flex-col gap-2">
+                        <Select
+                          value={charge.option || ""}
+                          onValueChange={(value) => {
+                            const updated = [...additionalCharges];
+                            updated[index].option = value;
+                            updated[index].type = value === "Others" ? "" : value;
+                            setAdditionalCharges(updated);
+                          }}
+                        >
+                          <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                            <SelectValue placeholder="Charge Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Delivery Charges">Delivery Charges</SelectItem>
+                            <SelectItem value="Installation Charges">Installation Charges</SelectItem>
+                            <SelectItem value="Installation Material Charges">Installation Material Charges</SelectItem>
+                            <SelectItem value="Others">Others</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Render manual input field if option is "Others" */}
+                        {charge.option === "Others" && (
+                          <Input
+                            placeholder="Enter custom charge type"
+                            className="bg-slate-50 border-slate-200 h-11 rounded-xl mt-1"
+                            value={charge.type}
+                            onChange={(e) => {
+                              const updated = [...additionalCharges];
+                              updated[index].type = e.target.value;
+                              setAdditionalCharges(updated);
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      <Input
+                        type="number"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl w-32 text-right"
+                        placeholder="0.00"
+                        value={charge.value}
+                        onChange={(e) => {
+                          const updated = [...additionalCharges];
+                          updated[index].value = e.target.value;
+                          setAdditionalCharges(updated);
+                        }}
+                      />
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => handleRemoveCharge(index)}
+                        className="text-rose-500 hover:text-rose-700 p-2 h-11 w-11 rounded-xl"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddAdditionalCharge}
+                    className="border-slate-200 text-blue-600 hover:bg-blue-50 rounded-xl h-9 px-3 text-xs"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Add Charge
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <Checkbox
+                    id="vat"
+                    checked={vat}
+                    onCheckedChange={() => setVat(!vat)}
+                  />
+                  <Label htmlFor="vat" className="text-sm font-semibold text-slate-700 cursor-pointer">
+                    Include VAT (18%)
+                  </Label>
+                </div>
               </div>
 
+              <div className="space-y-4 flex flex-col justify-end">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-semibold text-sm">Sub Total</span>
+                  <Input
+                    type="number"
+                    className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-medium"
+                    value={subTotal}
+                    readOnly
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-semibold text-sm">Discount</span>
+                  <Input
+                    type="number"
+                    className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-medium"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-800 font-bold text-base">Total</span>
+                  <Input
+                    type="number"
+                    className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-bold text-slate-900"
+                    value={total}
+                    readOnly
+                  />
+                </div>
+
+                {vat && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 font-semibold text-sm">VAT (18%)</span>
+                      <Input
+                        type="number"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-medium"
+                        value={vatAmount}
+                        readOnly
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                      <span className="text-blue-700 font-extrabold text-base">Net Total</span>
+                      <Input
+                        type="number"
+                        className="bg-blue-50 border-blue-200 h-11 rounded-xl w-44 text-right font-extrabold text-blue-800"
+                        value={netTotal}
+                        readOnly
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-          <Separator className="mt-2" />
-          <div>
-            <h1 className="text-md font-semibold">Customer Details</h1>
-            <div className="grid sm:grid-cols-2 grid-cols-1 gap-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PackType" className="justify-self-start text-left">
-                    Title
-                  </Label>
-                  <Select
-                    value={title || undefined}
-                    onValueChange={setTitle}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select title">
-                        {title || "Select title"}
-                      </SelectValue>
+
+          {/* Customer Details Section */}
+          <div className="p-6 border border-slate-200/70 rounded-2xl shadow-sm bg-slate-50/50 space-y-6">
+            <h2 className="font-bold text-lg text-slate-800">Customer Details</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Title</Label>
+                  <Select value={title || undefined} onValueChange={setTitle}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                      <SelectValue placeholder="Select title" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Mr.">Mr</SelectItem>
@@ -892,180 +820,123 @@ export function EditOrder({ onUpdate, ...props }) {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PhoneNo2" className="justify-self-start text-left">
-                    Secondary Phone No.
-                  </Label>
-                  <Input
-                    id="PhoneNo2"
-                    value={phoneNo2}
-                    onChange={(e) => setPhoneNo2(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Secondary Phone No.</Label>
+                  <Input value={phoneNo2} onChange={(e) => setPhoneNo2(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="FirstName" className="justify-self-start text-left">
-                    First Name
-                  </Label>
-                  <Input
-                    id="FirstName"
-                    value={fisrtName}
-                    onChange={(e) => setFisrtName(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">First Name</Label>
+                  <Input value={fisrtName} onChange={(e) => setFisrtName(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="John" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="Address" className="justify-self-start text-left">
-                    Address
-                  </Label>
-                  <Input
-                    id="Address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Address</Label>
+                  <Input value={address} onChange={(e) => setAddress(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="123 Street Name" />
                 </div>
 
-                {
-                  vat && (<div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="VatNo" className="justify-self-start text-left">
-                      VAT No
-                    </Label>
-                    <Input
-                      id="VatNo"
-                      value={vatNo}
-                      onChange={(e) => setVatNo(e.target.value)}
-                      className="col-span-3"
-                    />
-                  </div>)
-                }
-
+                {vat && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-slate-700 font-semibold text-sm">VAT No.</Label>
+                    <Input value={vatNo} onChange={(e) => setVatNo(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Customer's VAT No" />
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PhoneNo1" className="justify-self-start text-left">
-                    Phone No.
-                  </Label>
-                  <Input
-                    id="PhoneNo1"
-                    value={phoneNo1}
-                    onChange={(e) => setPhoneNo1(e.target.value)}
-                    className="col-span-3"
-                  />
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Phone No.</Label>
+                  <Input value={phoneNo1} onChange={(e) => setPhoneNo1(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="Email" className="justify-self-start text-left">
-                    Email
-                  </Label>
-                  <Input
-                    id="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Email</Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="john@example.com" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="LastName" className="justify-self-start text-left">
-                    Last Name
-                  </Label>
-                  <Input
-                    id="LastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Last Name</Label>
+                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Doe" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PoNo" className="justify-self-start text-left">
-                    PO No
-                  </Label>
-                  <Input
-                    id="PoNo"
-                    value={poNo}
-                    onChange={(e) => setPoNo(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">PO No.</Label>
+                  <Input value={poNo} onChange={(e) => setPoNo(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Purchasing Order No" />
                 </div>
               </div>
             </div>
           </div>
 
-          <Separator className="mt-4" />
-          {
-            !(props.orderData?.PaymentStatus === "Paid" && currentTotalPaid >= (vat ? parseFloat(netTotal) : parseFloat(total))) && <div>
-              <Separator className="mt-4" />
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h1 className="text-md font-semibold">Payment Details</h1>
-                </div>
-                <div>
-                  <div className="flex items-center gap-3 pt-6">
-                    <Checkbox
-                      id="loan"
-                      checked={includeLoan}
-                      oonCheckedChange={(checked) => {
-                        setIncludeLoan(checked);
-                        if (!checked) setLoanAmount(0);
-                      }}
-                    />
-                    <Label htmlFor="loan" className="text-xs font-normal italic">
-                      Include Loan
-                    </Label>
-                  </div>
+          {/* Payment Details Section */}
+          {!(initialOrderData?.PaymentStatus === "Paid" && currentTotalPaid >= (vat ? parseFloat(netTotal) : parseFloat(total))) && (
+            <div className="p-6 border border-slate-200/70 rounded-2xl shadow-sm bg-slate-50/50 space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="font-bold text-lg text-slate-800">Payment Details</h2>
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="loan"
+                    checked={includeLoan}
+                    onCheckedChange={(checked) => {
+                      setIncludeLoan(checked);
+                      if (!checked) setLoanAmount(0);
+                    }}
+                  />
+                  <Label htmlFor="loan" className="text-sm font-semibold text-slate-700 cursor-pointer">
+                    Include Loan
+                  </Label>
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 grid-cols-1 gap-4">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="PaidDate" className="justify-self-start text-left">
-                      Paid Date
-                    </Label>
+              <div className="grid sm:grid-cols-2 grid-cols-1 gap-5">
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="PaidDate" className="text-slate-700 font-semibold text-sm">Paid Date</Label>
                     <input
                       type="date"
                       id="PaidDate"
-                      value={paidDate ? paidDate.slice(0, 10) : ""}
-                      onChange={(e) => {
-                        const date = new Date(e.target.value);
-                        const isoDate = date.toISOString();
-                        setPaidDate(isoDate);
-                      }}
-                      className="col-span-3 border rounded-md p-2 w-full"
+                      value={paidDate || ""}
+                      onChange={(e) => setPaidDate(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 h-11 rounded-xl px-3 w-full text-sm"
                     />
                   </div>
 
-
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="PaidRecipt" className="justify-self-start text-left">
-                      Paid Recipt
-                    </Label>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="PaidReceipt" className="text-slate-700 font-semibold text-sm">Paid Receipt</Label>
                     <input
                       type="file"
-                      id="PaidRecipt"
-                      onChange={(e) => setPaidRecipt(e.target.files)}
-                      className="col-span-3 border rounded-md p-2 w-full"
+                      id="PaidReceipt"
+                      onChange={(e) => setPaidReceipt(e.target.files)}
+                      className="bg-slate-50 border border-slate-200 h-11 rounded-xl px-3 pt-2 w-full text-sm cursor-pointer file:text-blue-700 file:bg-blue-50 file:border-0 file:rounded-lg file:mr-3 file:px-3 file:py-0.5 hover:file:bg-blue-100"
                     />
                   </div>
+
+                  {includeLoan && (
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="loanInput" className="text-slate-700 font-semibold text-sm">Loan Amount</Label>
+                      <Input
+                        id="loanInput"
+                        type="number"
+                        value={loanAmount}
+                        onChange={(e) => setLoanAmount(e.target.value)}
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+                        placeholder="Loan Amount"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="PaidAmount" className="justify-self-start text-left">
-                      Paid Amount
-                    </Label>
-                    <input
+
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="PaidAmount" className="text-slate-700 font-semibold text-sm">Paid Amount</Label>
+                    <Input
                       type="number"
                       id="PaidAmount"
                       value={paidAmount}
                       onChange={(e) => {
                         const value = parseFloat(e.target.value);
+                        const safeLoanAmount = parseFloat(loanAmount || 0);
                         const max = parseFloat(
-                          (vat ? netTotal - (currentTotalPaid + loanAmount) : total - (currentTotalPaid + loanAmount)).toFixed(2)
+                          (vat ? netTotal - (currentTotalPaid + safeLoanAmount) : total - (currentTotalPaid + safeLoanAmount)).toFixed(2)
                         );
 
                         if (isNaN(value) || value <= max) {
@@ -1074,56 +945,49 @@ export function EditOrder({ onUpdate, ...props }) {
                           setPaidAmount(max.toString());
                         }
                       }}
-                      placeholder={`Remaining Amount: ${vat ? (netTotal - (currentTotalPaid + loanAmount)).toFixed(2) : (total - (currentTotalPaid + loanAmount)).toFixed(2)}`}
-                      className="col-span-3 border rounded-md p-2 w-full"
-                      max={vat ? (netTotal - (currentTotalPaid + loanAmount)).toFixed(2) : (total - (currentTotalPaid + loanAmount)).toFixed(2)}
+                      placeholder={`Remaining: ${vat ? (netTotal - (currentTotalPaid + parseFloat(loanAmount || 0))).toFixed(2) : (total - (currentTotalPaid + parseFloat(loanAmount || 0))).toFixed(2)}`}
+                      className="bg-slate-50 border-slate-200 h-11 rounded-xl"
+                      max={vat ? (netTotal - (currentTotalPaid + parseFloat(loanAmount || 0))).toFixed(2) : (total - (currentTotalPaid + parseFloat(loanAmount || 0))).toFixed(2)}
                     />
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    {
-                      loanAmount && (
-                        <div className="flex items-center gap-3">
-                          <Label htmlFor="NetTotal" className="">
-                            Loan Amount:
-                          </Label>
-                        </div>
-                      )
-                    }
 
-                    {
-                      loanAmount && (<>
-                        <Input
-                          id="loan"
-                          type="number"
-                          value={loanAmount}
-                          onChange={(e) => setLoanAmount(e.target.value)}
-                          className="col-span-3"
-                        />
-                      </>
-                      )
-                    }
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-slate-700 font-semibold text-sm">Mode of Payment</Label>
+                    <Select onValueChange={setPaymentMode} value={paymentMode}>
+                      <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl w-full">
+                        <SelectValue placeholder="Select mode of payment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="Card">Card</SelectItem>
+                        <SelectItem value="Cheque">Cheque</SelectItem>
+                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-
-
                 </div>
               </div>
             </div>
-          }
+          )}
 
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <DialogFooter className="pt-4 border-t border-slate-100 flex gap-3 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6"
+            >
               Cancel
             </Button>
-            <Button
-              className="bg-blue-800 hover:bg-blue-900"
-              onClick={handleEditBatteryPackQuoteSubmit}
+            <Button 
+              type="submit" 
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Submitting..." : "Save changes"}
+              {isSubmitting ? "Saving..." : "Save changes"}
             </Button>
           </DialogFooter>
-        </>
+        </form>
       </DialogContent>
     </Dialog>
   );

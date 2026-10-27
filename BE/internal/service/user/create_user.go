@@ -1,8 +1,8 @@
 package user
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {

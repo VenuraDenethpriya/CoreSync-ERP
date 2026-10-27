@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -109,6 +109,7 @@ func (r *InventoryItemUsageRepository) CreateUsageAndAdjustInventory(db *gorm.DB
 			ItemID:    childItem.ID,
 			ItemCode:  childItem.ItemCode,
 			OrderID:   usageReq.OrderID,
+			PackID:    usageReq.PackID,
 			OrderType: usageReq.OrderType,
 			OrederNo:  usageReq.OrederNo,
 			UserName:  usageReq.UserName,
@@ -147,6 +148,9 @@ type usageRawResult struct {
 	OrderType string `gorm:"column:order_type"`
 	OrderNo   string `gorm:"column:order_no"`
 
+	PackID   uuid.UUID `gorm:"column:pack_id"`
+	SerialNo string    `gorm:"column:serial_no"`
+
 	UserFirstName string `gorm:"column:user_first_name"`
 	UserLastName  string `gorm:"column:user_last_name"`
 }
@@ -167,6 +171,8 @@ func mapRawToDomain(r usageRawResult) *domain.InventoryItemUsage {
 		OrderID:       r.OrderID,
 		OrderType:     r.OrderType,
 		OrederNo:      r.OrderNo,
+		PackID:        r.PackID,
+		SerialNo:      r.SerialNo,
 		UserName:      finalUserName,
 		CreatedAt:     r.CreatedAt,
 		User: &domain.User{
@@ -184,6 +190,7 @@ func mapRawToDomain(r usageRawResult) *domain.InventoryItemUsage {
 
 // 	var distinctOrders []uuid.UUID
 // 	var total int64
+// 	var isDirectInventoryJoin bool
 
 // 	base := r.db.Table("inventory_item_usage").
 // 		Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
@@ -193,6 +200,20 @@ func mapRawToDomain(r usageRawResult) *domain.InventoryItemUsage {
 // 		Distinct("inventory_item_usage.order_id").
 // 		Count(&total).Error; err != nil {
 // 		return nil, 0, err
+// 	}
+
+// 	if total == 0 {
+// 		isDirectInventoryJoin = true
+
+// 		base = r.db.Table("inventory_item_usage").
+// 			Joins("JOIN inventory ii ON ii.id = inventory_item_usage.item_id").
+// 			Where("inventory_item_usage.item_id = ?", itemID)
+
+// 		if err := base.Session(&gorm.Session{}).
+// 			Distinct("inventory_item_usage.order_id").
+// 			Count(&total).Error; err != nil {
+// 			return nil, 0, err
+// 		}
 // 	}
 
 // 	if total == 0 {
@@ -209,37 +230,56 @@ func mapRawToDomain(r usageRawResult) *domain.InventoryItemUsage {
 // 		return nil, 0, err
 // 	}
 
+// 	if len(distinctOrders) == 0 {
+// 		return []*domain.InventoryItemUsage{}, int(total), nil
+// 	}
+
 // 	var rawResults []usageRawResult
 
-// 	err := r.db.Table("inventory_item_usage").
-// 		Select(`
-// 			inventory_item_usage.id,
-// 			inventory_item_usage.order_id,
-// 			inventory_item_usage.item_id,
-// 			inventory_item_usage.user_name,
-// 			inventory_item_usage.created_at,
-
-// 			ii.item_code as child_code,
-// 			ii.item_id as parent_id,
-// 			inv.item_code as parent_code,
-// 			inv.item_name as parent_name,
-
-// 			o.type as order_type,
-// 			o.order_no as order_no,
-
-// 			u.first_name as user_first_name,
-// 			u.last_name as user_last_name
-// 		`).
-// 		Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
-// 		Joins("LEFT JOIN inventory inv ON inv.id = ii.item_id").
+// 	finalQuery := r.db.Table("inventory_item_usage").
 // 		Joins("LEFT JOIN orders o ON o.order_id = inventory_item_usage.order_id").
 // 		Joins("LEFT JOIN users u ON u.clerk_id = inventory_item_usage.user_name").
 // 		Where("inventory_item_usage.order_id IN ?", distinctOrders).
-// 		Where("ii.item_id = ?", itemID).
-// 		Order("inventory_item_usage.created_at DESC").
-// 		Scan(&rawResults).Error
+// 		Order("inventory_item_usage.created_at DESC")
 
-// 	if err != nil {
+// 	if isDirectInventoryJoin {
+// 		finalQuery = finalQuery.
+// 			Select(`
+// 				inventory_item_usage.id, inventory_item_usage.order_id,
+// 				inventory_item_usage.item_id, inventory_item_usage.user_name,
+// 				inventory_item_usage.created_at,
+
+// 				'' as child_code,
+// 				ii.id as parent_id,
+// 				ii.item_code as parent_code,
+// 				ii.item_name as parent_name,
+
+// 				o.type as order_type, o.order_no as order_no,
+// 				u.first_name as user_first_name, u.last_name as user_last_name
+// 			`).
+// 			Joins("JOIN inventory ii ON ii.id = inventory_item_usage.item_id").
+// 			Where("inventory_item_usage.item_id = ?", itemID)
+// 	} else {
+// 		finalQuery = finalQuery.
+// 			Select(`
+// 				inventory_item_usage.id, inventory_item_usage.order_id,
+// 				inventory_item_usage.item_id, inventory_item_usage.user_name,
+// 				inventory_item_usage.created_at,
+
+// 				ii.item_code as child_code,
+// 				ii.item_id as parent_id,
+// 				inv.item_code as parent_code,
+// 				inv.item_name as parent_name,
+
+// 				o.type as order_type, o.order_no as order_no,
+// 				u.first_name as user_first_name, u.last_name as user_last_name
+// 			`).
+// 			Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
+// 			Joins("LEFT JOIN inventory inv ON inv.id = ii.item_id").
+// 			Where("ii.item_id = ?", itemID)
+// 	}
+
+// 	if err := finalQuery.Scan(&rawResults).Error; err != nil {
 // 		return nil, 0, err
 // 	}
 
@@ -257,7 +297,6 @@ func (r *InventoryItemUsageRepository) GetUsageGroupedByOrder(
 	limit, offset int,
 ) ([]*domain.InventoryItemUsage, int, error) {
 
-	var distinctOrders []uuid.UUID
 	var total int64
 	var isDirectInventoryJoin bool
 
@@ -265,8 +304,11 @@ func (r *InventoryItemUsageRepository) GetUsageGroupedByOrder(
 		Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
 		Where("ii.item_id = ?", itemID)
 
-	if err := base.Session(&gorm.Session{}).
-		Distinct("inventory_item_usage.order_id").
+	// FIX: Prioritize Pack ID over Order ID. Added NULLIF to safely ignore zero-value UUIDs.
+	groupExpr := "COALESCE(NULLIF(inventory_item_usage.pack_id, '00000000-0000-0000-0000-000000000000'::uuid), NULLIF(inventory_item_usage.order_id, '00000000-0000-0000-0000-000000000000'::uuid), inventory_item_usage.id)"
+
+	// 1. EXACT COUNT OF UNIFIED GROUPS
+	if err := r.db.Table("(?) as subquery", base.Select(groupExpr).Group(groupExpr)).
 		Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -278,8 +320,7 @@ func (r *InventoryItemUsageRepository) GetUsageGroupedByOrder(
 			Joins("JOIN inventory ii ON ii.id = inventory_item_usage.item_id").
 			Where("inventory_item_usage.item_id = ?", itemID)
 
-		if err := base.Session(&gorm.Session{}).
-			Distinct("inventory_item_usage.order_id").
+		if err := r.db.Table("(?) as subquery", base.Select(groupExpr).Group(groupExpr)).
 			Count(&total).Error; err != nil {
 			return nil, 0, err
 		}
@@ -289,60 +330,79 @@ func (r *InventoryItemUsageRepository) GetUsageGroupedByOrder(
 		return []*domain.InventoryItemUsage{}, 0, nil
 	}
 
+	// 2. PLUCK DISTINCT GROUP IDs
+	var groupIDs []string
+
 	if err := base.Session(&gorm.Session{}).
-		Select("inventory_item_usage.order_id").
-		Group("inventory_item_usage.order_id").
+		Select(groupExpr).
+		Group(groupExpr).
 		Order("MAX(inventory_item_usage.created_at) DESC").
 		Limit(limit).
 		Offset(offset).
-		Pluck("inventory_item_usage.order_id", &distinctOrders).Error; err != nil {
+		Pluck(groupExpr, &groupIDs).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if len(distinctOrders) == 0 {
+	if len(groupIDs) == 0 {
 		return []*domain.InventoryItemUsage{}, int(total), nil
 	}
 
+	// 3. FINAL QUERY JOINING BOTH ORDERS AND PACKS
 	var rawResults []usageRawResult
 
 	finalQuery := r.db.Table("inventory_item_usage").
-		Joins("LEFT JOIN orders o ON o.order_id = inventory_item_usage.order_id").
+		Joins("LEFT JOIN orders ord ON ord.order_id = inventory_item_usage.order_id").
+		Joins("LEFT JOIN order_items pack ON pack.id = inventory_item_usage.pack_id"). // Join pack for serial_no
 		Joins("LEFT JOIN users u ON u.clerk_id = inventory_item_usage.user_name").
-		Where("inventory_item_usage.order_id IN ?", distinctOrders).
+		Where(groupExpr+" IN ?", groupIDs).
 		Order("inventory_item_usage.created_at DESC")
+
+	selectDirect := `
+		inventory_item_usage.id, 
+		COALESCE(inventory_item_usage.order_id, '00000000-0000-0000-0000-000000000000'::uuid) as order_id, 
+		COALESCE(inventory_item_usage.pack_id, '00000000-0000-0000-0000-000000000000'::uuid) as pack_id,
+		inventory_item_usage.item_id, inventory_item_usage.user_name,
+		inventory_item_usage.created_at,
+
+		'' as child_code,
+		ii.id as parent_id,
+		ii.item_code as parent_code,
+		ii.item_name as parent_name,
+
+		COALESCE(ord.type, '') as order_type, 
+		COALESCE(ord.order_no, '') as order_no,
+		COALESCE(pack.serial_no, '') as serial_no,
+		COALESCE(u.first_name, '') as user_first_name, 
+		COALESCE(u.last_name, '') as user_last_name
+	`
+
+	selectIndirect := `
+		inventory_item_usage.id, 
+		COALESCE(inventory_item_usage.order_id, '00000000-0000-0000-0000-000000000000'::uuid) as order_id, 
+		COALESCE(inventory_item_usage.pack_id, '00000000-0000-0000-0000-000000000000'::uuid) as pack_id,
+		inventory_item_usage.item_id, inventory_item_usage.user_name,
+		inventory_item_usage.created_at,
+
+		ii.item_code as child_code,
+		ii.item_id as parent_id,
+		inv.item_code as parent_code,
+		inv.item_name as parent_name,
+
+		COALESCE(ord.type, '') as order_type, 
+		COALESCE(ord.order_no, '') as order_no,
+		COALESCE(pack.serial_no, '') as serial_no,
+		COALESCE(u.first_name, '') as user_first_name, 
+		COALESCE(u.last_name, '') as user_last_name
+	`
 
 	if isDirectInventoryJoin {
 		finalQuery = finalQuery.
-			Select(`
-				inventory_item_usage.id, inventory_item_usage.order_id, 
-				inventory_item_usage.item_id, inventory_item_usage.user_name, 
-				inventory_item_usage.created_at,
-				
-				'' as child_code,
-				ii.id as parent_id,
-				ii.item_code as parent_code,
-				ii.item_name as parent_name,
-				
-				o.type as order_type, o.order_no as order_no,
-				u.first_name as user_first_name, u.last_name as user_last_name
-			`).
+			Select(selectDirect).
 			Joins("JOIN inventory ii ON ii.id = inventory_item_usage.item_id").
 			Where("inventory_item_usage.item_id = ?", itemID)
 	} else {
 		finalQuery = finalQuery.
-			Select(`
-				inventory_item_usage.id, inventory_item_usage.order_id, 
-				inventory_item_usage.item_id, inventory_item_usage.user_name, 
-				inventory_item_usage.created_at,
-				
-				ii.item_code as child_code,
-				ii.item_id as parent_id,
-				inv.item_code as parent_code,
-				inv.item_name as parent_name,
-				
-				o.type as order_type, o.order_no as order_no,
-				u.first_name as user_first_name, u.last_name as user_last_name
-			`).
+			Select(selectIndirect).
 			Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
 			Joins("LEFT JOIN inventory inv ON inv.id = ii.item_id").
 			Where("ii.item_id = ?", itemID)
@@ -360,79 +420,123 @@ func (r *InventoryItemUsageRepository) GetUsageGroupedByOrder(
 	return domainUsages, int(total), nil
 }
 
-// func (r *InventoryItemUsageRepository) GetUsageGroupedByInventory(
-// 	ctx context.Context,
-// 	orderID uuid.UUID,
-// 	limit, offset int,
-// ) ([]*domain.InventoryItemUsage, int, error) {
+func (r *InventoryItemUsageRepository) GetUsageGroupedByPack(
+	ctx context.Context,
+	packID uuid.UUID,
+	limit, offset int,
+) ([]*domain.InventoryItemUsage, int, error) {
 
-// 	var distinctParents []uuid.UUID
-// 	var total int64
+	var distinctParentIDs []uuid.UUID
+	var total int64
+	var isDirectInventoryJoin bool
 
-// 	base := r.db.Model(&models.InventoryItemUsageModel{}).
-// 		Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
-// 		Where("inventory_item_usage.order_id = ?", orderID)
+	// 1. Fixed Join: Join on inventory_item to find distinct Parent Inventory IDs (ii.item_id)
+	base := r.db.Table("inventory_item_usage").
+		Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
+		Where("inventory_item_usage.pack_id = ?", packID)
 
-// 	if err := base.Session(&gorm.Session{}).
-// 		Distinct("ii.item_id").
-// 		Count(&total).Error; err != nil {
-// 		return nil, 0, err
-// 	}
+	if err := base.Session(&gorm.Session{}).
+		Distinct("ii.item_id").
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
-// 	if total == 0 {
-// 		return []*domain.InventoryItemUsage{}, 0, nil
-// 	}
+	// 2. Fallback for direct inventory joins
+	if total == 0 {
+		isDirectInventoryJoin = true
 
-// 	if err := base.Session(&gorm.Session{}).
-// 		Select("ii.item_id").
-// 		Group("ii.item_id").
-// 		Order("MAX(inventory_item_usage.created_at) DESC").
-// 		Limit(limit).
-// 		Offset(offset).
-// 		Pluck("ii.item_id", &distinctParents).Error; err != nil {
-// 		return nil, 0, err
-// 	}
+		base = r.db.Table("inventory_item_usage").
+			Joins("JOIN inventory ii ON ii.id = inventory_item_usage.item_id").
+			Where("inventory_item_usage.pack_id = ?", packID)
 
-// 	type Result struct {
-// 		models.InventoryItemUsageModel
-// 		ParentID   uuid.UUID `gorm:"column:parent_id"`
-// 		ParentCode string    `gorm:"column:parent_code"`
-// 		ParentName string    `gorm:"column:parent_name"`
-// 		ChildCode  string    `gorm:"column:child_code"`
-// 	}
-// 	var results []Result
+		if err := base.Session(&gorm.Session{}).
+			Distinct("ii.id").
+			Count(&total).Error; err != nil {
+			return nil, 0, err
+		}
+	}
 
-// 	err := r.db.Table("inventory_item_usage").
-// 		Select("inventory_item_usage.*, ii.item_id as parent_id, inv.item_code as parent_code, inv.item_name as parent_name, ii.item_code as child_code").
-// 		Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
-// 		Joins("LEFT JOIN inventory inv ON inv.id = ii.item_id").
-// 		Preload("User").
-// 		Preload("Order").
-// 		Where("inventory_item_usage.order_id = ?", orderID).
-// 		Where("ii.item_id IN ?", distinctParents).
-// 		Order("inventory_item_usage.created_at DESC").
-// 		Find(&results).Error
+	if total == 0 {
+		return []*domain.InventoryItemUsage{}, 0, nil
+	}
 
-// 	if err != nil {
-// 		return nil, 0, err
-// 	}
+	// 3. Pluck the distinct PARENT inventories (applying limit/offset to the main inventory groups)
+	pluckColumn := "ii.item_id"
+	if isDirectInventoryJoin {
+		pluckColumn = "ii.id"
+	}
 
-// 	var domainUsages []*domain.InventoryItemUsage
-// 	for _, res := range results {
-// 		d := res.InventoryItemUsageModel.InventoryItemUsageModelToDomain()
+	if err := base.Session(&gorm.Session{}).
+		Select(pluckColumn).
+		Group(pluckColumn).
+		Order("MAX(inventory_item_usage.created_at) DESC").
+		Limit(limit).
+		Offset(offset).
+		Pluck(pluckColumn, &distinctParentIDs).Error; err != nil {
+		return nil, 0, err
+	}
 
-// 		d.InventoryID = res.ParentID
-// 		d.InventoryCode = res.ParentCode
-// 		d.InventoryName = res.ParentName
-// 		if res.ChildCode != "" {
-// 			d.ItemCode = res.ChildCode
-// 		}
+	if len(distinctParentIDs) == 0 {
+		return []*domain.InventoryItemUsage{}, int(total), nil
+	}
 
-// 		domainUsages = append(domainUsages, d)
-// 	}
+	var rawResults []usageRawResult
 
-//		return domainUsages, int(total), nil
-//	}
+	// 4. Fixed Final Query: Fetch ALL child usages for the paginated parent inventories
+	finalQuery := r.db.Table("inventory_item_usage").
+		Joins("LEFT JOIN order_items o ON o.id = inventory_item_usage.pack_id").
+		Joins("LEFT JOIN users u ON u.clerk_id = inventory_item_usage.user_name").
+		Where("inventory_item_usage.pack_id = ?", packID).
+		Order("inventory_item_usage.created_at DESC")
+
+	if isDirectInventoryJoin {
+		finalQuery = finalQuery.
+			Select(`
+				inventory_item_usage.id, inventory_item_usage.pack_id, 
+				inventory_item_usage.item_id, inventory_item_usage.user_name, 
+				inventory_item_usage.created_at,
+				
+				'' as child_code,
+				ii.id as parent_id,
+				ii.item_code as parent_code,
+				ii.item_name as parent_name,
+				
+				o.serial_no as serial_no,
+				u.first_name as user_first_name, u.last_name as user_last_name
+			`).
+			Joins("JOIN inventory ii ON ii.id = inventory_item_usage.item_id").
+			Where("ii.id IN ?", distinctParentIDs) // Filter by parent IDs
+	} else {
+		finalQuery = finalQuery.
+			Select(`
+				inventory_item_usage.id, inventory_item_usage.pack_id, 
+				inventory_item_usage.item_id, inventory_item_usage.user_name, 
+				inventory_item_usage.created_at,
+				
+				ii.item_code as child_code,
+				ii.item_id as parent_id,
+				inv.item_code as parent_code,
+				inv.item_name as parent_name,
+				
+				o.serial_no as serial_no,
+				u.first_name as user_first_name, u.last_name as user_last_name
+			`).
+			Joins("JOIN inventory_item ii ON ii.id = inventory_item_usage.item_id").
+			Joins("LEFT JOIN inventory inv ON inv.id = ii.item_id").
+			Where("ii.item_id IN ?", distinctParentIDs) // Filter by parent IDs
+	}
+
+	if err := finalQuery.Scan(&rawResults).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var domainUsages []*domain.InventoryItemUsage
+	for _, res := range rawResults {
+		domainUsages = append(domainUsages, mapRawToDomain(res))
+	}
+
+	return domainUsages, int(total), nil
+}
 
 func (r *InventoryItemUsageRepository) GetUsageGroupedByInventory(
 	ctx context.Context,

@@ -1,8 +1,8 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) DeleteSale(ctx context.Context, sale *domain.Sale, actingClerkID string) (*domain.Sale, string, error) {

@@ -1,9 +1,9 @@
 package common
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"errors"
 	"net/http"
-	"rims-backend/internal/service/domain"
 )
 
 // ErrorStatusMap is a map of defined error messages and their corresponding http status codes

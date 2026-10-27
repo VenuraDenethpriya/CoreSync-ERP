@@ -1,7 +1,5 @@
-import { uploadAudioToCloudinary } from "@/api/cloudinaryApi";
-import { updateCustomer } from "@/api/customerApi";
 import { updateSale } from "@/api/saleApi";
-import { fethchSalespersonNames } from "@/api/salespersonApi";
+import { uploadAudioToCloudinary } from "@/api/cloudinaryApi";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,14 +23,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
+import { fethchSalespersonNames } from "@/api/salespersonApi";
 
-export function EditSale({ onUpdate, ...props }) {
+export function EditSale({ saleData, onUpdate }) {
   const { getToken } = useAuth();
-  const saleId = props.saleData.id;
+  const saleId = saleData.id;
 
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
 
   const [salespersonsList, setSalespersonsList] = useState([]);
   const [selectedSalesperson, setSelectedSalesperson] = useState("");
@@ -44,45 +43,35 @@ export function EditSale({ onUpdate, ...props }) {
   const [recording, setRecording] = useState([]);
   const [description, setDescription] = useState("");
 
-
   useEffect(() => {
-    if (open && props.saleData) {
-      setSelectedSalesperson(props.saleData.salesperson_id);
-      setType(props.saleData.type)
-      setCommission(props.saleData.commission)
-      if (props.saleData.date) {
-        setDate(props.saleData.date.split("T")[0]);
-      } else {
-        setDate("");
-      }
-      setCustomerName(props.saleData.customer_name)
-      setCustomerPhone(props.saleData.customer_phone)
-      setRecording(props.saleData.recording_url)
-      setDescription(props.saleData.description)
-
+    if (open && saleData) {
+      setSelectedSalesperson(saleData.salesperson_id || "");
+      setType(saleData.type || "");
+      setCommission(saleData.commission || "");
+      setDate(saleData.date ? saleData.date.split("T")[0] : "");
+      setCustomerName(saleData.customer_name || "");
+      setCustomerPhone(saleData.customer_phone || "");
+      setRecording(saleData.recording_url || []);
+      setDescription(saleData.description || "");
     }
-  }, [open, props.saleData]);
+  }, [open, saleData]);
 
   useEffect(() => {
     const loadSalespersons = async () => {
       try {
         const token = await getToken();
         const response = await fethchSalespersonNames(token);
-        const salespersonsList = response.data.salespersons;
-
-        const formattedList = salespersonsList.map(item => ({
+        const list = response.data.salespersons.map(item => ({
           id: item.id,
           name: item.salesperson
         }));
-
-        setSalespersonsList(formattedList);
+        setSalespersonsList(list);
       } catch (err) {
         console.error("Error fetching salespersons:", err);
       }
     };
-
     loadSalespersons();
-  }, []);
+  }, [getToken]);
 
   const handleEditSaleSubmit = async () => {
     try {
@@ -100,21 +89,24 @@ export function EditSale({ onUpdate, ...props }) {
           return;
         }
       }
+      
       let finalDate = date;
-      if (!date.includes("T")) {
+      if (date && !date.includes("T")) {
         finalDate = `${date}T00:00:00Z`;
       }
+      
       const response = await updateSale(token, {
         id: saleId,
         salesperson: selectedSalesperson,
         type: type,
         commission: parseFloat(commission),
-        date: finalDate || props.saleData.date,
+        date: finalDate || saleData.date,
         customer_name: customerName,
         customer_phone: customerPhone,
         description: description,
-        recording_url: recordingUrl || props.saleData.recording_url,
+        recording_url: recordingUrl || saleData.recording_url,
       });
+
       if (response.message === "success") {
         toast.success("Sale updated successfully!", { position: "bottom-right" });
         setOpen(false);
@@ -125,29 +117,32 @@ export function EditSale({ onUpdate, ...props }) {
     } catch (error) {
       console.error("Error updating sale:", error);
       toast.error("Error updating sale! Please try again.", { position: "bottom-right" });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit</Button>
+        <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-10 px-4">
+          <Pencil className="w-4 h-4 mr-2" /> Edit
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[1200px]">
-        <DialogHeader>
-          <DialogTitle>Edit Sale</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[900px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl">
+        <DialogHeader className="space-y-1.5">
+          <DialogTitle className="text-xl font-extrabold text-slate-800">Edit Sale</DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
             Make changes to sale details. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid sm:grid-cols-2 grid-cols-1 gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Salespereson" className="justify-self-start text-left">
-              Salesperson
-            </Label>
+
+        <div className="grid sm:grid-cols-2 grid-cols-1 gap-5 pt-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Salesperson" className="text-slate-700 font-semibold text-sm">Salesperson</Label>
             <Select value={selectedSalesperson} onValueChange={setSelectedSalesperson}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a saleperson" />
+              <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                <SelectValue placeholder="Select a salesperson" />
               </SelectTrigger>
               <SelectContent>
                 {salespersonsList.map((p) => (
@@ -159,12 +154,10 @@ export function EditSale({ onUpdate, ...props }) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Type" className="justify-self-start text-left">
-              Type
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Type" className="text-slate-700 font-semibold text-sm">Type</Label>
             <Select value={type} onValueChange={setType}>
-              <SelectTrigger className="col-span-3">
+              <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
                 <SelectValue placeholder="Select a type" />
               </SelectTrigger>
               <SelectContent>
@@ -175,82 +168,83 @@ export function EditSale({ onUpdate, ...props }) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Commission" className="justify-self-start text-left">
-              Commission
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Commission" className="text-slate-700 font-semibold text-sm">Commission</Label>
             <Input
               id="Commission"
               value={commission}
               onChange={(e) => setCommission(e.target.value)}
-              className="col-span-3"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Date" className="justify-self-start text-left">
-              Date
-            </Label>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="Date" className="text-slate-700 font-semibold text-sm">Date</Label>
             <Input
               id="Date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="col-span-3 w-full"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
             />
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="CustomerName" className="justify-self-start text-left">
-              Customer Name
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="CustomerName" className="text-slate-700 font-semibold text-sm">Customer Name</Label>
             <Input
               id="CustomerName"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="col-span-3"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
             />
           </div>
 
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="CustomerPhone" className="justify-self-start text-left">
-              Customer Phone No.
-            </Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="CustomerPhone" className="text-slate-700 font-semibold text-sm">Customer Phone No.</Label>
             <Input
               id="CustomerPhone"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
-              className="col-span-3"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Recording" className="justify-self-start text-left">
-              Recording
-            </Label>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="Recording" className="text-slate-700 font-semibold text-sm">Recording</Label>
             <Input
               type="file"
               accept="audio/*"
-              className="col-span-3 w-full bg-white"
+              className="bg-slate-50 border-slate-200 h-11 rounded-xl"
               onChange={(e) => setRecording(e.target.files?.[0])}
             />
           </div>
-ma lagin innw denwa n
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="Description" className="justify-self-start text-left">
-              Description
-            </Label>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="Description" className="text-slate-700 font-semibold text-sm">Description</Label>
             <Textarea
               id="Description"
-              value={description} 
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3"
+              className="w-full min-h-[90px] border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+              rows={3}
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button className="bg-blue-800 hover:bg-blue-900" onClick={handleEditSaleSubmit} disabled={isSubmitting}>
+
+        <DialogFooter className="pt-4 border-t border-slate-100 flex gap-3 sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6"
+          >
+            Cancel
+          </Button>
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6" 
+            onClick={handleEditSaleSubmit} 
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "Submitting..." : "Save changes"}
           </Button>
         </DialogFooter>

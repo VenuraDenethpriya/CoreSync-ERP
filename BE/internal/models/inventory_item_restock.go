@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,18 +9,20 @@ import (
 )
 
 type InventoryItemRestockModel struct {
-	ID        uuid.UUID            `gorm:"type:uuid;primary_key" json:"id"`
-	Items     []InventoryItemModel `gorm:"foreignKey:RestockID" json:"items"`
-	User      UserModel            `gorm:"foreignKey:UserName;references:ClerkID" json:"user"`
-	ItemID    uuid.UUID            `gorm:"type:uuid;foreignKey:ItemID;references:ID" json:"item_id"`
-	Inventory InventoryModel       `gorm:"foreignKey:ItemID;references:ID"`
-	Amount    float64              `gorm:"type:float;not null" json:"amount"`
-	Quantity  int                  `gorm:"type:int;not null" json:"quantity"`
-	UnitPrice float64              `gorm:"type:float;not null" json:"unit_price"`
-	UserName  string               `gorm:"type:varchar(100);not null" json:"user_name"`
-	Remark    string               `gorm:"type:varchar(100);not null" json:"remark"`
-	IsPrint   bool                 `gorm:"type:boolean;default:false" json:"is_print"`
-	CreatedAt time.Time            `gorm:"autoCreateTime" json:"created_at"`
+	ID             uuid.UUID            `gorm:"type:uuid;primary_key" json:"id"`
+	OrderID        *uuid.UUID           `gorm:"type:uuid;foreignKey:OrderID;references:ID" json:"order_id"`
+	InventoryOrder *InventoryOrderModel `gorm:"foreignKey:OrderID" json:"inventory_order_id"`
+	Items          []InventoryItemModel `gorm:"foreignKey:RestockID" json:"items"`
+	User           UserModel            `gorm:"foreignKey:UserName;references:ClerkID" json:"user"`
+	ItemID         uuid.UUID            `gorm:"type:uuid;foreignKey:ItemID;references:ID" json:"item_id"`
+	Inventory      InventoryModel       `gorm:"foreignKey:ItemID;references:ID"`
+	Amount         float64              `gorm:"type:float;not null" json:"amount"`
+	Quantity       int                  `gorm:"type:int;not null" json:"quantity"`
+	UnitPrice      float64              `gorm:"type:float;not null" json:"unit_price"`
+	UserName       string               `gorm:"type:varchar(100);not null" json:"user_name"`
+	Remark         string               `gorm:"type:varchar(100);not null" json:"remark"`
+	IsPrint        bool                 `gorm:"type:boolean;default:false" json:"is_print"`
+	CreatedAt      time.Time            `gorm:"autoCreateTime" json:"created_at"`
 }
 
 func (i *InventoryItemRestockModel) BeforeCreate(_ *gorm.DB) (err error) {
@@ -41,8 +43,13 @@ func InventoryItemRestockModelFromDomain(restock *domain.InventoryItemRestock) *
 	if restock == nil {
 		return nil
 	}
+	var orderIDPtr *uuid.UUID
+	if restock.OrderID != uuid.Nil {
+		orderIDPtr = &restock.OrderID
+	}
 	return &InventoryItemRestockModel{
 		ID:        restock.ID,
+		OrderID:   orderIDPtr,
 		ItemID:    restock.ItemID,
 		Amount:    restock.Amount,
 		Quantity:  restock.Quantity,

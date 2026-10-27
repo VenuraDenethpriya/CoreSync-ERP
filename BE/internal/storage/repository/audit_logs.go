@@ -1,9 +1,9 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 
 	"gorm.io/gorm"
 )

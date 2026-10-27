@@ -1,11 +1,10 @@
 package quote
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,21 +30,19 @@ func (ch *QuoteHandler) DeleteQuote(ctx *gin.Context) {
 		return
 	}
 
+	actingClerkID := ctx.GetString("user_id")
 	// Call service to delete quote and its items
-	deletedQuote, err := ch.orderService.DeleteQuote(ctx, quoteUUID)
+	deletedQuote, actorName, err := ch.orderService.DeleteQuote(ctx, quoteUUID, actingClerkID)
 	if err != nil {
 		logger.Error(ctx, "Failed to delete quote and items", zap.Error(err))
 		common.HandleError(ctx, err)
 		return
 	}
-	userName := deletedQuote.CreatedBy
-	if deletedQuote.User != nil {
-		userName = strings.TrimSpace(deletedQuote.User.FirstName + " " + deletedQuote.User.LastName)
-	}
+
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Quote deleted"},
-		Description: fmt.Sprintf("%s deleted a Quote %s/%s", userName, deletedQuote.Type, deletedQuote.QuoteNo),
+		Description: fmt.Sprintf("%s deleted a Quote %s/%s", actorName, deletedQuote.Type, deletedQuote.QuoteNo),
 	})
 	logger.Info(ctx, "Quote and associated items deleted successfully", zap.String("quote_id", deletedQuote.QuoteID.String()))
 	common.HandleSuccess(ctx, common.StatusOK, dto.NewDeleteQuoteResponse(deletedQuote))

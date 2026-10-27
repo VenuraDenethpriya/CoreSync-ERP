@@ -1,14 +1,15 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/helper/logger"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -24,10 +25,20 @@ func (ih *InventoryHandler) CreateInventoryItemAllocation(c *gin.Context) {
 
 	var createInventoryItemAllocationList []dto.CreateInventoryItemAllocateResponse
 
+	var orderID uuid.UUID
+	if req.Allocation.OrderID != nil {
+		orderID = *req.Allocation.OrderID
+	}
+
+	var packID uuid.UUID
+	if req.Allocation.PackID != nil {
+		packID = *req.Allocation.PackID
+	}
 	for _, item := range req.Allocation.Items {
 		inventoryAllocation := mapper.InventoryItemAllocationRequestToDomain(
 			&item,
-			req.Allocation.OrderID,
+			orderID,
+			packID,
 			req.Allocation.Allocator,
 		)
 
@@ -40,7 +51,7 @@ func (ih *InventoryHandler) CreateInventoryItemAllocation(c *gin.Context) {
 		logger.Info(c, "Inventory item allocation created", zap.Any("inventory item allocation", createInventoryItemAllocation))
 		userName := createInventoryItemAllocation.Allocator
 		if createInventoryItemAllocation.User != nil {
-			userName = strings.TrimSpace(createInventoryItemAllocation.User.FirstName + " " + createInventoryItemAllocation.User.LastName)
+			userName = strings.TCoreSyncpace(createInventoryItemAllocation.User.FirstName + " " + createInventoryItemAllocation.User.LastName)
 		}
 		common.SetAuditInfo(c, common.AuditLogDetails{
 			Headers: map[string]string{"X-Response-Message": "Item allocation created"},

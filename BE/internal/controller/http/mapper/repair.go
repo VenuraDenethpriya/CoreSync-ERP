@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	dto "rims-backend/internal/controller/http/dto"
-	domain "rims-backend/internal/service/domain"
+	dto "CoreSync-backend/internal/controller/http/dto"
+	domain "CoreSync-backend/internal/service/domain"
 )
 
 func RepairRequestToDomain(req *dto.CreateRepairRequest) *domain.Repair {

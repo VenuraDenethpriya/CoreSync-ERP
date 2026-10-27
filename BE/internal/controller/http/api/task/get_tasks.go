@@ -1,9 +1,9 @@
 package task
 
 import (
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -19,7 +19,7 @@ func (th *TaskHandler) GetTasks(ctx *gin.Context) {
 		common.ValidationError(ctx, err)
 		return
 	}
-	getTasks, totalTasks, err := th.taskService.GetTasks(ctx, searchParams.Query, searchParams.Limit, searchParams.Offset)
+	getTasks, totalTasks, err := th.taskService.GetTasks(ctx, searchParams.Query, searchParams.Limit, searchParams.Offset, searchParams.Assignee, searchParams.StartDate, searchParams.EndDate)
 	if err != nil {
 		logger.Error(ctx, "Error getting tasks", zap.Any("error", err))
 		common.HandleError(ctx, err)

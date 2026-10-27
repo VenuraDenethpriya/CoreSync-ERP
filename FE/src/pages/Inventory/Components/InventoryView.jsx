@@ -277,7 +277,7 @@ function InventoryView() {
 
                     doc.setFontSize(8);
                     doc.setFont("helvetica", "bold");
-                    doc.text("Renewaa Pvt. Ltd", 25, 4, { align: "center" });
+                    doc.text("CoreSync Pvt. Ltd", 25, 4, { align: "center" });
 
                     doc.addImage(imgData, 'PNG', 5, 5, 40, 13);
 
@@ -464,7 +464,20 @@ function InventoryView() {
         }
     };
 
-    
+    if (user.publicMetadata.role == Roles.WAREHOUSE_STAFF) {
+        return (
+            <div className="flex items-center justify-center h-[80vh] px-4">
+                <div className="bg-white shadow-md rounded-xl p-8 max-w-lg text-center border border-red-200">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                        <LockIcon className="w-14 h-14 text-red-600" />
+                        <h1 className="text-2xl font-semibold text-gray-800">Access Denied</h1>
+                        <p className="text-gray-600">You are not authorized to access this page.</p>
+                        <Button className="mt-4 bg-blue-700 hover:bg-blue-800 text-white" onClick={() => navigate("/")}>Go to Dashboard</Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (
@@ -491,7 +504,7 @@ function InventoryView() {
                     {
                         isMobile ? null : <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                             <EditInventoryItem itemData={inventoryData} onUpdate={handleInventoryUpdate} />
-                             <InventoryDeleteAlert itemData={inventoryData}/>
+                            {user.publicMetadata.role == Roles.WAREHOUSE_STAFF ? null : <InventoryDeleteAlert itemData={inventoryData} />}
                             <PDFDownloadLink
                                 document={<InventoryTemplate inventoryData={inventoryData} itemUsageData={itemUsageData} restockData={restockData} />}
                                 fileName={`Inventory Item Report-${inventoryData?.item_code}.pdf`}
@@ -541,7 +554,7 @@ function InventoryView() {
 
                         <div className="space-y-2">
                             <div className="grid sm:grid-cols-5  grid-cols-1 text-xs text-gray-500 font-semibold border-b pb-1">
-                                <span>Order No</span>
+                                <span>Order/Serial No</span>
                                 <span>Count</span>
                                 <span>Allocator</span>
                                 <span>Time Stamp</span>
@@ -552,9 +565,9 @@ function InventoryView() {
                                     <div key={item.id} className="grid sm:grid-cols-5  grid-cols-1 text-xs text-gray-500 font-semibold border-b pb-1">
                                         <span
                                             className="text-blue-800 cursor-pointer"
-                                            onClick={() => navigate(`/orders/${item.order_id}`)}
+                                            onClick={() => {!item.serial_no ? navigate(`/orders/${item.order_id}`) : navigate(`/orders/packs/${item.pack_id}`)} }
                                         >
-                                            {item.order_type}{item.order_no}
+                                            {!item.serial_no ? `${item.order_type}${item.order_no}` : item.serial_no}
                                         </span>
                                         <span className="pl-5">{item.usage_count}</span>
                                         <span>{item.user_name}</span>
@@ -589,6 +602,7 @@ function InventoryView() {
                         <Tabs defaultValue="order" className="w-full">
                             <TabsList>
                                 <TabsTrigger value="order">Orders</TabsTrigger>
+                                {/* <TabsTrigger value="pack">Packs</TabsTrigger> */}
                                 <TabsTrigger value="repair">Repairs</TabsTrigger>
                             </TabsList>
                             <TabsContent value="order">
@@ -689,6 +703,7 @@ function InventoryView() {
                                     </>
                                 )}
                             </TabsContent>
+                            
                             <TabsContent value="repair">
                                 {isRepairUsageLoading ? (
                                     <div className="space-y-4 py-4">
@@ -916,7 +931,7 @@ function InventoryView() {
                 <div ref={componentRef} className="print-wrapper">
                     {printableItems.map((invItem, index) => (
                         <div key={`${invItem.id}-${index}`} className="barcode-label">
-                            <div className="company-name">Renewaa Pvt. Ltd</div>
+                            <div className="company-name">CoreSync Pvt. Ltd</div>
                             <Barcode value={invItem.item_code} format="CODE128" displayValue={false} width={1.5} height={55} margin={0} fontSize={10} background="transparent" />
                             <div className="item-code">{invItem.item_code}</div>
                         </div>
@@ -928,7 +943,7 @@ function InventoryView() {
                 <div ref={componentRef} className="print-wrapper">
                     {printableItems.map((invItem, index) => (
                         <div key={`${invItem.id}-${index}`} className="barcode-label">
-                            <div className="company-name">Renewaa Pvt. Ltd</div>
+                            <div className="company-name">CoreSync Pvt. Ltd</div>
 
                             {/* NEW CONTAINER CLASS */}
                             <div className="barcode-container">

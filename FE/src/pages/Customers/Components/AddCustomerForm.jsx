@@ -17,7 +17,7 @@ const formSchema = z.object({
     Title: z.string().min(2, { message: "Title is required" }),
     FirstName: z.string().min(2, { message: "First name is required" }),
     LastName: z.string().optional(),
-    Email: z.string().optional(),
+    Email: z.string().email({ message: "Invalid email address" }).optional().or(z.literal("")),
     Address: z.string().min(2, { message: "Address is required" }),
     PhoneNo1: z
         .string()
@@ -25,16 +25,14 @@ const formSchema = z.object({
         .refine((val) => isValidPhoneNumber(val), {
           message: "Invalid international phone number",
         }),
-    
-        PhoneNo2: z
+    PhoneNo2: z
         .string()
         .transform((val) => val.startsWith('+') ? val : `+${val}`) 
         .refine((val) => isValidPhoneNumber(val), {
-          message: "Invalid  phone number",
+          message: "Invalid phone number",
         })
         .or(z.literal(""))
         .optional(),
-    
     vatNo: z.string().optional(),
 });
 
@@ -48,6 +46,13 @@ const AddCustomerForm = () => {
         resolver: zodResolver(formSchema),
         defaultValues: {
             Title: "Mr.",
+            FirstName: "",
+            LastName: "",
+            Email: "",
+            Address: "",
+            PhoneNo1: "",
+            PhoneNo2: "",
+            vatNo: ""
         }
     });
 
@@ -64,7 +69,6 @@ const AddCustomerForm = () => {
     async function handleSubmit(values) {
         try {
             const token = await getToken();
-            console.log("Token:", token);
             const payload = {
                 Title: values.Title,
                 PhoneNo1: values.PhoneNo1,
@@ -78,7 +82,6 @@ const AddCustomerForm = () => {
             };
 
             const response = await createCustomer(token, payload);
-            console.log("Response:", response);
             if (response.message == "success") {
                 toast.success("Customer added successfully!", { position: "bottom-right" });
                 navigate("/customers");
@@ -102,21 +105,21 @@ const AddCustomerForm = () => {
     return (
         <div>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="sm:space-y-8 space-y-4 w-full">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 w-full">
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-6">
-                            {/* Left Column */}
+                        {/* Left Column */}
+                        <div className="flex flex-col gap-5">
                             <FormField
                                 control={form.control}
                                 name="Title"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Title</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Title</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
-                                                <SelectTrigger className="bg-white">
-                                                    <SelectValue className="bg-white" placeholder="Mr" />
+                                                <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                                                    <SelectValue placeholder="Mr." />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -138,9 +141,9 @@ const AddCustomerForm = () => {
                                 name="PhoneNo2"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Secondary Phone No.</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Secondary Phone No.</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="94XXXXXXXXX" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -152,9 +155,9 @@ const AddCustomerForm = () => {
                                 name="FirstName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>First Name</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">First Name</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="First Name" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter first name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -166,9 +169,9 @@ const AddCustomerForm = () => {
                                 name="Address"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Address</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Address</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Address" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter address" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -176,16 +179,16 @@ const AddCustomerForm = () => {
                             />
                         </div>
 
-                        <div className="flex flex-col gap-6">
-                            {/* Right Column */}
+                        {/* Right Column */}
+                        <div className="flex flex-col gap-5">
                             <FormField
                                 control={form.control}
                                 name="PhoneNo1"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone No.</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Phone No.</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="94XXXXXXXXX" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -197,9 +200,9 @@ const AddCustomerForm = () => {
                                 name="Email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Email</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Email" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter email address" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -211,9 +214,9 @@ const AddCustomerForm = () => {
                                 name="LastName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Last Name</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Last Name</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Last Name" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter last name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -225,9 +228,9 @@ const AddCustomerForm = () => {
                                 name="vatNo"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>VAT No:</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">VAT No.</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Customer's VAT No" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Customer's VAT No" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -236,10 +239,11 @@ const AddCustomerForm = () => {
                         </div>
                     </div>
 
-                    <div className="flex sm:justify-between justify-center">
+                    <div className="flex sm:justify-between justify-center items-center pt-6 border-t border-slate-100 mt-8">
                         <Button
+                            type="button"
                             variant="outline"
-                            className="flex items-center gap-2 border rounded-full px-3 py-1 text-sm shadow-sm hover:bg-slate-100 transition-all"
+                            className="flex items-center gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-4 py-2 text-sm shadow-sm transition-all"
                             onClick={handleClearAll}
                             title="Clear All"
                         >
@@ -247,13 +251,20 @@ const AddCustomerForm = () => {
                             {isSmallScreen ? null : "Clear All"}
                         </Button>
 
-                        <div className="flex gap-4 ml-2">
-                            <Button type="submit" className="bg-blue-800 hover:bg-blue-900 ">Add Customer</Button>
+                        <div className="flex gap-3">
+                            <Button 
+                                type="submit" 
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+                            >
+                                Add Customer
+                            </Button>
                             <Button
+                                type="button"
                                 variant="outline"
-                                className="border-2 border-red-400 hover:bg-red-500 hover:text-white"
+                                className="border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-6"
                                 onClick={handleClose}
-                            >Close
+                            >
+                                Close
                             </Button>
                         </div>
                     </div>

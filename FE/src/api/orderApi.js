@@ -224,3 +224,162 @@ export const orderPaymentsRefund = async (token, PaymentData) => {
     console.log("Error updating order payment refund", error);
   }
 };
+
+export const fetchAllBatteryPacks = async (token, query, limit, offset) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/packs?query=${encodeURI(
+        query
+      )}&limit=${limit}&offset=${offset}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error fetching all packs:", error);
+  }
+};
+
+export const featchPackById = async (token, packId) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/pack/${packId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error fetching pack by id:", error);
+  }
+};
+
+export const updatePack = async (token, PackData) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/pack`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(PackData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.log("Error updating pack", error);
+  }
+};
+
+export const updatePackOrderID = async (token, PackData) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/pack/order-no`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(PackData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.log("Error updating pack", error);
+  }
+};
+
+export const createPack = async (token, PackData) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/pack`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(PackData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.log("Error updating pack", error);
+  }
+};
+
+export const fetchPayments = async (
+  token,
+  query,
+  limit,
+  offset
+) => {
+  try {
+    const response = await fetch(
+      `${apiUrl}/orders/payments?query=${encodeURI(query)}&limit=${limit}&offset=${offset}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      }
+    );
+    return response?.json();
+  } catch (error) {
+    console.error("Error fetching payments:", error);
+  }
+};
+
+export const updatePayment = async (token, PaymentData) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/payment`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(PaymentData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.log("Error updating payment", error);
+  }
+};
+
+export const updatePackProduction = async (token, PackData) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/pack/production`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(PackData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.log("Error updating pack", error);
+  }
+};
+
+export const deletePack = async (token, packId) => {
+  try {
+    const response = await fetch(`${apiUrl}/orders/pack/${packId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error deleting pack by id:", error);
+  }
+};

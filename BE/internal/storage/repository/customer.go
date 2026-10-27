@@ -1,13 +1,13 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
+	"CoreSync-backend/pkg/uuid"
 	"context"
 	"errors"
 	"fmt"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
-	"rims-backend/pkg/uuid"
 	"time"
 
 	"go.uber.org/zap"
@@ -103,6 +103,7 @@ func (ur *CustomerRepository) UpdateCustomer(ctx context.Context, customer *doma
 	customerModel.PhoneNo2 = customer.PhoneNo2
 	customerModel.Email = customer.Email
 	customerModel.VatNo = customer.VatNo
+	customerModel.TinNo = customer.TinNo
 	err = ur.db.Updates(&customerModel).Error
 	if err != nil {
 		logger.Error(ctx, "Error updating customer", zap.String("method", "PUT"), zap.String("path", "/customers/:customer-id"), zap.Any("customer", customer), zap.Error(err))
@@ -140,55 +141,67 @@ func (ur *CustomerRepository) DeleteCustomer(ctx context.Context, customer *doma
 }
 
 // SearchCustomers searches for customers based on a search query and returns paginated results
-func (ur *CustomerRepository) SearchCustomers(ctx context.Context, searchQuery string, limit int, offset int) ([]*domain.Customer, int, error) {
+func (ur *CustomerRepository) SearchCustomers(ctx context.Context, searchQuery string, limit int, offset int, sortByTotal bool) ([]*domain.Customer, int, error) {
+	fmt.Printf("DEBUG: sortByTotal received in Repository: %v\n", sortByTotal)
 	var results []struct {
 		models.CustomerModel
-		LastOrderType string    `gorm:"column:last_order_type"`
-		LastOrderNo   string    `gorm:"column:last_order_no"`
-		LastOrderDate time.Time `gorm:"column:last_order_date"`
+		LastOrderType   string    `gorm:"column:last_order_type"`
+		LastOrderNo     string    `gorm:"column:last_order_no"`
+		LastOrderDate   time.Time `gorm:"column:last_order_date"`
+		TotalOrderValue float64   `gorm:"column:total_order_value"`
 	}
 
 	var whereClause string
 	var args []interface{}
-
 	parsedUUID, err := uuid.Parse(searchQuery)
 	if err == nil {
 		whereClause = " WHERE c.customer_id = ?"
 		args = append(args, parsedUUID)
-	} else {
+	} else if searchQuery != "" {
 		searchPattern := "%" + searchQuery + "%"
 		whereClause = ` WHERE c.first_name ILIKE ? OR c.last_name ILIKE ? OR c.address ILIKE ? OR c.phone_no1 ILIKE ? OR c.email ILIKE ? OR c.title ILIKE ?`
 		args = append(args, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
 	}
 
-	// Count total customers matching the filter
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM customers c" + whereClause
 	if err := ur.db.Raw(countQuery, args...).Scan(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Paginated query with latest order join
 	baseQuery := `
-		SELECT
-			c.*,
-			o.type AS last_order_type,
-			o.order_no AS last_order_no,
-			o.created_at AS last_order_date
-		FROM
-			customers c
-		LEFT JOIN LATERAL (
-			SELECT type, order_no, created_at
-			FROM orders
-			WHERE customer_id = c.customer_id
-			ORDER BY created_at DESC
-			LIMIT 1
-		) o ON TRUE
-	`
-	paginationClause := " ORDER BY c.created_at DESC LIMIT ? OFFSET ?"
+        SELECT 
+            c.customer_id, c.title, c.first_name, c.last_name, c.address, 
+            c.phone_no1, c.phone_no2, c.email, c.vat_no, c.tin_no, 
+            c.created_by, c.created_at, c.updated_at,
+            o.type AS last_order_type, 
+            o.order_no AS last_order_no, 
+            o.created_at AS last_order_date,
+            COALESCE(ao.total_sum, 0) AS total_order_value
+        FROM customers c
+        LEFT JOIN LATERAL (
+            SELECT type, order_no, created_at 
+            FROM orders 
+            WHERE customer_id = c.customer_id 
+            ORDER BY created_at DESC LIMIT 1
+        ) o ON TRUE
+        LEFT JOIN (
+            SELECT customer_id, SUM(CAST(total AS DECIMAL)) as total_sum 
+            FROM orders 
+            GROUP BY customer_id
+        ) ao ON c.customer_id = ao.customer_id
+    `
+
+	orderClause := " ORDER BY c.created_at DESC"
+	if sortByTotal {
+		orderClause = " ORDER BY total_order_value DESC"
+	}
+
+	paginationClause := " LIMIT ? OFFSET ?"
 	argsWithPagination := append(args, limit, offset)
 
-	finalQuery := baseQuery + whereClause + paginationClause
+	finalQuery := baseQuery + whereClause + orderClause + paginationClause
+
 	if err := ur.db.Raw(finalQuery, argsWithPagination...).Scan(&results).Error; err != nil {
 		return nil, 0, err
 	}
@@ -201,6 +214,7 @@ func (ur *CustomerRepository) SearchCustomers(ctx context.Context, searchQuery s
 			No:   res.LastOrderNo,
 			Date: res.LastOrderDate,
 		}
+		domainCustomer.TotalOrderValue = res.TotalOrderValue
 		domainCustomers = append(domainCustomers, domainCustomer)
 	}
 

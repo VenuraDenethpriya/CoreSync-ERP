@@ -96,7 +96,7 @@ const AddInterviewTrackerForm = () => {
     }
 
     const handleClose = () => {
-        navigate("/hr/talent-pool");
+        navigate("/hr/interviews-tracker");
     }
 
     const handleClearAll = () => {

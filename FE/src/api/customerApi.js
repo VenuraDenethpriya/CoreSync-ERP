@@ -31,12 +31,12 @@ export const createCustomer = async (token,payload) => {
 };
 
 
-export const searchCustomers = async (token, query, limit, offset) => {
+export const searchCustomers = async (token, query, limit, offset, sort_by_total) => {
   try {
     const response = await fetch(
       `${apiUrl}/customers/search?query=${encodeURIComponent(
         query
-      )}&limit=${limit}&offset=${offset}`,
+      )}&limit=${limit}&offset=${offset}&sort_by_total=${sort_by_total}`,
       {
         method: "GET",
         headers: {

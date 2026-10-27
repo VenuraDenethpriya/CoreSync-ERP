@@ -27,7 +27,6 @@ export function ChangeStatusDropdownMenu({ onUpdate, ...props }) {
     const handleStatusChange = async (newStatus) => {
         try {
             const token = await getToken();
-            console.log("Token:", token);
             setStatus(status);
             const response = await updateQuoteStatus(token, props.quoteId, newStatus);
             const isSuccess = 

@@ -1,8 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,21 +53,6 @@ func InventoryModelFromDomain(inventory *domain.Inventory) *InventoryModel {
 	}
 }
 
-//	func InventoryModelToDomain(model *InventoryModel) *domain.Inventory {
-//		return &domain.Inventory{
-//			ID:              model.ID,
-//			ItemCode:        model.ItemCode,
-//			ItemName:        model.ItemName,
-//			QuantityInStock: model.QuantityInStock,
-//			UnitCost:        model.UnitCost,
-//			Threshold:       model.Threshold,
-//			Status:          model.Status,
-//			ProductID:       model.ProductID,
-//			Allocated:       model.InventoryItemAllocate.Count,
-//			CreatedAt:       model.CreatedAt,
-//			UpdatedAt:       model.UpdatedAt,
-//		}
-//	}
 func InventoryModelToDomain(model *InventoryModel) *domain.Inventory {
 	// allocatedCount := 0
 	// for _, alloc := range model.InventoryItemAllocates {
@@ -90,30 +74,5 @@ func InventoryModelToDomain(model *InventoryModel) *domain.Inventory {
 		CreatedBy:       model.CreatedBy,
 		CreatedAt:       model.CreatedAt,
 		UpdatedAt:       model.UpdatedAt,
-	}
-}
-
-func UpdateInventoryRequestToDomain(req *dto.UpdateInventoryRequest) *domain.Inventory {
-	return &domain.Inventory{
-		ItemCode:        req.ItemCode,
-		ItemName:        req.ItemName,
-		QuantityInStock: req.QuantityInStock,
-		UnitCost:        req.UnitCost,
-		Threshold:       req.Threshold,
-		Status:          req.Status,
-		ProductID:       req.ProductId,
-	}
-}
-func UpdateInventoryResponseToDomain(req *dto.UpdateInventoryResponse) *domain.Inventory {
-	return &domain.Inventory{
-		ItemCode:        req.ItemCode,
-		ItemName:        req.ItemName,
-		QuantityInStock: req.QuantityInStock,
-		UnitCost:        req.UnitCost,
-		Threshold:       req.Threshold,
-		Status:          req.Status,
-		ProductID:       req.ProductID,
-		CreatedAt:       req.CreatedAt,
-		UpdatedAt:       req.UpdatedAt,
 	}
 }

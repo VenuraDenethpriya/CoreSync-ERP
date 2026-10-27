@@ -1,15 +1,16 @@
 package order
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
-func (s *service) UpdateOrderStatus(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+func (s *service) UpdateOrderStatus(ctx context.Context, order *domain.Order, actingClerkID string) (*domain.Order, string, error) {
 	updateOrder, err := s.orderRepo.UpdateOrderStatus(ctx, order)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
+	s.stockOrderChanged(ctx, order.OrderID, actingClerkID) // [ADDED 2026-10-13] Delivered -> packs leave finished stock
 
 	// Only send WhatsApp if order is completed
 	// if updateOrder.OrderStatus == "Completed" && updateOrder.Customer != nil {
@@ -22,7 +23,7 @@ func (s *service) UpdateOrderStatus(ctx context.Context, order *domain.Order) (*
 
 	// 	waSender := whatsapp.NewWhatsAppSender()
 	// 	msg := fmt.Sprintf(
-	// 		"Hi %s, your %s order #%s has been completed and is ready for delivery/pickup. – Renewaa Team",
+	// 		"Hi %s, your %s order #%s has been completed and is ready for delivery/pickup. – CoreSync Team",
 	// 		updateOrder.Customer.FirstName, updateOrder.Type, updateOrder.OrderNo,
 	// 	)
 
@@ -39,5 +40,10 @@ func (s *service) UpdateOrderStatus(ctx context.Context, order *domain.Order) (*
 	// 	}
 	// }
 
-	return updateOrder, nil
+	actor, err := s.userRepo.FindByClerkID(ctx, actingClerkID)
+	if err != nil {
+		return nil, "", err
+	}
+	actorName := actor.FirstName + " " + actor.LastName
+	return updateOrder, actorName, nil
 }

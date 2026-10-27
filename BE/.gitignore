@@ -25,7 +25,4 @@ coverage*
 
 cmd/
 
-.github
-docker-compose.yml
-Dockerfile
-credentials.json
+/credentials.json

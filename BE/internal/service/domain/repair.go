@@ -18,6 +18,7 @@ type Repair struct {
 	Price         float64   `json:"price"`
 	CustomerName  string    `json:"customer_name"`
 	CustomerPhone string    `json:"customer_phone"`
+	Assignee      string    `json:"assingee"`
 	CreatedBy     string    `json:"created_by"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`

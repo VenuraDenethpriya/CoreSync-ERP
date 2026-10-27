@@ -18,6 +18,7 @@ import { PaginationComponent } from "@/components/Pagination"
 import { useAuth } from "@clerk/clerk-react"
 import { useDebounce } from "@/hooks/useDebounce"
 import { ChangeStatusDropdownMenu } from "./ChangeStatusMenu"
+import { fechInterviewTrackerList } from "@/api/hrApi"
 
 
 
@@ -87,21 +88,21 @@ export function InterviewTrackerTable({ setExportData }) {
   };
 
   const columns = [
-    {
-      accessorKey: "ID",
-      header: "ID",
-      cell: ({ row }) => {
-        const { ID, id } = row.original
-        return (
-          <div
-            className="capitalize cursor-pointer"
-            onClick={() => navigate(`/hr/interviews-tracker/${id}`)}
-          >
-            {ID}
-          </div>
-        )
-      },
-    },
+    // {
+    //   accessorKey: "ID",
+    //   header: "ID",
+    //   cell: ({ row }) => {
+    //     const { ID, id } = row.original
+    //     return (
+    //       <div
+    //         className="capitalize cursor-pointer"
+    //         onClick={() => navigate(`/hr/interviews-tracker/${id}`)}
+    //       >
+    //         {ID}
+    //       </div>
+    //     )
+    //   },
+    // },
     {
       accessorKey: "name",
       header: "Name",
@@ -175,14 +176,14 @@ export function InterviewTrackerTable({ setExportData }) {
       },
     },
     {
-      accessorKey: "score",
+      accessorKey: "interviewScore",
       header: "Interview Score",
       cell: ({ row }) => {
-        const { score , id } = row.original
+        const { score, id } = row.original
         return (
           <div
             onClick={() => navigate(`/hr/interviews-tracker/${id}`)}
-            className="capitalize pl-5" >{row.getValue("score")}</div>
+            className="capitalize pl-5" >{row.getValue("interviewScore")}</div>
         )
       },
     },
@@ -190,10 +191,10 @@ export function InterviewTrackerTable({ setExportData }) {
       accessorKey: "status",
       header: () => <div className="pl-8">Status</div>,
       cell: ({ row }) => {
-        const item = row.original
+        const member = row.original
         return (
           <ChangeStatusDropdownMenu
-            item={item}
+            member={member}
           />
         )
       },
@@ -218,24 +219,22 @@ export function InterviewTrackerTable({ setExportData }) {
       try {
         setIsLoading(true)
         const token = await getToken();
-        console.log(token)
-        const response = await fetchInventoryItemsList(token, debouncedSearch, limit, offset)
-        const apiData = response?.data?.items || []
-        const total = response.data.total_inventory;
+        const response = await fechInterviewTrackerList(token, debouncedSearch, limit, offset)
+        const apiData = response?.data?.interview_tracker || []
+        const total = response.data.total_interview_tracker;
         setTotal(total)
 
         const mappedData = apiData
           .map((item) => ({
             id: item.id,
-            name: item.item_name,
-            dateOfApplication: item.date_of_application,
+            name: item.candidate_name,
+            dateOfInterview: new Date(item.date_of_inverview).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }),
             positionApplied: item.position_applied,
-            department: item.department,
-            evaluationScore: item.evaluation_score,
+            interviewScore: item.interview_score,
             comments: item.comments,
+            phoneNumber: item.phone,
+            email: item.email,
             status: item.status,
-            // allocated: item.allocated,
-            updatedAt: item.updated_at,
             createdAt: item.created_at,
           }))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))

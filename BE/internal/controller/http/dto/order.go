@@ -1,8 +1,8 @@
 package dto
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"encoding/json"
-	"rims-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -252,6 +252,7 @@ type GetQuoteByIdResponse struct {
 	PhoneNo2          string                     `json:"phone_no2"`
 	Email             string                     `json:"email"`
 	VatNo             string                     `json:"vat_no"`
+	TinNo             string                     `json:"tin_no"`
 	CreatedBy         string                     `json:"created_by"`
 	Type              string                     `json:"type"`
 	QuoteNo           string                     `json:"quote_no"`
@@ -267,6 +268,7 @@ type GetQuoteByIdResponse struct {
 	SalesID           uuid.UUID                  `json:"sales_id"`
 	SalesNo           string                     `json:"sales_no"`
 	Salesperson       string                     `json:"salesperson"`
+	SalespersonPhone  string                     `json:"salesperson_phone"`
 	SaleType          string                     `json:"sales_type"`
 	Commission        float64                    `json:"commission"`
 	Date              time.Time                  `json:"date"`
@@ -293,7 +295,7 @@ func NewGetQuoteByIdResponse(quote *domain.Quote) *GetQuoteByIdResponse {
 		})
 	}
 	var salesID uuid.UUID
-	salesNo, saleType, salesperson, description, recordingURL := "", "", "", "", ""
+	salesNo, saleType, salesperson, salespersonPhone, description, recordingURL := "", "", "", "", "", ""
 	var commission float64
 	var saleDate time.Time
 
@@ -307,13 +309,13 @@ func NewGetQuoteByIdResponse(quote *domain.Quote) *GetQuoteByIdResponse {
 		saleDate = quote.Sale.Date
 		description = quote.Sale.Description
 		recordingURL = quote.Sale.RecordingURL
-
 		if quote.Sale.SalespersonData != nil {
 			salesperson = quote.Sale.SalespersonData.FirstName + " " + quote.Sale.SalespersonData.LastName
+			salespersonPhone = quote.Sale.SalespersonData.PhoneNo
 		}
 	}
 
-	title, firstName, lastName, address, phoneNo1, phoneNo2, email, VatNo := "", "", "", "", "", "", "", ""
+	title, firstName, lastName, address, phoneNo1, phoneNo2, email, VatNo, TinNo := "", "", "", "", "", "", "", "", ""
 	if quote.Customer != nil {
 		title = quote.Customer.Title
 		firstName = quote.Customer.FirstName
@@ -323,6 +325,7 @@ func NewGetQuoteByIdResponse(quote *domain.Quote) *GetQuoteByIdResponse {
 		phoneNo2 = quote.Customer.PhoneNo2
 		email = quote.Customer.Email
 		VatNo = quote.Customer.VatNo
+		TinNo = quote.Customer.TinNo
 	}
 
 	return &GetQuoteByIdResponse{
@@ -336,6 +339,7 @@ func NewGetQuoteByIdResponse(quote *domain.Quote) *GetQuoteByIdResponse {
 		PhoneNo2:          phoneNo2,
 		Email:             email,
 		VatNo:             VatNo,
+		TinNo:             TinNo,
 		CreatedBy:         quote.CreatedBy,
 		Type:              quote.Type,
 		QuoteNo:           quote.QuoteNo,
@@ -352,6 +356,7 @@ func NewGetQuoteByIdResponse(quote *domain.Quote) *GetQuoteByIdResponse {
 		SalesNo:           salesNo,
 		SaleType:          saleType,
 		Salesperson:       salesperson,
+		SalespersonPhone:  salespersonPhone,
 		Commission:        commission,
 		Date:              saleDate,
 		Description:       description,
@@ -605,11 +610,11 @@ type CreateOrderItemResponse struct {
 func NewOrderItemResponse(orderItem *domain.OrderItem) *CreateOrderItemResponse {
 	return &CreateOrderItemResponse{
 		ID:        orderItem.ID,
-		OrderNo:   orderItem.OrderNo,
+		OrderNo:   *orderItem.OrderNo,
 		ProductID: orderItem.ProductID,
 		Quantity:  orderItem.Quantity,
 		UnitPrice: orderItem.UnitPrice,
-		SubTotal:  orderItem.SubTotal,
+		// SubTotal:  orderItem.SubTotal,
 		Note:      orderItem.Note,
 		CreatedAt: orderItem.CreatedAt,
 	}
@@ -617,6 +622,7 @@ func NewOrderItemResponse(orderItem *domain.OrderItem) *CreateOrderItemResponse 
 
 type CreateOrderPaymentRequest struct {
 	PaymentType domain.PaymentType `json:"payment_type" validate:"required"`
+	PaymentMode string             `json:"payment_mode" validate:"required"`
 	Amount      float64            `json:"amount" validate:"required"`
 	LoanAmount  float64            `json:"loan_amount" validate:"required"`
 	PaidDate    string             `json:"paid_date" validate:"required"`
@@ -628,6 +634,7 @@ type CreateOrderPaymentResponse struct {
 	ID          uuid.UUID          `gorm:"type:uuid;primary_key" json:"id"`
 	OrderID     uuid.UUID          `gorm:"type:uuid;primary_key" json:"order_id"`
 	PaymentType domain.PaymentType `json:"payment_type"`
+	PaymentMode string             `json:"payment_mode" `
 	Amount      float64            `json:"amount"`
 	LoanAmount  float64            `json:"loan_amount"`
 	PaidDate    string             `json:"paid_date"`
@@ -640,6 +647,7 @@ func NewCreateOrderPaymentResponse(payment *domain.Payment) *CreateOrderPaymentR
 		ID:          payment.ID,
 		OrderID:     payment.OrderID,
 		PaymentType: payment.PaymentType,
+		PaymentMode: payment.PaymentMode,
 		Amount:      payment.Amount,
 		LoanAmount:  payment.LoanAmount,
 		PaidDate:    payment.PaidDate,
@@ -658,15 +666,17 @@ type CreateFullOrderRequest struct {
 
 // CreateFullOrderResponse represents the response body for creating a new order with customer and items
 type CreateFullOrderResponse struct {
-	OrderID              uuid.UUID                 `gorm:"type:uuid;primary_key" json:"id"`
-	SalesID              uuid.UUID                 `gorm:"type:uuid;primary_key" json:"SalesID"`
-	CustomerID           uuid.UUID                 `gorm:"type:uuid;primary_key" json:"customer_id"`
-	FirstName            string                    `json:"first_name"`
-	LastName             string                    `json:"last_name"`
-	Address              string                    `json:"address"`
-	PhoneNo1             string                    `json:"phone_no1"`
-	PhoneNo2             string                    `json:"phone_no2"`
-	Email                string                    `json:"email"`
+	OrderID    uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
+	SalesID    uuid.UUID `gorm:"type:uuid;primary_key" json:"SalesID"`
+	CustomerID uuid.UUID `gorm:"type:uuid;primary_key" json:"customer_id"`
+	FirstName  string    `json:"first_name"`
+	LastName   string    `json:"last_name"`
+	Address    string    `json:"address"`
+	PhoneNo1   string    `json:"phone_no1"`
+	PhoneNo2   string    `json:"phone_no2"`
+	Email      string    `json:"email"`
+	VatNo      string    `json:"vat_no"`
+	// PoNo                 string                    `json:"ti_no"`
 	Type                 string                    `json:"type"`
 	OrderNo              string                    `json:"order_no"`
 	SubTotal             float64                   `json:"subtotal"`
@@ -679,6 +689,7 @@ type CreateFullOrderResponse struct {
 	Items                []CreateOrderItemResponse `json:"items"`
 	ExpectedDeliveryDate time.Time                 `json:"ExpectedDeliveryDate,omitempty"`
 	PaymentType          domain.PaymentType        `json:"payment_type"`
+	PaymentMode          string                    `json:"payment_mode"`
 	Amount               int                       `json:"amount"`
 	LoanAmount           int                       `json:"loan_amount"`
 	PaidDate             string                    `json:"paid_date"`
@@ -1010,6 +1021,7 @@ func NewUpdateOrderResponse(order *domain.Order) *UpdateOrderResponse {
 		UpdatedAt:         order.UpdatedAt,
 	}
 }
+
 func NewApproveOrderResponse(order *domain.Order) *ApproveOrderResponse {
 
 	return &ApproveOrderResponse{
@@ -1044,32 +1056,36 @@ type UpdateOrderItemResponse struct {
 func NewUpdateOrderItemResponse(orderItem *domain.OrderItem) *UpdateOrderItemResponse {
 	return &UpdateOrderItemResponse{
 		ID:        orderItem.ID,
-		OrderNo:   orderItem.OrderNo,
+		OrderNo:   *orderItem.OrderNo,
 		ProductID: orderItem.ProductID,
 		Quantity:  orderItem.Quantity,
 		UnitPrice: orderItem.UnitPrice,
-		SubTotal:  orderItem.SubTotal,
+		// SubTotal:  orderItem.SubTotal,
 		Note:      orderItem.Note,
 		CreatedAt: orderItem.CreatedAt,
 	}
 }
 
 type UpdateOrderPaymentRequest struct {
-	PaymentType domain.PaymentType `json:"payment_type" validate:"required"`
-	Amount      float64            `json:"amount" validate:"required"`
-	LoanAmount  float64            `json:"loan_amount" validate:"required"`
-	PaidDate    string             `json:"paid_date" validate:"required"`
-	Image       string             `json:"image" validate:"required"`
-	CreatedBy   string             `json:"created_by" validate:"required"`
+	ID          uuid.UUID          `json:"id"`
+	PaymentType domain.PaymentType `json:"payment_type"`
+	PaymentMode string             `json:"payment_mode" `
+	Amount      float64            `json:"amount" `
+	LoanAmount  float64            `json:"loan_amount"`
+	PaidDate    string             `json:"paid_date"`
+	Image       string             `json:"image" `
+	CreatedBy   string             `json:"created_by"`
 }
 type UpdateOrderPaymentResponse struct {
-	// ID          uuid.UUID          `gorm:"type:uuid;primary_key" json:"id"`
-	OrderID     uuid.UUID          `gorm:"type:uuid;primary_key" json:"order_id"`
+	ID          uuid.UUID          `json:"id"`
+	OrderID     uuid.UUID          `json:"order_id"`
 	PaymentType domain.PaymentType `json:"payment_type"`
+	PaymentMode string             `json:"payment_mode" `
 	Amount      float64            `json:"amount"`
 	LoanAmount  float64            `json:"loan_amount"`
 	PaidDate    string             `json:"paid_date"`
 	Image       string             `json:"image"`
+	Status      string             `json:"status"`
 	CreatedBy   string             `json:"created_by"`
 }
 
@@ -1116,6 +1132,8 @@ type UpdateOrderStatusRequest struct {
 	OrderID       string `json:"id" binding:"required" validate:"required"`
 	PaymentStatus string `json:"PaymentStatus,omitempty"`
 	OrderStatus   string `json:"OrderStatus,omitempty"`
+	QcProof       string `json:"QcProof,omitempty"`
+	DeliveryProof string `json:"DeliveryProof,omitempty"`
 }
 
 // UpdateQuoteStatusResponse represents the response body for updating a quote status
@@ -1136,24 +1154,29 @@ type GetOrderIdRequest struct {
 	OrderID string `uri:"order-id" binding:"required" json:"order-id"`
 }
 type GetOrderItemResponse struct {
-	ID          uuid.UUID `json:"id"`
-	OrderNo     uuid.UUID `gorm:"foreignKey:OrderNo" json:"order_no"`
-	ProductID   uuid.UUID `gorm:"foreignKey:ProductID" json:"product_id"`
-	ProductName string    `json:"product_name"`
-	Quantity    int       `json:"quantity"`
-	UnitPrice   float64   `json:"unit_price"`
-	SubTotal    float64   `json:"subtotal"`
-	Note        string    `json:"note"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID            uuid.UUID `json:"id"`
+	OrderNo       uuid.UUID `gorm:"foreignKey:OrderNo" json:"order_no"`
+	ProductID     uuid.UUID `gorm:"foreignKey:ProductID" json:"product_id"`
+	SerialNo      string    `json:"serial_no"`
+	ProductName   string    `json:"product_name"`
+	Quantity      int       `json:"quantity"`
+	UnitPrice     float64   `json:"unit_price"`
+	SubTotal      float64   `json:"subtotal"`
+	Note          string    `json:"note"`
+	QcProof       string    `json:"qc_proof"`
+	DeliveryProof string    `json:"delivery_proof"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type GetOrderPaymentResponse struct {
 	ID          uuid.UUID          `json:"id"`
 	PaymentType domain.PaymentType `json:"payment_type"`
+	PaymentMode string             `json:"payment_mode"`
 	Amount      float64            `json:"amount"`
 	LoanAmount  float64            `json:"loan_amount"`
 	PaidDate    string             `json:"paid_date"`
 	Image       string             `json:"image"`
+	Status      string             `json:"status"`
 	CreatedBy   string             `json:"created_by"`
 }
 
@@ -1167,46 +1190,55 @@ type GetSaleResponse struct {
 	Description  string    `json:"description"`
 	RecordingURL string    `json:"recording_url"`
 }
+type OrderItemSummaryResponse struct {
+	ProductID uuid.UUID `json:"product_id"`
+	UnitPrice float64   `json:"unit_price"`
+	Quantity  int       `json:"quantity"`
+}
 
 type GetOrderByIdResponse struct {
-	OrderID              uuid.UUID                 `gorm:"type:uuid;primary_key" json:"id"`
-	CustomerID           uuid.UUID                 `gorm:"type:uuid;foreign_Key:CustomerID" json:"customer_id"`
-	Title                string                    `json:"title"`
-	FirstName            string                    `json:"first_name"`
-	LastName             string                    `json:"last_name"`
-	Address              string                    `json:"address"`
-	PhoneNo1             string                    `json:"phone_no1"`
-	PhoneNo2             string                    `json:"phone_no2"`
-	Email                string                    `json:"email"`
-	VatNo                string                    `json:"vat_no"`
-	CreatedBy            string                    `json:"created_by"`
-	Type                 string                    `json:"type"`
-	OrderNo              string                    `json:"order_no"`
-	SubTotal             float64                   `json:"subtotal"`
-	AdditionalCharges    []AdditionalCharge        `json:"additional_charges"`
-	Discount             float64                   `json:"discount,omitempty"`
-	Total                float64                   `json:"total"`
-	Vat                  bool                      `json:"vat"`
-	OrderStatus          string                    `json:"OrderStatus"`
-	PaymentStatus        string                    `json:"PaymentStatus"`
-	ExpectedDeliveryDate time.Time                 `json:"expected_delivery_date,omitempty"`
-	OrderItems           []GetOrderItemResponse    `json:"order_items"`
-	Payments             []GetOrderPaymentResponse `json:"payments"`
-	Assignee             []string                  `json:"assignee"`
-	Supervisor           string                    `json:"supervisor"`
-	CADFiles             CADFile                   `json:"cad_files"`
-	Designer             Designer                  `json:"designer"`
-	PoNo                 string                    `json:"po_no"`
-	SalesID              uuid.UUID                 `json:"sales_id"`
-	SalesNo              string                    `json:"sales_no"`
-	Salesperson          string                    `json:"salesperson"`
-	SaleType             string                    `json:"sales_type"`
-	Commission           float64                   `json:"commission"`
-	Date                 time.Time                 `json:"date"`
-	Description          string                    `json:"description"`
-	RecordingURL         string                    `json:"recording_url"`
-	CreatedAt            time.Time                 `json:"created_at"`
-	UpdatedAt            time.Time                 `json:"updated_at"`
+	OrderID              uuid.UUID                  `gorm:"type:uuid;primary_key" json:"id"`
+	CustomerID           uuid.UUID                  `gorm:"type:uuid;foreign_Key:CustomerID" json:"customer_id"`
+	Title                string                     `json:"title"`
+	FirstName            string                     `json:"first_name"`
+	LastName             string                     `json:"last_name"`
+	Address              string                     `json:"address"`
+	PhoneNo1             string                     `json:"phone_no1"`
+	PhoneNo2             string                     `json:"phone_no2"`
+	Email                string                     `json:"email"`
+	VatNo                string                     `json:"vat_no"`
+	CreatedBy            string                     `json:"created_by"`
+	Type                 string                     `json:"type"`
+	OrderNo              string                     `json:"order_no"`
+	SubTotal             float64                    `json:"subtotal"`
+	AdditionalCharges    []AdditionalCharge         `json:"additional_charges"`
+	Discount             float64                    `json:"discount,omitempty"`
+	Total                float64                    `json:"total"`
+	Vat                  bool                       `json:"vat"`
+	OrderStatus          string                     `json:"OrderStatus"`
+	PaymentStatus        string                     `json:"PaymentStatus"`
+	ExpectedDeliveryDate time.Time                  `json:"expected_delivery_date,omitempty"`
+	OrderItems           []GetOrderItemResponse     `json:"order_items"`
+	Payments             []GetOrderPaymentResponse  `json:"payments"`
+	Assignee             []string                   `json:"assignee"`
+	Supervisor           string                     `json:"supervisor"`
+	CADFiles             CADFile                    `json:"cad_files"`
+	Designer             Designer                   `json:"designer"`
+	PoNo                 string                     `json:"po_no"`
+	SalesID              uuid.UUID                  `json:"sales_id"`
+	SalesNo              string                     `json:"sales_no"`
+	Salesperson          string                     `json:"salesperson"`
+	SalespersonPhone     string                     `json:"salesperson_phone"`
+	SaleType             string                     `json:"sales_type"`
+	Commission           float64                    `json:"commission"`
+	Date                 time.Time                  `json:"date"`
+	Description          string                     `json:"description"`
+	RecordingURL         string                     `json:"recording_url"`
+	QcProof              string                     `json:"qc_proof"`
+	DeliveryProof        string                     `json:"delivery_proof"`
+	Items                []OrderItemSummaryResponse `json:"items_summary"`
+	CreatedAt            time.Time                  `json:"created_at"`
+	UpdatedAt            time.Time                  `json:"updated_at"`
 }
 
 func NewGetOrderByIdResponse(order *domain.Order) *GetOrderByIdResponse {
@@ -1215,23 +1247,60 @@ func NewGetOrderByIdResponse(order *domain.Order) *GetOrderByIdResponse {
 	}
 
 	var items []GetOrderItemResponse
+	assignedCounts := make(map[uuid.UUID]int)
+
+	batteryPackPrices := make(map[uuid.UUID]float64)
+	for _, summaryItem := range order.Items {
+		batteryPackPrices[summaryItem.ProductID] = summaryItem.UnitPrice
+	}
+
 	for _, item := range order.OrderItems {
 		productName := ""
 		if item.ProductName != nil {
 			productName = item.ProductName.Name
 		}
+		var safeOrderNo uuid.UUID
+		if item.OrderNo != nil {
+			safeOrderNo = *item.OrderNo
+		}
+
+		assignedCounts[item.ProductID] += item.Quantity
+
+		finalUnitPrice := item.UnitPrice
+		if summaryPrice, isBatteryPack := batteryPackPrices[item.ProductID]; isBatteryPack {
+			finalUnitPrice = summaryPrice
+		}
 
 		items = append(items, GetOrderItemResponse{
 			ID:          item.ID,
-			OrderNo:     item.OrderNo,
+			OrderNo:     safeOrderNo,
 			ProductID:   item.ProductID,
+			SerialNo:    item.SerialNo,
 			ProductName: productName,
 			Quantity:    item.Quantity,
-			UnitPrice:   item.UnitPrice,
-			SubTotal:    item.SubTotal,
-			Note:        item.Note,
-			CreatedAt:   item.CreatedAt,
+			UnitPrice:   finalUnitPrice,
+			// SubTotal:    item.SubTotal,
+			Note:      item.Note,
+			CreatedAt: item.CreatedAt,
 		})
+	}
+
+	for _, summaryItem := range order.Items {
+
+		pendingQty := summaryItem.Quantity - assignedCounts[summaryItem.ProductID]
+
+		for i := 0; i < pendingQty; i++ {
+			items = append(items, GetOrderItemResponse{
+				ID:          uuid.Nil,
+				OrderNo:     order.OrderID,
+				ProductID:   summaryItem.ProductID,
+				SerialNo:    "",
+				ProductName: summaryItem.ProductName,
+				Quantity:    1,
+				UnitPrice:   summaryItem.UnitPrice,
+				Note:        summaryItem.Note,
+			})
+		}
 	}
 
 	var payments []GetOrderPaymentResponse
@@ -1244,20 +1313,21 @@ func NewGetOrderByIdResponse(order *domain.Order) *GetOrderByIdResponse {
 		payments = append(payments, GetOrderPaymentResponse{
 			ID:          p.ID,
 			PaymentType: p.PaymentType,
+			PaymentMode: p.PaymentMode,
 			Amount:      p.Amount,
 			LoanAmount:  p.LoanAmount,
 			PaidDate:    p.PaidDate,
 			Image:       p.Image,
+			Status:      p.Status,
 			CreatedBy:   creator,
 		})
 	}
 
 	var salesID uuid.UUID
-	salesNo, saleType, salesperson, description, recordingURL := "", "", "", "", ""
+	salesNo, saleType, salesperson, salespersonPhone, description, recordingURL := "", "", "", "", "", ""
 	var commission float64
 	var saleDate time.Time
 
-	// 2. Safely extract Sale data
 	if order.Sale != nil {
 		salesID = order.Sale.SalesID
 		salesNo = order.Sale.SalesNo
@@ -1271,9 +1341,9 @@ func NewGetOrderByIdResponse(order *domain.Order) *GetOrderByIdResponse {
 
 		if order.Sale.SalespersonData != nil {
 			salesperson = order.Sale.SalespersonData.FirstName + " " + order.Sale.SalespersonData.LastName
+			salespersonPhone = order.Sale.SalespersonData.PhoneNo
 		}
 	}
-	// Customer fields (nil-safe)
 	title, firstName, lastName, address, phoneNo1, phoneNo2, email, vatNo :=
 		"", "", "", "", "", "", "", ""
 	if order.Customer != nil {
@@ -1287,16 +1357,11 @@ func NewGetOrderByIdResponse(order *domain.Order) *GetOrderByIdResponse {
 		vatNo = order.Customer.VatNo
 	}
 
-	// CreatedBy for the order's creator (nil-safe)
 	createdBy := ""
 	if order.User != nil {
 		createdBy = order.User.FirstName + " " + order.User.LastName
 	}
 
-	// salesperson := ""
-	// if order.Sale.SalespersonData != nil {
-	// 	salesperson = order.Sale.SalespersonData.FirstName + " " + order.Sale.SalespersonData.LastName
-	// }
 	return &GetOrderByIdResponse{
 		OrderID:              order.OrderID,
 		CustomerID:           order.CustomerID,
@@ -1326,24 +1391,19 @@ func NewGetOrderByIdResponse(order *domain.Order) *GetOrderByIdResponse {
 		CADFiles:             CADFile(order.CADFiles),
 		Designer:             Designer(order.Designer),
 		PoNo:                 order.PoNo,
-		// SalesID:              order.Sale.SalesID,
-		// SalesNo:              order.Sale.SalesNo,
-		// SaleType:             order.Sale.SalesType,
-		// Salesperson:          salesperson,
-		// Commission:           order.Sale.Commission,
-		// Date:                 order.Sale.Date,
-		// Description:          order.Sale.Description,
-		// RecordingURL:         order.Sale.RecordingURL,
-		SalesID:      salesID,
-		SalesNo:      salesNo,
-		SaleType:     saleType,
-		Salesperson:  salesperson,
-		Commission:   commission,
-		Date:         saleDate,
-		Description:  description,
-		RecordingURL: recordingURL,
-		CreatedAt:    order.CreatedAt,
-		UpdatedAt:    order.UpdatedAt,
+		SalesID:              salesID,
+		SalesNo:              salesNo,
+		SaleType:             saleType,
+		Salesperson:          salesperson,
+		SalespersonPhone:     salespersonPhone,
+		Commission:           commission,
+		Date:                 saleDate,
+		Description:          description,
+		RecordingURL:         recordingURL,
+		QcProof:              order.QcProof,
+		DeliveryProof:        order.DeliveryProof,
+		CreatedAt:            order.CreatedAt,
+		UpdatedAt:            order.UpdatedAt,
 	}
 }
 
@@ -1407,7 +1467,7 @@ func NewGetOrderCardResponse(order *domain.Order) *GetOrdersCardResponse {
 	for _, item := range order.OrderItems {
 		items = append(items, GetOrderItemCardResponse{
 			ID:          item.ID,
-			OrderNo:     item.OrderNo,
+			OrderNo:     *item.OrderNo,
 			ProductID:   item.ProductID,
 			ProductName: item.ProductName.Name,
 			Quantity:    item.Quantity,
@@ -1448,5 +1508,352 @@ type UpdareOrderPaymentRefundResponse struct {
 func NewOrderPaymentRefundResponse(order *domain.Order) *UpdareOrderPaymentRefundResponse {
 	return &UpdareOrderPaymentRefundResponse{
 		OrderID: order.OrderID,
+	}
+}
+
+type GetPacksRequest struct {
+	Query  string `form:"query"`
+	Limit  int    `form:"limit"`
+	Offset int    `form:"offset"`
+}
+
+type GetPackResponse struct {
+	ID          uuid.UUID `json:"id"`
+	ProductID   uuid.UUID `json:"product_id"`
+	ProductName string    `json:"product_name"`
+	SerialNo    string    `json:"serial_no"`
+	Priority    string    `json:"priority"`
+	Status      string    `json:"status"`
+	Note        string    `json:"note"`
+}
+type GetPacksResponse struct {
+	Packs      []GetPackResponse `json:"packs"`
+	Total      int               `json:"total"`
+	TotalPacks int64             `json:"total_packs"`
+}
+
+func NewGetPacksResponse(packs []*domain.OrderItem, totalPacks int64) *GetPacksResponse {
+	var response []GetPackResponse
+	for _, p := range packs {
+		productName := ""
+		if p.ProductName != nil {
+			productName = p.ProductName.Name
+		}
+
+		response = append(response, GetPackResponse{
+			ID:          p.ID,
+			ProductID:   p.ProductID,
+			ProductName: productName,
+			SerialNo:    p.SerialNo,
+			Priority:    p.Priority,
+			Status:      p.Status,
+			Note:        p.Note,
+		})
+	}
+	return &GetPacksResponse{
+		Packs:      response,
+		Total:      len(packs),
+		TotalPacks: totalPacks,
+	}
+}
+
+type GetPackByIdRequest struct {
+	PackID string `uri:"pack-id" binding:"required" json:"packId"`
+}
+type GetPackByIdResponse struct {
+	ID             uuid.UUID `json:"id"`
+	OrderID        uuid.UUID `json:"order_id"`
+	OrderNo        string    `json:"order_no"`
+	CasingID       uuid.UUID `json:"casing_id"`
+	CasingNo       string    `json:"casing_no"`
+	WireHarnessID  uuid.UUID `json:"wire_harness_id"`
+	WireHarnessNo  string    `json:"wire_harness_no"`
+	ProductID      uuid.UUID `json:"product_id"`
+	SerialNo       string    `json:"serial_no"`
+	Status         string    `json:"status"`
+	Notes          string    `json:"note"`
+	Category       string    `json:"category"`
+	Name           string    `json:"name"`
+	Type           string    `json:"type"`
+	CellType       string    `json:"cell_type"`
+	CellCount      string    `json:"cell_count"`
+	Voltage        float64   `json:"voltage"`
+	Capacity       float64   `json:"capacity"`
+	BmsType        string    `json:"bms_type"`
+	SolarPanel     string    `json:"solar_panel"`
+	Inverter       string    `json:"inverter"`
+	Monitor        string    `json:"monitor"`
+	BasePrice      float64   `json:"base_price"`
+	Specifications string    `json:"specifications"`
+	IsActive       bool      `json:"is_active"`
+}
+
+func NewGetPackByIdResponse(pack *domain.OrderItem) *GetPackByIdResponse {
+	var orderID uuid.UUID
+	var orderNo string
+	if pack.OrderNo != nil {
+		orderID = *pack.OrderNo
+
+		if pack.Order != nil {
+			orderNo = pack.Order.Type + pack.Order.OrderNo
+		} else {
+			orderNo = "N/A"
+		}
+	} else {
+		orderID = uuid.Nil
+		orderNo = ""
+	}
+
+	var casingID uuid.UUID
+	var casingNo string
+	if pack.CasingID != nil {
+		casingID = *pack.CasingID
+	}
+	if pack.Casing != nil {
+		casingNo = pack.Casing.SerialNo
+	}
+
+	var wireHarnessID uuid.UUID
+	var wireHarnessNo string
+	if pack.WireHarnessID != nil {
+		wireHarnessID = *pack.WireHarnessID
+	}
+	if pack.WireHarness != nil {
+		wireHarnessNo = pack.WireHarness.SerialNo
+	}
+
+	var category, name, prodType, cellType, cellCount, bmsType, solarPanel, inverter, monitor, specs string
+	var voltage, capacity, basePrice float64
+	var isActive bool
+
+	if pack.ProductName != nil {
+		category = string(pack.ProductName.Category)
+		name = pack.ProductName.Name
+		prodType = pack.ProductName.Type
+		cellType = pack.ProductName.CellType
+		cellCount = pack.ProductName.CellCount
+		voltage = pack.ProductName.Voltage
+		capacity = pack.ProductName.Capacity
+		bmsType = pack.ProductName.BmsType
+		solarPanel = pack.ProductName.SolarPanel
+		inverter = pack.ProductName.Inverter
+		monitor = pack.ProductName.Monitor
+		basePrice = pack.ProductName.BasePrice
+		specs = pack.ProductName.Specifications
+		if pack.ProductName.IsActive != nil {
+			isActive = *pack.ProductName.IsActive
+		}
+	}
+
+	return &GetPackByIdResponse{
+		ID:             pack.ID,
+		OrderID:        orderID,
+		OrderNo:        orderNo,
+		CasingID:       casingID,
+		CasingNo:       casingNo,
+		WireHarnessID:  wireHarnessID,
+		WireHarnessNo:  wireHarnessNo,
+		ProductID:      pack.ProductID,
+		SerialNo:       pack.SerialNo,
+		Status:         pack.Status,
+		Notes:          pack.Note,
+		Category:       category,
+		Name:           name,
+		Type:           prodType,
+		CellType:       cellType,
+		CellCount:      cellCount,
+		Voltage:        voltage,
+		Capacity:       capacity,
+		BmsType:        bmsType,
+		SolarPanel:     solarPanel,
+		Inverter:       inverter,
+		Monitor:        monitor,
+		BasePrice:      basePrice,
+		Specifications: specs,
+		IsActive:       isActive,
+	}
+}
+
+type UpdatePackSRequest struct {
+	PackID   string `json:"packId" binding:"required" validate:"required"`
+	OrderID  string `json:"orderId,omitempty"`
+	Status   string `json:"status,omitempty"`
+	SerialNo string `json:"serial_no,omitempty"`
+	Priority string `json:"priority,omitempty"`
+}
+
+type UpdatePackStatusResponse struct {
+	PackID   uuid.UUID `gorm:"type:uuid;primary_key" json:"pack-id"`
+	OrderID  uuid.UUID `json:"orderId,omitempty"`
+	Status   string    `json:"status,omitempty"`
+	SerialNo string    `json:"SerialNo"`
+	Priority string    `json:"priority,omitempty"`
+}
+
+func NewUpdatePackResponse(pack *domain.OrderItem) *UpdatePackStatusResponse {
+	var orderIDVal uuid.UUID
+	if pack.OrderNo != nil {
+		orderIDVal = *pack.OrderNo
+	}
+
+	return &UpdatePackStatusResponse{
+		PackID:   pack.ID,
+		OrderID:  orderIDVal,
+		Status:   pack.Status,
+		SerialNo: pack.SerialNo,
+		Priority: pack.Priority,
+	}
+}
+
+type UpdatePacksOrderIDRequest struct {
+	PackID          string `json:"packId" binding:"required" validate:"required"`
+	ExistingOrderID string `json:"existiongorderId"`
+	NewOrderID      string `json:"neworderId"`
+}
+
+type UpdatePacksOrderIDResponse struct {
+	PackID     uuid.UUID `json:"packId" binding:"required" validate:"required"`
+	NewOrderID uuid.UUID `json:"neworderId" binding:"required" validate:"required"`
+}
+
+func NewUpdatePacksOrderIDResponse(pack *domain.OrderItem) *UpdatePacksOrderIDResponse {
+	return &UpdatePacksOrderIDResponse{
+		PackID:     pack.ID,
+		NewOrderID: *pack.OrderNo,
+	}
+}
+
+type CreatePackRequest struct {
+	ProductID uuid.UUID `json:"product_id" validate:"required"`
+	Quantity  int       `json:"quantity,omitempty"`
+	UnitPrice float64   `json:"unit_price,omitempty"`
+	Status    string    `json:"status,omitempty"`
+	Note      string    `json:"note,omitempty"`
+}
+
+// CreateQuoteItemResponse represents the response body for creating a new quote item
+type CreatePackResponse struct {
+	ID        uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
+	SerialNo  string    `json:"serial_no"`
+	ProductID uuid.UUID `gorm:"type:uuid;primary_key" json:"product_id"`
+	Quantity  int       `json:"Quantity,omitempty"`
+	UnitPrice float64   `json:"unit_price,omitempty"`
+	Status    string    `json:"status"`
+	Note      string    `json:"Note,omitempty"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+}
+
+func NewPackResponse(orderItem *domain.OrderItem) *CreatePackResponse {
+	return &CreatePackResponse{
+		ID:        orderItem.ID,
+		ProductID: orderItem.ProductID,
+		SerialNo:  orderItem.SerialNo,
+		Quantity:  orderItem.Quantity,
+		UnitPrice: orderItem.UnitPrice,
+		Status:    orderItem.Status,
+		Note:      orderItem.Note,
+		CreatedAt: orderItem.CreatedAt,
+	}
+}
+
+type GetPaymentRequest struct {
+	Query  string `form:"query"`
+	Limit  int    `form:"limit"`
+	Offset int    `form:"offset"`
+}
+type GetOrderPaymentListResponse struct {
+	ID          uuid.UUID          `json:"id"`
+	OrderNo     string             `json:"order_no"`
+	PaymentType domain.PaymentType `json:"payment_type"`
+	PaymentMode string             `json:"payment_mode"`
+	Amount      float64            `json:"amount"`
+	Status      string             `json:"status"`
+	PaidDate    string             `json:"paid_date"`
+	CreatedBy   string             `json:"created_by"`
+}
+type GetOrderPaymentListResponses struct {
+	Payments      []GetOrderPaymentListResponse `json:"payments"`
+	Total         int                           `json:"total"`
+	TotalPayments int                           `json:"total_payments"`
+}
+
+func NewGetOrderPaymentListResponses(payments []*domain.Payment, totalPayments int) *GetOrderPaymentListResponses {
+	var responses []GetOrderPaymentListResponse
+	for _, p := range payments {
+		creator := ""
+		if p.User != nil {
+			creator = p.User.FirstName + " " + p.User.LastName
+		}
+		responses = append(responses, GetOrderPaymentListResponse{
+			ID:          p.ID,
+			OrderNo:     p.Order.Type + "" + p.Order.OrderNo,
+			PaymentType: p.PaymentType,
+			PaymentMode: p.PaymentMode,
+			Amount:      p.Amount,
+			Status:      p.Status,
+			PaidDate:    p.PaidDate,
+			CreatedBy:   creator,
+		})
+	}
+	return &GetOrderPaymentListResponses{
+		Payments:      responses,
+		Total:         len(responses),
+		TotalPayments: totalPayments,
+	}
+}
+
+type UpdatePaymentRequest struct {
+	ID     uuid.UUID `json:"id"`
+	Status string    `json:"status" `
+}
+type UpdatePaymentResponse struct {
+	ID      uuid.UUID `json:"id"`
+	OrderNo string    `json:"order_no"`
+	Amount  float64   `json:"amount"`
+	Status  string    `json:"status"`
+}
+
+func NewUpdatePaymentResponse(payment *domain.Payment) *UpdatePaymentResponse {
+	return &UpdatePaymentResponse{
+		ID:      payment.ID,
+		OrderNo: payment.Order.Type + "" + payment.Order.OrderNo,
+		Amount:  payment.Amount,
+		Status:  payment.Status,
+	}
+}
+
+type UpdatePacksProductionIDRequest struct {
+	PackID        string `json:"packId" binding:"required" validate:"required"`
+	CasingID      string `json:"casingId,omitempty"`
+	WireHarnessID string `json:"wireHarnessId,omitempty"`
+}
+
+type UpdatePacksProductionResponse struct {
+	PackID        uuid.UUID  `json:"packId" binding:"required" validate:"required"`
+	CasingID      *uuid.UUID `json:"casingId,omitempty"`
+	WireHarnessID *uuid.UUID `json:"wireHarnessId,omitempty"`
+}
+
+func NewUpdatePacksProductionResponse(pack *domain.OrderItem) *UpdatePacksProductionResponse {
+	return &UpdatePacksProductionResponse{
+		PackID:        pack.ID,
+		CasingID:      pack.CasingID,
+		WireHarnessID: pack.WireHarnessID,
+	}
+}
+
+type DeletePackIdRequest struct {
+	PackID string `uri:"pack-id" binding:"required" json:"pack-id"`
+}
+
+type DeletePackResponse struct {
+	PackID   uuid.UUID `json:"id"`
+	SerialNo string    `json:"serial_no"`
+}
+
+func NewDeletePackResponse(pack *domain.OrderItem) DeletePackResponse {
+	return DeletePackResponse{
+		PackID:   pack.ID,
+		SerialNo: pack.SerialNo,
 	}
 }

@@ -11,7 +11,22 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
         className
       )}
       ref={ref}
-      {...props} />)
+      {...props}
+      onWheel={(e) => {
+        if (type === "number") {
+          e.currentTarget.blur();
+        }
+        if (props.onWheel) props.onWheel(e);
+      }}
+
+      onKeyDown={(e) => {
+        if (type === "number" && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+          e.preventDefault();
+        }
+        if (props.onKeyDown) props.onKeyDown(e);
+      }}
+    />)
+
   );
 })
 Input.displayName = "Input"

@@ -1,10 +1,10 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,7 +20,7 @@ func (ih *InventoryHandler) GetInventoryItemUsage(ctx *gin.Context) {
 		return
 	}
 
-	var orderID, itemID uuid.UUID
+	var orderID, itemID, packID uuid.UUID
 	var err error
 
 	if query.OrderID != "" {
@@ -39,7 +39,15 @@ func (ih *InventoryHandler) GetInventoryItemUsage(ctx *gin.Context) {
 		}
 	}
 
-	usages, total, mode, err := ih.inventoryService.GetInventoryItemUsages(ctx, orderID, itemID, query.Limit, query.Offset)
+	if query.PackID != "" {
+		packID, err = uuid.Parse(query.PackID)
+		if err != nil {
+			common.HandleError(ctx, fmt.Errorf("invalid pack_id UUID: %v", err))
+			return
+		}
+	}
+
+	usages, total, mode, err := ih.inventoryService.GetInventoryItemUsages(ctx, orderID, itemID, packID, query.Limit, query.Offset)
 	if err != nil {
 		common.HandleError(ctx, err)
 		return

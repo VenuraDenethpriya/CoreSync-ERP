@@ -3,7 +3,7 @@ import logo from '../assets/logo.png';
 const LoadingScreen = () => {
   return (
     <div style={styles.container}>
-      <img src={logo} alt="Renewaa Logo" style={styles.logo} />
+      <img src={logo} alt="CoreSync Logo" style={styles.logo} />
       <div style={styles.loaderBar}></div>
     </div>
   );

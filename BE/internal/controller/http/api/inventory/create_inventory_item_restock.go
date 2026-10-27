@@ -1,11 +1,11 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/helper/logger"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +31,7 @@ func (ih *InventoryHandler) CreateInventoryItemRestock(c *gin.Context) {
 	// Custom description
 	userName := createInventoryItemRestock.UserName
 	if createInventoryItemRestock.User != nil {
-		userName = strings.TrimSpace(createInventoryItemRestock.User.FirstName + " " + createInventoryItemRestock.User.LastName)
+		userName = strings.TCoreSyncpace(createInventoryItemRestock.User.FirstName + " " + createInventoryItemRestock.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(c, common.AuditLogDetails{

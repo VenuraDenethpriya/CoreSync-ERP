@@ -19,6 +19,7 @@ import { useAuth } from "@clerk/clerk-react"
 import { Button } from "@/components/ui/button"
 import { ArrowUpDown } from "lucide-react"
 import { fethchSalespersonList } from "@/api/salespersonApi"
+import { ChangeStatusDropdownMenu } from "./ChangeStatusMenu"
 
 
 
@@ -70,21 +71,30 @@ export function TeamTable({ setExportData }) {
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("name")}</div>
+        <div
+          className="capitalize"
+          onClick={() => navigate(`/sales/salespersons/${row.original.id}`)}
+        >{row.getValue("name")}</div>
       ),
     },
     {
       accessorKey: "phoneNo",
       header: "Phone No.",
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("phoneNo")}</div>
+        <div
+          className="capitalize"
+          onClick={() => navigate(`/sales/salespersons/${row.original.id}`)}
+        >{row.getValue("phoneNo")}</div>
       ),
     },
     {
       accessorKey: "email",
       header: "Email",
       cell: ({ row }) => (
-        <div className="">{row.getValue("email")}</div>
+        <div
+          className=""
+          onClick={() => navigate(`/sales/salespersons/${row.original.id}`)}
+        >{row.getValue("email")}</div>
       ),
     },
     {
@@ -100,7 +110,10 @@ export function TeamTable({ setExportData }) {
       ),
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("totalSales"))
-        return <div className="pl-20 w-full">{amount}</div>
+        return <div
+          className="pl-20 w-full"
+          onClick={() => navigate(`/sales/salespersons/${row.original.id}`)}
+        >{amount}</div>
       },
     },
     {
@@ -120,10 +133,24 @@ export function TeamTable({ setExportData }) {
           style: "currency",
           currency: "LKR",
         }).format(amount)
-        return <div className="pl-4 w-full">{formatted}</div>
+        return <div
+          className="pl-4 w-full"
+          onClick={() => navigate(`/sales/salespersons/${row.original.id}`)}
+        >{formatted}</div>
       },
     },
-
+    {
+      accessorKey: "status",
+      header: () => <div className="pl-8">Status</div>,
+      cell: ({ row }) => {
+        const team = row.original
+        return (
+          <ChangeStatusDropdownMenu
+            team={team}
+          />
+        )
+      },
+    }
   ]
 
   useEffect(() => {
@@ -146,6 +173,7 @@ export function TeamTable({ setExportData }) {
             email: team.email,
             totalSales: team.total_sales_no,
             totalCommission: team.total_commission,
+            status: team.status,
             updatedAt: team.updated_at,
             createdAt: team.created_at,
           }))
@@ -362,7 +390,6 @@ export function TeamTable({ setExportData }) {
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                   className="cursor-pointer"
-                  onClick={() => navigate(`/sales/salespersons/${row.original.id}`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

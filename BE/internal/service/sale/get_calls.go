@@ -1,10 +1,10 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
-func (s *service) GetCalls(ctx context.Context, query string, limit int, offset int) ([]*domain.Call, int, error) {
-	return s.callRepo.GetCalls(ctx, query, limit, offset)
+func (s *service) GetCalls(ctx context.Context, query string, limit int, offset int, userRole string, clerkID string, userEmail string) ([]*domain.Call, int, error) {
+	return s.callRepo.GetCalls(ctx, query, limit, offset, userRole, clerkID, userEmail)
 }

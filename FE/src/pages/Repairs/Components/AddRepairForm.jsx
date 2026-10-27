@@ -1,4 +1,4 @@
-import { custom, set, z } from "zod"
+import { z } from "zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,18 +10,16 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { CalendarIcon, Eye, EyeOff } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { addDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createSale } from "@/api/saleApi";
 import { Textarea } from "@/components/ui/textarea";
 import { featchAllOrders } from "@/api/orderApi";
 import { createRepair, fetchLastJobNo } from "@/api/repair";
 
 const formSchema = z.object({
-    // JobNo: z.string().min(2, { message: "Job No is required" }),
     OrderNo: z.string().optional(),
     DueDate: z.date({ required_error: "Due Date is required" }),
     CustomerName: z.string().optional(),
@@ -39,13 +37,13 @@ const AddRepairForm = () => {
     const { user } = useUser();
     const userID = user?.id;
 
-    const [data, setData] = useState([])
-    const [searchOrders, setSearchOrders] = useState("")
+    const [data, setData] = useState([]);
+    const [searchOrders, setSearchOrders] = useState("");
     const [ordersLoading, setOrdersLoading] = useState(false);
     const [ordersError, setOrdersError] = useState(null);
-    const [limitOrders, setLimitOrders] = useState(10)
-    const [offsetOrders, setOffsetOrders] = useState(0)
-    const [totalOrders, setTotalOrders] = useState(0)
+    const [limitOrders, setLimitOrders] = useState(10);
+    const [offsetOrders, setOffsetOrders] = useState(0);
+    const [totalOrders, setTotalOrders] = useState(0);
     const defaultDueDate = addDays(new Date(), 2);
     const [lastJobNo, setLastJobNo] = useState(null);
     const [isFetchingJob, setIsFetchingJob] = useState(true);
@@ -59,12 +57,16 @@ const AddRepairForm = () => {
         resolver: zodResolver(formSchema),
         defaultValues: {
             DueDate: defaultDueDate,
+            OrderNo: "",
+            CustomerName: "",
+            CustomerPhone: "",
+            Description: "",
+            Price: undefined,
         }
     });
 
     const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 640);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
 
     useEffect(() => {
         const handleResize = () => {
@@ -73,6 +75,7 @@ const AddRepairForm = () => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
     async function handleSubmit(values) {
         try {
             const token = await getToken();
@@ -93,13 +96,14 @@ const AddRepairForm = () => {
             if (response.message == "success") {
                 toast.success("Repair added successfully!", { position: "bottom-right" });
                 navigate("/repairs");
-                setIsSubmitting(false);
             } else {
                 toast.error("Error adding repair! " + response.message, { position: "bottom-right" });
             }
         } catch (error) {
             console.error("Error submitting form:", error);
             toast.error("Error adding repair!", { position: "bottom-right" });
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -118,7 +122,7 @@ const AddRepairForm = () => {
                 const response = await featchAllOrders(token, searchValue, vat, orderStatus, paymentStatus, limitOrders, offsetOrders);
                 const apiData = response?.data.orders || [];
                 const total = response.data.total_orders;
-                setTotalOrders(total)
+                setTotalOrders(total);
 
                 const mappedData = apiData
                     .map((order) => ({
@@ -127,7 +131,6 @@ const AddRepairForm = () => {
                         type: order.type,
                         created_at: order.created_at,
                         updated_at: order.updated_at,
-
                     }))
                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
@@ -142,14 +145,12 @@ const AddRepairForm = () => {
         fetchData();
     }, [searchOrders, limitOrders, offsetOrders, getToken]);
 
-
     useEffect(() => {
         const loadLastJobNo = async () => {
             try {
                 const token = await getToken();
                 const response = await fetchLastJobNo(token);
 
-                // Update this line to look inside 'data' for 'last_job_no'
                 if (response && response.data && response.data.last_job_no) {
                     setLastJobNo(response.data.last_job_no);
                 } else {
@@ -166,33 +167,25 @@ const AddRepairForm = () => {
     }, [getToken]);
 
     const generateNextJobNo = (last) => {
-        // Handle the loading state before the fetch completes
         if (last === undefined) return "Loading...";
 
-        // 1. Calculate today's prefix (e.g., JOB-260427)
         const today = new Date();
         const yy = String(today.getFullYear()).slice(-2);
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const dd = String(today.getDate()).padStart(2, '0');
         const todayPrefix = `JOB-${yy}${mm}${dd}`;
 
-        // 2. If the last job is from TODAY, increment its sequence
         if (last && last.startsWith(todayPrefix)) {
-            // Split by hyphen and grab the last part (the sequence number)
             const parts = last.split('-');
             const lastSequence = parts[parts.length - 1];
-
-            // Increment and pad back to 2 digits (e.g., "01" -> "02")
             const nextSequence = String(parseInt(lastSequence, 10) + 1).padStart(2, "0");
             return `${todayPrefix}-${nextSequence}`;
         }
 
-        // 3. If there is no last job, or the last job was from yesterday, start at 01
         return `${todayPrefix}-01`;
     };
 
     const newJobNo = generateNextJobNo(lastJobNo);
-    console.log("Generated Job No:", newJobNo);
 
     const handleClose = () => {
         navigate("/repairs");
@@ -203,40 +196,44 @@ const AddRepairForm = () => {
     };
 
     return (
-        <div >
-            <h1 className="text-right">
-                Job No: <span className="font-semibold">{newJobNo}</span>
-            </h1>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="sm:space-y-8 space-y-4 w-full">
+        <div>
+            <div className="flex justify-end mb-4">
+                <div className="text-sm font-semibold text-slate-700 bg-slate-100 px-4 py-2 rounded-xl shadow-sm">
+                    Job No: <span className="text-blue-600 font-extrabold">{newJobNo}</span>
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-6">
-                            {/* Left Column */}
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div className="flex flex-col gap-5">
+                            {/* Order No */}
                             <FormField
                                 control={form.control}
                                 name="OrderNo"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Order NO</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Order No</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
-                                                <SelectTrigger className="bg-white">
-                                                    <SelectValue placeholder="Order NO" />
+                                                <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                                                    <SelectValue placeholder="Select Order No" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <Input
-                                                    type="text"
-                                                    placeholder="Search Order No"
-                                                    className="mb-2"
-                                                    value={searchOrders}
-                                                    onChange={(e) => setSearchOrders(e.target.value)}
-                                                />
+                                                <div className="p-2">
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="Search Order No…"
+                                                        className="w-full h-9 text-sm"
+                                                        value={searchOrders}
+                                                        onChange={(e) => setSearchOrders(e.target.value)}
+                                                    />
+                                                </div>
                                                 {ordersLoading ? (
                                                     <SelectItem value="loading" disabled>Searching orders...</SelectItem>
                                                 ) : ordersError ? (
-                                                    <div className="p-2 text-red-600 text-center">
+                                                    <div className="p-2 text-red-600 text-center text-sm">
                                                         <p>{ordersError}</p>
                                                     </div>
                                                 ) : data.length > 0 ? (
@@ -255,31 +252,33 @@ const AddRepairForm = () => {
                                 )}
                             />
 
+                            {/* Customer Name */}
                             <FormField
                                 control={form.control}
                                 name="CustomerName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Customer Name</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Customer Name</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Enter customer name" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter customer name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
+                            {/* Price */}
                             <FormField
                                 control={form.control}
                                 name="Price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Price</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Price</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
                                                 step="0.01"
-                                                className="bg-white"
+                                                className="bg-slate-50 border-slate-200 h-11 rounded-xl"
                                                 placeholder="Enter price"
                                                 {...field}
                                                 onChange={(e) => {
@@ -294,21 +293,21 @@ const AddRepairForm = () => {
                             />
                         </div>
 
-                        <div className="flex flex-col gap-6">
-                            {/* Right Column */}
+                        <div className="flex flex-col gap-5">
+                            {/* Due Date */}
                             <FormField
                                 control={form.control}
                                 name="DueDate"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col pt-2">
-                                        <FormLabel>Due Date</FormLabel>
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Due Date</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
                                                         variant={"outline"}
                                                         className={cn(
-                                                            "w-full pl-3 text-left font-normal",
+                                                            "w-full pl-3 text-left font-normal bg-slate-50 border-slate-200 h-11 rounded-xl",
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
@@ -336,36 +335,38 @@ const AddRepairForm = () => {
                                                     }}
                                                 />
                                             </PopoverContent>
-                                            <FormMessage />
                                         </Popover>
+                                        <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
+                            {/* Customer Phone No. */}
                             <FormField
                                 control={form.control}
                                 name="CustomerPhone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Customer Phone No.</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Customer Phone No.</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Enter cusotmer phone no." {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
+                            {/* Description */}
                             <FormField
                                 control={form.control}
                                 name="Description"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Description</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Description</FormLabel>
                                         <FormControl>
                                             <Textarea
-                                                className="bg-white"
-                                                placeholder="Enter description"
+                                                className="bg-slate-50 border-slate-200 rounded-xl p-3 h-[72px] focus:bg-white transition-all resize-none"
+                                                placeholder="Enter description..."
                                                 {...field}
                                             />
                                         </FormControl>
@@ -373,14 +374,14 @@ const AddRepairForm = () => {
                                     </FormItem>
                                 )}
                             />
-
                         </div>
                     </div>
 
-                    <div className="flex sm:justify-between justify-center">
+                    <div className="flex sm:justify-between justify-center items-center pt-6 border-t border-slate-100 mt-8">
                         <Button
+                            type="button"
                             variant="outline"
-                            className="flex items-center gap-2 border rounded-full px-3 py-1 text-sm shadow-sm hover:bg-slate-100 transition-all"
+                            className="flex items-center gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-4 py-2 text-sm shadow-sm transition-all"
                             onClick={handleClearAll}
                             title="Clear All"
                         >
@@ -388,9 +389,22 @@ const AddRepairForm = () => {
                             {isSmallScreen ? null : "Clear All"}
                         </Button>
 
-                        <div className="flex gap-4 ml-2">
-                            <Button type="submit" className="bg-blue-800 hover:bg-blue-900" disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Add Repair"}</Button>
-                            <Button variant="outline" className="border-2 border-red-400 hover:bg-red-500 hover:text-white" onClick={handleClose}>Close</Button>
+                        <div className="flex gap-3">
+                            <Button 
+                                type="submit" 
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? "Submitting..." : "Add Repair"}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-6"
+                                onClick={handleClose}
+                            >
+                                Close
+                            </Button>
                         </div>
                     </div>
                 </form>

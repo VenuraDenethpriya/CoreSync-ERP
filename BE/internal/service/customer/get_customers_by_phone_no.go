@@ -1,8 +1,8 @@
 package customer
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetCustomerByPhoneNo(ctx context.Context, phoneNo string) (*domain.Customer, error) {

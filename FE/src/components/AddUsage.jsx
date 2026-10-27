@@ -11,13 +11,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Trash2 } from "lucide-react";
-import { createInventoryUsage, fetchInventoryItemByCode, fetchInventoryItemsList } from "@/api/inventoryApi";
+import { createInventoryUsage, fetchInventoryItemByCode } from "@/api/inventoryApi";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { toast } from "sonner";
 import { createRepairItemUsage } from "@/api/repair";
 
 function AddUsage({ onUpdate, ...props }) {
-    console.log("Order Data in AddUsage:");
     const { getToken } = useAuth();
     const { user } = useUser();
     const userID = user?.id;
@@ -28,64 +27,6 @@ function AddUsage({ onUpdate, ...props }) {
     const [isOpen, setIsOpen] = useState(false);
 
 
-    // const handleBarcodeScan = async (e) => {
-    //     const code = e.target.value.trim().toUpperCase();
-    //     if (!code) return;
-
-    //     try {
-    //         const token = await getToken();
-    //         const response = await fetchInventoryItemByCode(token, code);
-
-
-    //         if (response?.message === "This item already used") {
-    //             toast.error("This item already used");
-    //             return;
-    //         }
-    //         if (response?.message === "record not found") {
-    //             toast.error("Item not found for code: " + code);
-    //             return;
-    //         }
-
-    //         const matchedItem = response?.data;
-
-    //         if (!matchedItem) {
-    //             toast.error("Item not found for code: " + code);
-    //             return;
-    //         }
-
-    //         const exists = scannedItems.find(item => item.id === matchedItem.id);
-
-    //         if (exists) {
-    //             setScannedItems(prev =>
-    //                 prev.map(item =>
-    //                     item.id === matchedItem.id ? { ...item, quantity: item.quantity + 1 } : item
-    //                 )
-    //             );
-    //         } else {
-    //             setScannedItems(prev => [
-    //                 ...prev,
-    //                 {
-    //                     id: matchedItem.id,
-    //                     code: matchedItem.item_code,
-    //                     name: matchedItem.item_name,
-    //                     quantity: 1,
-    //                     user: userID,
-    //                 }
-    //             ]);
-    //         }
-    //     } catch (error) {
-    //         console.error("Error scanning barcode:", error);
-
-    //         if (
-    //             error.response?.data?.message === "This item already used"
-    //         ) {
-    //             toast.error("This item already used");
-    //         }
-    //         else {
-    //             toast.error("Error scanning barcode. Please try again.");
-    //         }
-    //     }
-    // };
     const handleBarcodeScan = async (e) => {
         const code = e.target.value.trim().toUpperCase();
         if (!code) return;
@@ -182,7 +123,7 @@ function AddUsage({ onUpdate, ...props }) {
                     toast.error(`Error submitting usage data: ${response.message}`, { position: "bottom-right" });
                 }
             }
-            else if (props.type === "job"){
+            else if (props.type === "job") {
                 const usageData = scannedItems.map(item => ({
                     item_id: item.id,
                     // order_id: props.orderData.id || props.orderData.order_id,
@@ -199,6 +140,33 @@ function AddUsage({ onUpdate, ...props }) {
 
                 if (response.message === "success") {
                     toast.success("Repair usage data submitted successfully!", { position: "bottom-right" });
+                    setIsOpen(false);
+                    setScannedItems([]);
+
+                    if (onUpdate) {
+                        onUpdate();
+                    }
+                } else {
+                    toast.error(`Error submitting usage data: ${response.message}`, { position: "bottom-right" });
+                }
+            }
+            else if (props.type === "pack") {
+                const usageData = scannedItems.map(item => ({
+                    item_id: item.id,
+                    // order_id: props.orderData.id || props.orderData.order_id,
+                    pack_id: props.packData.pack_id || props.packData.id || props.packData.Pack_id,
+                    // usage_count: item.quantity,
+                    user_name: userID,
+                }));
+
+                const requestBody = {
+                    usages: usageData
+                };
+
+                const response = await createInventoryUsage(token, requestBody);
+
+                if (response.message === "success") {
+                    toast.success("Usage data submitted successfully!", { position: "bottom-right" });
                     setIsOpen(false);
                     setScannedItems([]);
 

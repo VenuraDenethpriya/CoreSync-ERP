@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +17,7 @@ type CreateCustomerRequest struct {
 	PhoneNo2  string `json:"PhoneNo2"`
 	Email     string `json:"Email"`
 	VatNo     string `json:"VatNo"`
+	TinNo     string `json:"TinNo"`
 	CreatedBy string `json:"CreatedBy"`
 }
 
@@ -31,6 +32,7 @@ type CreateCustomerResponse struct {
 	PhoneNo2   string    `gorm:"type:varchar(20);" json:"phone_no2"`
 	Email      string    `gorm:"type:varchar(255);" json:"email"`
 	VatNo      string    `gorm:"type:varchar(255);" json:"VatNo"`
+	TinNo      string    `gorm:"type:varchar(255);" json:"TinNo"`
 	CreatedBy  string    `gorm:"type:varchar(255);not null" json:"created_by"`
 	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt  time.Time `gorm:"autoUpdateTime" json:"updated_at"`
@@ -48,6 +50,7 @@ func NewCreateCustomerResponse(customer *domain.Customer) *CreateCustomerRespons
 		PhoneNo2:   customer.PhoneNo2,
 		Email:      customer.Email,
 		VatNo:      customer.VatNo,
+		TinNo:      customer.TinNo,
 		CreatedBy:  customer.CreatedBy,
 		CreatedAt:  customer.CreatedAt,
 		UpdatedAt:  customer.UpdatedAt,
@@ -70,6 +73,7 @@ type GetCustomerByIdResponse struct {
 	PhoneNo2   string             `gorm:"type:varchar(20);" json:"phone_no2"`
 	Email      string             `gorm:"type:varchar(255);" json:"email"`
 	VatNo      string             `gorm:"type:varchar(255);" json:"vat_no"`
+	TinNo      string             `gorm:"type:varchar(255);" json:"tin_no"`
 	CreatedAt  time.Time          `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt  time.Time          `gorm:"autoUpdateTime" json:"updated_at"`
 	Orders     []domain.OrderInfo `json:"orders"`
@@ -88,6 +92,7 @@ func NewGetCustomerByIdResponse(customer *domain.Customer) *GetCustomerByIdRespo
 		PhoneNo2:   customer.PhoneNo2,
 		Email:      customer.Email,
 		VatNo:      customer.VatNo,
+		TinNo:      customer.TinNo,
 		CreatedAt:  customer.CreatedAt,
 		UpdatedAt:  customer.UpdatedAt,
 		Orders:     customer.Orders,
@@ -105,6 +110,7 @@ type GetCustomerResponse struct {
 	PhoneNo    string    `gorm:"type:varchar(20):not null" json:"phone_no"`
 	Email      string    `gorm:"type:varchar(255);" json:"email"`
 	VatNo      string    `gorm:"type:varchar(255);" json:"vat_no"`
+	TinNo      string    `gorm:"type:varchar(255);" json:"tin_no"`
 	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt  time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
@@ -125,6 +131,7 @@ func NewGetCustomerResponse(customer *domain.Customer) *GetCustomerResponse {
 		PhoneNo:    customer.PhoneNo1,
 		Email:      customer.Email,
 		VatNo:      customer.VatNo,
+		TinNo:      customer.TinNo,
 		CreatedAt:  customer.CreatedAt,
 		UpdatedAt:  customer.UpdatedAt,
 	}
@@ -151,6 +158,7 @@ type UpdateCustomerRequest struct {
 	PhoneNo2   string `json:"PhoneNo2,omitempty"`
 	Email      string `json:"Email,omitempty"`
 	VatNo      string `json:"VatNo,omitempty"`
+	TinNo      string `json:"TinNo,omitempty"`
 }
 type UpdateCustomerResponse struct {
 	CustomerID uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
@@ -162,6 +170,7 @@ type UpdateCustomerResponse struct {
 	PhoneNo2   string    `gorm:"type:varchar(20):not null" json:"phone_no2"`
 	Email      string    `gorm:"type:varchar(255);" json:"email"`
 	VatNo      string    `gorm:"type:varchar(255);" json:"vat_no"`
+	TinNo      string    `gorm:"type:varchar(255);" json:"tin_no"`
 	CreatedBy  string    `gorm:"type:varchar(255);not null" json:"created_by"`
 	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt  time.Time `gorm:"autoUpdateTime" json:"updated_at"`
@@ -178,6 +187,7 @@ func NewUpdateCustomerResponse(customer *domain.Customer) *UpdateCustomerRespons
 		PhoneNo2:   customer.PhoneNo2,
 		Email:      customer.Email,
 		VatNo:      customer.VatNo,
+		TinNo:      customer.TinNo,
 		CreatedAt:  customer.CreatedAt,
 		UpdatedAt:  customer.UpdatedAt,
 	}
@@ -197,9 +207,10 @@ func NewDeleteCustomerResponse(customer *domain.Customer) *DeleteCustomerRespons
 }
 
 type SearchCustomersURI struct {
-	Query  string `form:"query"`
-	Limit  int    `form:"limit"`
-	Offset int    `form:"offset"`
+	Query       string `form:"query"`
+	Limit       int    `form:"limit"`
+	Offset      int    `form:"offset"`
+	SortByTotal bool   `form:"sort_by_total"`
 }
 type SearchCustomersResponse struct {
 	Customers      CustomerTableData `json:"customers"`
@@ -211,16 +222,17 @@ func NewSearchCustomersResponse(customers []*domain.Customer, totalCustomers int
 	var response []CustomerTableData
 	for _, c := range customers {
 		response = append(response, CustomerTableData{
-			CustomerID:    c.CustomerID,
-			Title:         c.Title,
-			FirstName:     c.FirstName,
-			LastName:      c.LastName,
-			PhoneNo:       c.PhoneNo1,
-			LastOrderType: c.LastOrder.Type,
-			LastOrderNo:   c.LastOrder.No,
-			LastOrderDate: c.LastOrder.Date,
-			CreatedAt:     c.CreatedAt,
-			UpdatedAt:     c.UpdatedAt,
+			CustomerID:      c.CustomerID,
+			Title:           c.Title,
+			FirstName:       c.FirstName,
+			LastName:        c.LastName,
+			PhoneNo:         c.PhoneNo1,
+			LastOrderType:   c.LastOrder.Type,
+			LastOrderNo:     c.LastOrder.No,
+			LastOrderDate:   c.LastOrder.Date,
+			TotalOrderValue: c.TotalOrderValue,
+			CreatedAt:       c.CreatedAt,
+			UpdatedAt:       c.UpdatedAt,
 		})
 	}
 
@@ -232,17 +244,19 @@ func NewSearchCustomersResponse(customers []*domain.Customer, totalCustomers int
 }
 
 type CustomerTableData struct {
-	CustomerID    uuid.UUID `json:"customer_id"`
-	Title         string    `json:"title"`
-	FirstName     string    `json:"first_name"`
-	LastName      string    `json:"last_name"`
-	PhoneNo       string    `json:"phone_no"`
-	LastOrderType string    `json:"last_order_type"`
-	LastOrderNo   string    `json:"last_order_no"`
-	LastOrderDate time.Time `json:"last_order_date"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	CustomerID      uuid.UUID `json:"customer_id"`
+	Title           string    `json:"title"`
+	FirstName       string    `json:"first_name"`
+	LastName        string    `json:"last_name"`
+	PhoneNo         string    `json:"phone_no"`
+	LastOrderType   string    `json:"last_order_type"`
+	LastOrderNo     string    `json:"last_order_no"`
+	LastOrderDate   time.Time `json:"last_order_date"`
+	TotalOrderValue float64   `json:"total_order_value"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
+
 type CustomersTableDataResponse struct {
 	Customers      []CustomerTableData `json:"customers"`
 	TotalCustomers int                 `json:"totalCustomers"`
@@ -253,16 +267,17 @@ func NewCustomersTableDataResponse(customers []*domain.Customer) *CustomersTable
 	var response []CustomerTableData
 	for _, c := range customers {
 		response = append(response, CustomerTableData{
-			CustomerID:    c.CustomerID,
-			Title:         c.Title,
-			FirstName:     c.FirstName,
-			LastName:      c.LastName,
-			PhoneNo:       c.PhoneNo1,
-			LastOrderType: c.LastOrder.Type,
-			LastOrderNo:   c.LastOrder.No,
-			LastOrderDate: c.LastOrder.Date,
-			CreatedAt:     c.CreatedAt,
-			UpdatedAt:     c.UpdatedAt,
+			CustomerID:      c.CustomerID,
+			Title:           c.Title,
+			FirstName:       c.FirstName,
+			LastName:        c.LastName,
+			PhoneNo:         c.PhoneNo1,
+			LastOrderType:   c.LastOrder.Type,
+			LastOrderNo:     c.LastOrder.No,
+			LastOrderDate:   c.LastOrder.Date,
+			TotalOrderValue: c.TotalOrderValue,
+			CreatedAt:       c.CreatedAt,
+			UpdatedAt:       c.UpdatedAt,
 		})
 	}
 	return &CustomersTableDataResponse{
@@ -284,6 +299,7 @@ type GetCustomerByPhoneNoResponse struct {
 	PhoneNo2   string    `gorm:"type:varchar(20):not null" json:"phone_no2"`
 	Email      string    `gorm:"type:varchar(255);" json:"email"`
 	VatNo      string    `gorm:"type:varchar(255);" json:"vat_no"`
+	TinNo      string    `gorm:"type:varchar(255);" json:"tin_no"`
 }
 
 func NewGetCustomerByPhoneNoResponse(customer *domain.Customer) *GetCustomerByPhoneNoResponse {
@@ -297,5 +313,6 @@ func NewGetCustomerByPhoneNoResponse(customer *domain.Customer) *GetCustomerByPh
 		PhoneNo2:   customer.PhoneNo2,
 		Email:      customer.Email,
 		VatNo:      customer.VatNo,
+		TinNo:      customer.TinNo,
 	}
 }

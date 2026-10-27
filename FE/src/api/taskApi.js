@@ -1,11 +1,11 @@
 const apiUrl = import.meta.env.VITE_API_BASE_GO_URL;
 
-export const fethchTasksList = async (token, query, limit, offset) => {
+export const fethchTasksList = async (token, query, limit, offset, assigneeId, startDate, endDate) => {
   try {
     const response = await fetch(
         `${apiUrl}/tasks?query=${encodeURIComponent(
             query
-        )}&limit=${limit}&offset=${offset}`,
+        )}&limit=${limit}&offset=${offset}&assignee=${assigneeId}&start_date=${startDate}&end_date=${endDate}`,
         {
             method: "GET",
             headers: {

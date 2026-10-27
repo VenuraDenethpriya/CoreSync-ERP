@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,6 +91,7 @@ type GetRepairIDResponse struct {
 	Status        string    `json:"status"`
 	Description   string    `json:"description"`
 	DueDate       time.Time `json:"due_date"`
+	Assignee      string    `json:"assignee"`
 	CreatedBy     string    `json:"created_by"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
@@ -110,6 +111,7 @@ func NewGetRepairIDResponse(repair *domain.Repair) *GetRepairIDResponse {
 		Price:         repair.Price,
 		Description:   repair.Description,
 		DueDate:       repair.DueDate,
+		Assignee:      repair.Assignee,
 		CreatedBy:     fullName,
 		CreatedAt:     repair.CreatedAt,
 		UpdatedAt:     repair.UpdatedAt,
@@ -119,6 +121,7 @@ func NewGetRepairIDResponse(repair *domain.Repair) *GetRepairIDResponse {
 type DeleteRepairIDRequest struct {
 	RepairID string `uri:"repair-id" binding:"required" json:"repair_id"`
 }
+
 type DeleteRepairIDResponse struct {
 	ID           uuid.UUID `json:"repair_id"`
 	JobNo        string    `json:"job_no"`
@@ -215,6 +218,7 @@ type CreateRepairItemUsageListRequest struct {
 type CreateRepairItemUsageResponse struct {
 	ID       uuid.UUID `json:"id"`
 	ItemID   uuid.UUID `json:"item_id"`
+	ItemCode string    `json:"item_code"`
 	RepairID uuid.UUID `json:"repair_id"`
 	// UsageCount int       `gorm:"type:int;not null" json:"usage_count"`
 	UserName  string    `json:"user_name"`
@@ -225,6 +229,7 @@ func NewGetCreateRepairItemUsageResponse(repairItemUsage *domain.RepairItemUsage
 	return &CreateRepairItemUsageResponse{
 		ID:       repairItemUsage.ID,
 		ItemID:   repairItemUsage.ItemID,
+		ItemCode: repairItemUsage.ItemCode,
 		RepairID: repairItemUsage.RepairID,
 		// UsageCount: repairItemUsage.UsageCount,
 		UserName:  repairItemUsage.UserName,

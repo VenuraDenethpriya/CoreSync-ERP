@@ -1,17 +1,19 @@
 package main
 
 import (
+	"CoreSync-backend/internal/config"
+	"CoreSync-backend/internal/controller/http"
+	"CoreSync-backend/internal/email"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/jobs"
+	"CoreSync-backend/internal/service"
+	"CoreSync-backend/internal/storage"
+	"CoreSync-backend/pkg/sms"
 	"context"
 	"log"
 	"os"
 	"os/signal"
-	"rims-backend/internal/config"
-	"rims-backend/internal/controller/http"
-	"rims-backend/internal/events"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/service"
-	"rims-backend/internal/storage"
-	"rims-backend/pkg/sms"
 	"syscall"
 
 	"go.uber.org/zap"
@@ -43,7 +45,7 @@ func main() {
 	)
 
 	// Initialize dependencies
-	db, services, err := initializeDependencies(ctx, config)
+	db, repo, services, err := initializeDependencies(ctx, config)
 	if err != nil {
 		zap.L().Error("Failed to initialize dependencies", zap.Error(err))
 		os.Exit(1)
@@ -57,6 +59,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create SMS sender: %v", err)
 	}
+	emailService := email.NewResendClient()
+	birthdayJob := jobs.NewBirthdayNotifier(repo.HrRepository, emailService, smsService)
+	birthdayJob.Start()
+	// [ADDED 2026-10-13] daily low-level check: updates low levels from BOMs, drafts automatic PRs
+	stockActor := os.Getenv("STOCK_SYSTEM_CLERK_ID")
+	if stockActor == "" {
+		stockActor = "system"
+	}
+	services.StockControl.StartDailyLowLevel(ctx, stockActor, log.Printf)
 	// smsService, err := sms.NewNotifySmsSender()
 	// if err != nil {
 	// 	log.Fatalf("Failed to create SMS sender: %v", err)
@@ -106,21 +117,40 @@ func handleShutdown(cancelFunc context.CancelFunc) {
 	cancelFunc()
 }
 
-func initializeDependencies(ctx context.Context, config *config.Container) (db *storage.DB, services *service.Services, err error) {
+// func initializeDependencies(ctx context.Context, config *config.Container) (db *storage.DB, services *service.Services, err error) {
+
+// 	// Initialize database connection
+// 	db, err = storage.New(ctx, config.DB)
+// 	if err != nil {
+// 		logger.Error(ctx, "Error initializing database connection", zap.Error(err))
+// 		return nil, nil, err
+// 	}
+
+// 	repository := storage.NewRepository(db)
+
+// 	services = service.SetupServices(service.Config{
+// 		Repositories: repository,
+// 		DB:           db.DB,
+// 	})
+
+//		return db, services, nil
+//	}
+func initializeDependencies(ctx context.Context, config *config.Container) (db *storage.DB, repo *storage.Repository, services *service.Services, err error) {
 
 	// Initialize database connection
 	db, err = storage.New(ctx, config.DB)
 	if err != nil {
 		logger.Error(ctx, "Error initializing database connection", zap.Error(err))
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	repository := storage.NewRepository(db)
+	// Capture the repository here
+	repo = storage.NewRepository(db)
 
 	services = service.SetupServices(service.Config{
-		Repositories: repository,
+		Repositories: repo,
 		DB:           db.DB,
 	})
 
-	return db, services, nil
+	return db, repo, services, nil
 }

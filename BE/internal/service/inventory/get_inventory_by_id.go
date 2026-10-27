@@ -1,8 +1,8 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetInventoryById(ctx context.Context, inventory *domain.Inventory) (*domain.Inventory, error) {

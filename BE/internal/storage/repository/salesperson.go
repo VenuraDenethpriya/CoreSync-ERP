@@ -1,10 +1,11 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -139,8 +140,9 @@ func (sr *SalespersonRepository) UpdateSalesperson(ctx context.Context, salesper
 	existingSalesperson.LastName = salesperson.LastName
 	existingSalesperson.PhoneNo = salesperson.PhoneNo
 	existingSalesperson.Email = salesperson.Email
+	existingSalesperson.Status = salesperson.Status
 
-	if err := sr.db.Save(&existingSalesperson).Error; err != nil {
+	if err := sr.db.Updates(&existingSalesperson).Error; err != nil {
 		return nil, err
 	}
 
@@ -173,66 +175,6 @@ func (sr *SalespersonRepository) DeleteSalesperson(ctx context.Context, salesper
 	logger.Info(ctx, "Salesperson deleted", zap.String("method", "DELETE"), zap.String("path", "/salesperson/:salesperson-id"), zap.Any("salespersonID", salesperson.ID))
 	return salespersonModel.SalespersonFromModelToDomain(), nil
 }
-
-// func (sr *SalespersonRepository) GetSalespersonByID(
-// 	ctx context.Context,
-// 	s *domain.Salesperson,
-// ) (*domain.Salesperson, int, float64, int, float64, error) {
-
-// 	var salespersonModel models.SalespersonModel
-
-// 	err := sr.db.
-// 		WithContext(ctx).Preload("User").
-// 		First(&salespersonModel, "id = ?", s.ID).Error
-
-// 	if err != nil {
-// 		return nil, 0, 0, 0, 0, err
-// 	}
-
-// 	// TOTAL SALES (ALL TIME)
-// 	var totalSales int64
-// 	sr.db.Raw(`
-// 		SELECT COUNT(*)
-// 		FROM sales
-// 		WHERE salesperson = ?
-// 	`, s.ID).Scan(&totalSales)
-
-// 	// TOTAL COMMISSION (ALL TIME)
-// 	var totalCommission float64
-// 	sr.db.Raw(`
-// 		SELECT COALESCE(SUM(commission), 0)
-// 		FROM sales
-// 		WHERE salesperson = ?
-// 	`, s.ID).Scan(&totalCommission)
-
-// 	// LAST 30 DAYS
-// 	lastMonthStart := time.Now().Add(-30 * 24 * time.Hour)
-
-// 	// TOTAL SALES (LAST 30 DAYS)
-// 	var totalSalesLastMonth int64
-// 	sr.db.Raw(`
-// 		SELECT COUNT(*)
-// 		FROM sales
-// 		WHERE salesperson = ?
-// 		AND date >= ?
-// 	`, s.ID, lastMonthStart).Scan(&totalSalesLastMonth)
-
-// 	// TOTAL COMMISSION (LAST 30 DAYS)
-// 	var totalCommissionLastMonth float64
-// 	sr.db.Raw(`
-// 		SELECT COALESCE(SUM(commission), 0)
-// 		FROM sales
-// 		WHERE salesperson = ?
-// 		AND date >= ?
-// 	`, s.ID, lastMonthStart).Scan(&totalCommissionLastMonth)
-
-//		return salespersonModel.SalespersonFromModelToDomain(),
-//			int(totalSalesLastMonth),
-//			totalCommissionLastMonth,
-//			int(totalSales),
-//			totalCommission,
-//			nil
-//	}
 
 func (sr *SalespersonRepository) GetSalespersonByID(
 	ctx context.Context,
@@ -313,12 +255,20 @@ func (sr *SalespersonRepository) GetSalespersonByID(
 		nil
 }
 
-func (sr *SalespersonRepository) GetSalesperonsList(ctx context.Context) ([]*domain.Salesperson, error) {
+func (sr *SalespersonRepository) GetSalesperonsList(ctx context.Context, status string) ([]*domain.Salesperson, error) {
 	var salespersons []*models.SalespersonModel
 
-	if err := sr.db.WithContext(ctx).
-		Select("id", "first_name", "last_name", "phone_no").
-		Find(&salespersons).Error; err != nil {
+	cleanStatus := strings.TCoreSyncpace(status)
+
+	query := sr.db.Debug().WithContext(ctx).
+		Model(&models.SalespersonModel{}).
+		Select("id", "first_name", "last_name", "phone_no")
+
+	if cleanStatus != "" && cleanStatus != "undefined" {
+		query = query.Where("status ILIKE ?", cleanStatus)
+	}
+
+	if err := query.Find(&salespersons).Error; err != nil {
 		return nil, err
 	}
 

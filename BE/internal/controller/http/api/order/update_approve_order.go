@@ -1,13 +1,12 @@
 package order
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/events"
-	"rims-backend/internal/helper/logger"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -38,20 +37,18 @@ func (ch *OrderHandler) ApproveOrder(ctx *gin.Context) {
 	}
 	order := mapper.ApproveOrderRequestToDomain(&req)
 	order.OrderID = orderID
-	updateOrder, err := ch.orderService.UpdateOrderApproval(ctx.Request.Context(), order)
+	actingClerkID := ctx.GetString("user_id")
+	updateOrder, actorName, err := ch.orderService.UpdateOrderApproval(ctx.Request.Context(), order, actingClerkID)
 	if err != nil {
 		common.HandleError(ctx, err)
 		logger.Error(ctx, "Failed to update order", zap.Error(err))
 		return
 	}
-	userName := updateOrder.CreatedBy
-	if updateOrder.User != nil {
-		userName = strings.TrimSpace(updateOrder.User.FirstName + " " + updateOrder.User.LastName)
-	}
+
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Order approved"},
-		Description: fmt.Sprintf("%s approved a Order %s/%s", userName, updateOrder.Type, updateOrder.OrderNo),
+		Description: fmt.Sprintf("%s approved a Order %s/%s", actorName, updateOrder.Type, updateOrder.OrderNo),
 	})
 	common.HandleSuccess(ctx, common.StatusOK, dto.NewApproveOrderResponse(updateOrder))
 	logger.Info(ctx, "Order updated successfully", zap.Any("order", updateOrder))

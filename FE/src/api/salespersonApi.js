@@ -21,10 +21,12 @@ export const fethchSalespersonList = async (token, query, limit, offset) => {
   }
 };
 
-export const fethchSalespersonNames = async (token) => {
+export const fethchSalespersonNames = async (token, salespersonStatus) => {
   try {
+    const queryParam = salespersonStatus ? `?status=${encodeURIComponent(salespersonStatus)}` : "";
+    
     const response = await fetch(
-        `${apiUrl}/sales/salespersons/salespersons-list`,
+        `${apiUrl}/sales/salespersons/salespersons-list${queryParam}`,
         {
             method: "GET",
             headers: {

@@ -1,8 +1,8 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) DeleteInventoryItemUsage(ctx context.Context, inventoryItemUsage *domain.InventoryItemUsage, actingClerkID string) (*domain.InventoryItemUsage, string, error) {

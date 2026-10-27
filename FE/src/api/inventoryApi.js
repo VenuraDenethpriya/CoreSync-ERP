@@ -17,9 +17,19 @@ export const createInventoryItem = async (token,inventoryItemData) => {
   }
 };
 
-export const fetchInventoryItemsList = async (token,query, limit, offset) => {
+export const fetchInventoryItemsList = async (token, query, limit, offset, sellable) => {
   try {
-    const response = await fetch(`${apiUrl}/inventory?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, {
+    const params = new URLSearchParams({
+      query: query || "",
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+
+    if (sellable !== undefined && sellable !== null && sellable !== "") {
+      params.append("sellable", sellable.toString());
+    }
+
+    const response = await fetch(`${apiUrl}/inventory?${params.toString()}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -27,9 +37,11 @@ export const fetchInventoryItemsList = async (token,query, limit, offset) => {
       },
       credentials: "include",
     });
-    return response?.json();
+
+    return await response.json();
   } catch (error) {
     console.error("Error fetching inventory items:", error);
+    throw error; 
   }
 };
 
@@ -100,11 +112,12 @@ export const createInventoryUsage = async (token, itemUsageData) => {
   }
 };
 
-export const featchInventoryUsage = async (token, { orderId, itemId,limit, offset }) => {
+export const featchInventoryUsage = async (token, { orderId, itemId, packId, limit, offset }) => {
   try {
     const queryParams = new URLSearchParams();
     if (orderId) queryParams.append("order_id", orderId);
     if (itemId) queryParams.append("item_id", itemId);
+    if (packId) queryParams.append("pack_id", packId);
 
     const response = await fetch(`${apiUrl}/inventory/usage?${queryParams.toString()}&limit=${limit}&offset=${offset}`, {
       method: "GET",
@@ -223,11 +236,12 @@ export const createInventoryAllocation = async (token, inventoryAllocationData) 
   }
 }
 
-export const featchInventoryAllocation = async (token, { orderId, itemId,limit, offset }) => {
+export const featchInventoryAllocation = async (token, { orderId, itemId, packId, limit, offset }) => {
   try {
     const queryParams = new URLSearchParams();
     if (orderId) queryParams.append("order_id", orderId);
     if (itemId) queryParams.append("item_id", itemId);
+    if (packId) queryParams.append("pack_id", packId);
 
     const response = await fetch(`${apiUrl}/inventory/allocation?${queryParams.toString()}&limit=${limit}&offset=${offset}`, {
       method: "GET",
@@ -309,5 +323,103 @@ export const updateInventoryRestockPrintStatus = async (token, restockData) => {
     return response?.json();
   } catch (error) {
     console.error("Error updating inventory restock print status:", error);
+  }
+};
+
+export const createInventoryOrderItem = async (token, inventoryOrderData) => {
+  try {
+    const response = await fetch(`${apiUrl}/inventory/order`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(inventoryOrderData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error creating inventory order:", error);
+  }
+};
+
+export const fetchInventoryOrdersList = async (token,query, limit, offset) => {
+  try {
+    const response = await fetch(`${apiUrl}/inventory/orders?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error fetching inventory orders:", error);
+  }
+};
+
+export const deleteInventoryOrder = async (token,orderId) => {
+  try {
+    const response = await fetch(`${apiUrl}/inventory/orders/${orderId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error deleting inventory order:", error);
+  }
+};
+
+export const updateInventoryOrder = async (token,inventoryOrderData) => {
+  try {
+    const response = await fetch(`${apiUrl}/inventory/orders`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(inventoryOrderData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error updating inventory item:", error);
+  }
+};
+
+export const fetchInventoryReceivedOrdersList = async (token,query, limit, offset) => {
+  try {
+    const response = await fetch(`${apiUrl}/inventory/orders/received?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error fetching inventory orders:", error);
+  }
+};
+export const createInventoryFromOrder = async (token, inventoryOrderData) => {
+  try {
+    const response = await fetch(`${apiUrl}/inventory/orders/received`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(inventoryOrderData),
+    });
+    return response?.json();
+  } catch (error) {
+    console.error("Error creating inventory order:", error);
   }
 };

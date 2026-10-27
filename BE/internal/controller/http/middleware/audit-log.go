@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
+	"CoreSync-backend/internal/service/domain"
 	"fmt"
-	auditlogs "rims-backend/internal/service/audit_logs"
-	"rims-backend/internal/service/domain"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +16,9 @@ func AuditMiddleware(auditSvc auditlogs.Service) gin.HandlerFunc {
 		c.Next()
 
 		desc, _ := c.Get("audit_desc")
+		if rb := c.GetString(ContextKeyRequestedBy); rb != "" {
+			desc = fmt.Sprintf("%v (via Claude, requested by %s)", desc, rb)
+		}
 
 		logEntry := domain.AuditLog{
 			ID:          uuid.New(),

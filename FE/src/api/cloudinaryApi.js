@@ -17,7 +17,7 @@ export const uploadImageToCloudinary = async (file) => {
 
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "rims_preset"); 
+  formData.append("upload_preset", "CoreSync_preset"); 
 
   // Debug FormData contents
   console.log("FormData contents:");
@@ -59,7 +59,7 @@ export const uploadImageToCloudinary = async (file) => {
           
           // Specific help for common errors
           if (errorData.error.message.includes("Upload preset must be whitelisted")) {
-            errorMessage += "\n\nFix: Go to Cloudinary Dashboard → Settings → Upload → Upload presets → Find 'rims' preset → Change 'Signing Mode' to 'Unsigned'";
+            errorMessage += "\n\nFix: Go to Cloudinary Dashboard → Settings → Upload → Upload presets → Find 'CoreSync' preset → Change 'Signing Mode' to 'Unsigned'";
           }
         }
       } catch (e) {
@@ -119,7 +119,7 @@ export const uploadAudioToCloudinary = async (file) => {
 
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "rims_preset"); // Must allow unsigned upload
+  formData.append("upload_preset", "CoreSync_preset"); // Must allow unsigned upload
 
   try {
     const response = await fetch(cloudinaryAudioURL, {

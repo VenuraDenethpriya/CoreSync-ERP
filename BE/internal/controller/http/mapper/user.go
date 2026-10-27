@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 )

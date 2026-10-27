@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +18,7 @@ func CustomerRequestToDomain(req *dto.CreateCustomerRequest) *domain.Customer {
 		PhoneNo2:  req.PhoneNo2,
 		Email:     req.Email,
 		VatNo:     req.VatNo,
+		TinNo:     req.TinNo,
 		CreatedBy: req.CreatedBy,
 	}
 }
@@ -33,6 +34,7 @@ func CustomerResponseToDomain(req *dto.CreateCustomerResponse) *domain.Customer 
 		PhoneNo2:  req.PhoneNo2,
 		Email:     req.Email,
 		VatNo:     req.VatNo,
+		TinNo:     req.TinNo,
 		CreatedBy: req.CreatedBy,
 	}
 }
@@ -47,6 +49,7 @@ func UpdateCustomerRequestToDomain(req *dto.UpdateCustomerRequest) *domain.Custo
 		PhoneNo2:   req.PhoneNo2,
 		Email:      req.Email,
 		VatNo:      req.VatNo,
+		TinNo:      req.TinNo,
 	}
 }
 func UpdateCustomerResponseToDomain(req *dto.UpdateCustomerResponse) *domain.Customer {
@@ -60,6 +63,7 @@ func UpdateCustomerResponseToDomain(req *dto.UpdateCustomerResponse) *domain.Cus
 		PhoneNo2:   req.PhoneNo2,
 		Email:      req.Email,
 		VatNo:      req.VatNo,
+		TinNo:      req.TinNo,
 		CreatedBy:  req.CreatedBy,
 	}
 }
@@ -79,5 +83,6 @@ func GetCustomerByPhoneNoResponseToDomain(req *dto.GetCustomerByPhoneNoResponse)
 		PhoneNo2:   req.PhoneNo2,
 		Email:      req.Email,
 		VatNo:      req.VatNo,
+		TinNo:      req.TinNo,
 	}
 }

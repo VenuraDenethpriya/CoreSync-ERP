@@ -14,7 +14,9 @@ type Task struct {
 	OrderType      string
 	OrderId        uuid.UUID `json:"order_id"`
 	JobId          uuid.UUID `json:"job_id"`
+	PackId         uuid.UUID `json:"pack_id"`
 	JobNo          string    `json:"job_no"`
+	SerialNo       string    `json:"serial_no"`
 	Task           string    `json:"task"`
 	Date           time.Time `json:"date"`
 	Time           string    `json:"time"`

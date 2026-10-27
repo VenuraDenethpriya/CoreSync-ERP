@@ -1,11 +1,11 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"fmt"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,17 +35,100 @@ func (tr *TaskRepository) CreateTask(ctx context.Context, task *domain.Task) (*d
 	return taskModel.TaskToDomain(), nil
 }
 
-func (tr *TaskRepository) GetTasks(ctx context.Context, query string, limit int, offset int) ([]*domain.Task, int, error) {
+// func (tr *TaskRepository) GetTasks(ctx context.Context, query string, limit int, offset int, assignee string, startDate, endDate time.Time) ([]*domain.Task, int, error) {
+// 	var tasks []*models.TaskModel
+// 	searchPattern := "%" + query + "%"
+// 	var totalTasks int64
+
+// 	if err := tr.db.Model(&models.TaskModel{}).Where("task ILIKE ? OR status ILIKE ?", searchPattern, searchPattern).Count(&totalTasks).Error; err != nil {
+// 		logger.Error(ctx, "Error counting tasks", zap.Error(err))
+// 		return nil, 0, err
+// 	}
+
+// 	if err := tr.db.Preload("Order").Preload("OrderItem").Preload("Repair").Where("task ILIKE ? OR status ILIKE ?", searchPattern, searchPattern).Order("created_at DESC").Limit(limit).Offset(offset).Find(&tasks).Error; err != nil {
+// 		logger.Error(ctx, "Error retrieving tasks", zap.Error(err))
+// 		return nil, 0, err
+// 	}
+
+// 	clerkIDs := make(map[string]struct{})
+// 	for _, task := range tasks {
+// 		if task.Assignee != "" {
+// 			clerkIDs[task.Assignee] = struct{}{}
+// 		}
+// 		if task.Supervisor != "" {
+// 			clerkIDs[task.Supervisor] = struct{}{}
+// 		}
+// 	}
+
+// 	idSlice := make([]string, 0, len(clerkIDs))
+// 	for id := range clerkIDs {
+// 		idSlice = append(idSlice, id)
+// 	}
+
+// 	userMap, err := tr.userRepo.FindManyByClerkIDs(ctx, idSlice)
+// 	if err != nil {
+// 		logger.Error(ctx, "Could not fetch user details for tasks", zap.Error(err))
+// 	}
+
+// 	domainTasks := make([]*domain.Task, 0, len(tasks))
+// 	for _, t := range tasks {
+// 		domainTask := t.TaskToDomain()
+
+// 		if user, ok := userMap[t.Assignee]; ok {
+// 			domainTask.Assignee = fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+// 		}
+
+// 		if user, ok := userMap[t.Supervisor]; ok {
+// 			domainTask.Supervisor = fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+// 		}
+
+// 		if t.Order.OrderID != uuid.Nil {
+// 			domainTask.OrderNo = t.Order.OrderNo
+// 			domainTask.OrderType = t.Order.Type
+// 		}
+// 		if t.JobId != nil && *t.JobId != uuid.Nil {
+// 			domainTask.JobNo = t.Repair.JobNo
+// 		}
+// 		if t.PackId != nil && *t.PackId != uuid.Nil {
+// 			domainTask.SerialNo = t.OrderItem.SerialNo
+// 		}
+// 		domainTasks = append(domainTasks, domainTask)
+// 	}
+
+//		return domainTasks, int(totalTasks), nil
+//	}
+func (tr *TaskRepository) GetTasks(ctx context.Context, query string, limit int, offset int, assignee string, startDate, endDate time.Time) ([]*domain.Task, int, error) {
 	var tasks []*models.TaskModel
-	searchPattern := "%" + query + "%"
 	var totalTasks int64
 
-	if err := tr.db.Model(&models.TaskModel{}).Where("task ILIKE ? OR status ILIKE ?", searchPattern, searchPattern).Count(&totalTasks).Error; err != nil {
+	searchPattern := "%" + query + "%"
+	queryBuilder := tr.db.Model(&models.TaskModel{}).
+		Where("task ILIKE ? OR status ILIKE ?", searchPattern, searchPattern)
+
+	if assignee != "" && assignee != "all" {
+		queryBuilder = queryBuilder.Where("assignee = ?", assignee)
+	}
+
+	if !startDate.IsZero() && !endDate.IsZero() {
+		queryBuilder = queryBuilder.Where("date::date >= ?::date AND date::date <= ?::date",
+			startDate.Format("2006-01-02"),
+			endDate.Format("2006-01-02"),
+		)
+	}
+
+	if err := queryBuilder.Count(&totalTasks).Error; err != nil {
 		logger.Error(ctx, "Error counting tasks", zap.Error(err))
 		return nil, 0, err
 	}
 
-	if err := tr.db.Preload("Order").Preload("Repair").Where("task ILIKE ? OR status ILIKE ?", searchPattern, searchPattern).Order("created_at DESC").Limit(limit).Offset(offset).Find(&tasks).Error; err != nil {
+	if err := queryBuilder.
+		Preload("Order").
+		Preload("OrderItem").
+		Preload("Repair").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&tasks).Error; err != nil {
 		logger.Error(ctx, "Error retrieving tasks", zap.Error(err))
 		return nil, 0, err
 	}
@@ -89,6 +172,10 @@ func (tr *TaskRepository) GetTasks(ctx context.Context, query string, limit int,
 		if t.JobId != nil && *t.JobId != uuid.Nil {
 			domainTask.JobNo = t.Repair.JobNo
 		}
+		if t.PackId != nil && *t.PackId != uuid.Nil {
+			domainTask.SerialNo = t.OrderItem.SerialNo
+		}
+
 		domainTasks = append(domainTasks, domainTask)
 	}
 
@@ -120,6 +207,7 @@ func (tr *TaskRepository) UpdateTask(ctx context.Context, task *domain.Task) (*d
 	logger.Info(ctx, "Task updated", zap.String("method", "PUT"), zap.String("path", "task"), zap.Any("task", task))
 	return existingTask.TaskToDomain(), nil
 }
+
 func (tr *TaskRepository) DeleteTask(ctx context.Context, task *domain.Task) (*domain.Task, error) {
 	var existingTask models.TaskModel
 	err := tr.db.First(&existingTask, "id = ?", task.ID).Error
@@ -143,7 +231,11 @@ func (tr *TaskRepository) GetCardTasks(ctx context.Context, searchQuery string, 
 
 	err := tr.db.WithContext(ctx).
 		Joins("LEFT JOIN orders ON orders.order_id = tasks.order_id").
-		Preload("Order.OrderItems.Name").
+		Preload("OrderItem").
+		Preload("OrderItem.Name").
+		Preload("OrderItems").
+		Preload("OrderItems.Name").
+		Preload("Order").
 		Preload("Repair").
 		Where("tasks.task ILIKE ? OR orders.order_no ILIKE ?", searchPattern, searchPattern).
 		Order("tasks.updated_at DESC").

@@ -1,9 +1,9 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"fmt"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) UpdateSale(ctx context.Context, sale *domain.Sale, actingClerkID string) (*domain.Sale, string, error) {
@@ -11,7 +11,6 @@ func (s *service) UpdateSale(ctx context.Context, sale *domain.Sale, actingClerk
 	if err != nil {
 		return nil, "", err
 	}
-	// Get the actor (logged-in user)
 	actor, err := s.userRepo.FindByClerkID(ctx, actingClerkID)
 	if err != nil {
 		return nil, "", err

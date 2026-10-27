@@ -1,8 +1,8 @@
 package dashboard
 
 import (
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

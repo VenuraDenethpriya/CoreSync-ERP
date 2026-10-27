@@ -1,3 +1,4 @@
+import { uploadImageToCloudinary } from "@/api/cloudinaryApi";
 import { updateOrderStatus } from "@/api/orderApi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import {
   DialogFooter,
   DialogTrigger
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@clerk/clerk-react";
 import { useRef, useState } from "react";
@@ -35,14 +37,14 @@ const checklistItems = [
 
 function OrderCompleteCheckList(props) {
   const { getToken } = useAuth();
-  const dialogCloseRef = useRef(null); 
+  const dialogCloseRef = useRef(null);
   const [checked, setChecked] = useState(false);
+  const [qcProof, setQcProof] = useState([]);
 
   const handleCheckboxChange = () => {
     setChecked(!checked);
   }
 
-  
   const handleStatusChange = async () => {
     if (!checked) {
       toast.error("Please complete all checklist items before confirming!", { position: "bottom-right" });
@@ -51,10 +53,25 @@ function OrderCompleteCheckList(props) {
 
     try {
       const token = await getToken();
+      let receiptUrl = "";
+
+      if (qcProof && qcProof.length > 0) {
+        try {
+          const file = qcProof[0];
+          receiptUrl = await uploadImageToCloudinary(file);
+        } catch (uploadError) {
+          console.error("Failed to upload receipt:", uploadError);
+          toast.error("Failed to upload receipt image. Please try again.", { position: "bottom-right" });
+          return;
+        }
+      }
+
       const response = await updateOrderStatus(token, {
         id: props.orderId,
         OrderStatus: "Completed",
-        PaymentStatus: props.paymentStatus
+        PaymentStatus: props.paymentStatus,
+        QcProof: receiptUrl,
+
       });
 
       if (response.message === "success") {
@@ -88,17 +105,32 @@ function OrderCompleteCheckList(props) {
               </div>
             ))}
           </div>
+
           <div className="flex items-center gap-3">
-            <Checkbox id="terms" chacked={checked} onCheckedChange={handleCheckboxChange}/>
-            <Label htmlFor="terms">I confirm that I have followed all of the above steps.
-            </Label>
+            <Checkbox id="terms" checked={checked} onCheckedChange={handleCheckboxChange} />
+            <Label htmlFor="terms">I confirm that I have followed all of the above steps.</Label>
+          </div>
+
+          <div className="py-5">
+            <Label>Q/C Proof</Label>
+            <Input
+              type="file"
+              className="bg-white"
+              placeholder="Receipt"
+              onChange={(e) => setQcProof(e.target.files)}
+            />
           </div>
 
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline" ref={dialogCloseRef}>Cancel</Button>
             </DialogClose>
-            <Button type="button" className="bg-blue-700 hover:bg-blue-900" onClick={handleStatusChange} disabled={!checked}>
+            <Button
+              type="button"
+              className="bg-blue-700 hover:bg-blue-900"
+              onClick={handleStatusChange}
+              disabled={!checked || qcProof.length === 0}
+            >
               Confirm
             </Button>
           </DialogFooter>

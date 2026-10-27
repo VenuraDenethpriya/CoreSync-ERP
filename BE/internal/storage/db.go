@@ -1,9 +1,9 @@
 package storage
 
 import (
+	"CoreSync-backend/internal/config"
 	"context"
 	"log"
-	"rims-backend/internal/config"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"

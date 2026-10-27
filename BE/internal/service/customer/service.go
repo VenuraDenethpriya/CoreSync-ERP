@@ -1,9 +1,9 @@
 package customer
 
 import (
+	"CoreSync-backend/internal/service/domain"
+	"CoreSync-backend/internal/storage/repository"
 	"context"
-	"rims-backend/internal/service/domain"
-	"rims-backend/internal/storage/repository"
 )
 
 // Service defines the interface for customer-related business logic
@@ -13,7 +13,7 @@ type Service interface {
 	GetCustomerByID(ctx context.Context, customer *domain.Customer) (*domain.Customer, error)
 	GetCustomers(ctx context.Context) ([]*domain.Customer, error)
 	DeleteCustomer(ctx context.Context, customer *domain.Customer, actingClerkID string) (*domain.Customer, string, error)
-	SearchCustomers(ctx context.Context, query string, limit int, offset int) ([]*domain.Customer, int, error)
+	SearchCustomers(ctx context.Context, query string, limit int, offset int, sortByTotal bool) ([]*domain.Customer, int, error)
 	GetCustomersTableData(ctx context.Context) ([]*domain.Customer, error)
 	UpdateCustomer(ctx context.Context, customer *domain.Customer, actingClerkID string) (*domain.Customer, string, error)
 }

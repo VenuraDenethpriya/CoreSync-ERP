@@ -1,9 +1,9 @@
 package order
 
 import (
+	"CoreSync-backend/internal/email"
 	"net/http"
 	"os"
-	"rims-backend/internal/email"
 
 	"github.com/gin-gonic/gin"
 )

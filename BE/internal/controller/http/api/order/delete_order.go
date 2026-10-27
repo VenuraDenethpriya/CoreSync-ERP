@@ -1,12 +1,11 @@
 package order
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/events"
-	"rims-backend/internal/helper/logger"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -32,22 +31,19 @@ func (ch *OrderHandler) DeleteOrder(ctx *gin.Context) {
 		return
 	}
 
+	actingClerkID := ctx.GetString("user_id")
 	// Call service to delete order and its items
-	deletedOrder, err := ch.orderService.DeleteOrder(ctx, orderUUID)
+	deletedOrder, actorName, err := ch.orderService.DeleteOrder(ctx, orderUUID, actingClerkID)
 	if err != nil {
 		logger.Error(ctx, "Failed to delete order and items", zap.Error(err))
 		common.HandleError(ctx, err)
 		return
 	}
 
-	userName := deletedOrder.CreatedBy
-	if deletedOrder.User != nil {
-		userName = strings.TrimSpace(deletedOrder.User.FirstName + " " + deletedOrder.User.LastName)
-	}
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Order deleted"},
-		Description: fmt.Sprintf("%s deleted a Order %s/%s", userName, deletedOrder.Type, deletedOrder.OrderNo),
+		Description: fmt.Sprintf("%s deleted a Order %s/%s", actorName, deletedOrder.Type, deletedOrder.OrderNo),
 	})
 
 	logger.Info(ctx, "Order and associated items deleted successfully", zap.String("order_id", deletedOrder.OrderID.String()))

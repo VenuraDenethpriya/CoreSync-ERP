@@ -1,10 +1,10 @@
 package models
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"rims-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -77,31 +77,35 @@ type OrderModel struct {
 	Type       string    `gorm:"type:varchar(255);not null;" json:"type"`
 	CustomerID uuid.UUID `gorm:"type:uuid;foreign_Key:CustomerID" json:"customer_id"`
 	// SalesID              uuid.UUID            `gorm:"type:uuid;foreign_Key:SalesID;references:ID" json:"sales_id"`
-	SalesID              *uuid.UUID           `gorm:"type:uuid;foreignKey:SalesID" json:"SalesID"`
-	Customer             CustomerModel        `gorm:"foreignKey:CustomerID;references:CustomerID" json:"customer"`
-	User                 UserModel            `gorm:"foreignKey:CreatedBy;references:ClerkID" json:"user"`
-	Sale                 SaleModel            `gorm:"foreignKey:SalesID;references:SalesID" json:"sale"`
-	CreatedBy            string               `gorm:"foreignKey:CreatedBy;references:ClerkID" json:"created_by"`
-	OrderNo              string               `json:"order_no"`
-	SubTotal             float64              `json:"subtotal"`
-	AdditionalCharges    AdditionalChargeList `gorm:"type:jsonb" json:"additional_charges"`
-	Discount             float64              `json:"discount"`
-	Total                float64              `json:"total"`
-	Vat                  bool                 `json:"vat"`
-	OrderStatus          string               `gorm:"default:Drafted" json:"ProductStatus"`
-	PaymentStatus        string               `json:"PaymentStatus"`
-	ExpectedDeliveryDate time.Time            `json:"ExpectedDeliveryDate,omitempty"`
-	OrderItems           []OrderItemModel     `gorm:"foreignKey:OrderNo;references:OrderID" json:"order_items"`
+	SalesID           *uuid.UUID           `gorm:"type:uuid;foreignKey:SalesID" json:"SalesID"`
+	Customer          CustomerModel        `gorm:"foreignKey:CustomerID;references:CustomerID" json:"customer"`
+	User              UserModel            `gorm:"foreignKey:CreatedBy;references:ClerkID" json:"user"`
+	Sale              SaleModel            `gorm:"foreignKey:SalesID;references:SalesID" json:"sale"`
+	CreatedBy         string               `gorm:"foreignKey:CreatedBy;references:ClerkID" json:"created_by"`
+	OrderNo           string               `json:"order_no"`
+	SubTotal          float64              `json:"subtotal"`
+	AdditionalCharges AdditionalChargeList `gorm:"type:jsonb" json:"additional_charges"`
+	Discount          float64              `json:"discount"`
+	Total             float64              `json:"total"`
+	Vat               bool                 `json:"vat"`
+	// Items                pq.StringArray       `gorm:"type:uuid[]" json:"items"`
+	Items                datatypes.JSON   `gorm:"type:jsonb" json:"items"`
+	OrderStatus          string           `gorm:"default:Drafted" json:"ProductStatus"`
+	PaymentStatus        string           `json:"PaymentStatus"`
+	ExpectedDeliveryDate time.Time        `json:"ExpectedDeliveryDate,omitempty"`
+	OrderItems           []OrderItemModel `gorm:"foreignKey:OrderNo;references:OrderID" json:"order_items"`
 	// OrderItems    []OrderItemModel `gorm:"foreignKey:OrderID;references:OrderNo" json:"order_items"`
 	OrderPayments []PaymentModel `gorm:"foreignKey:OrderID;references:OrderID" json:"order_payments"`
 	// Assignee             []uuid.UUID          `gorm:"type:uuid;foreignKey:Assignee;references:ID" json:"assignee"`
-	Assignee   datatypes.JSON `gorm:"type:jsonb" json:"assignee"`
-	Supervisor string         `json:"supervisor"`
-	CADFiles   CADFile        `gorm:"type:jsonb" json:"cad_files"`
-	Designer   Designer       `gorm:"type:jsonb" json:"designer"`
-	PoNo       string         `gorm:"type:text" json:"po_no"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	Assignee      datatypes.JSON `gorm:"type:jsonb" json:"assignee"`
+	Supervisor    string         `json:"supervisor"`
+	CADFiles      CADFile        `gorm:"type:jsonb" json:"cad_files"`
+	Designer      Designer       `gorm:"type:jsonb" json:"designer"`
+	PoNo          string         `gorm:"type:text" json:"po_no"`
+	QcProof       string         `gorm:"type:text" json:"QcProof"`
+	DeliveryProof string         `gorm:"type:text" json:"DeliveryProof"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 func (o *OrderModel) BeforeCreate(_ *gorm.DB) (err error) {
@@ -143,21 +147,37 @@ func ConvertDesignerFromDomain(domainDesigner domain.Designer) Designer {
 }
 func OrderModelFromDomain(quote *domain.Order) *OrderModel {
 	assigneeJSON, _ := json.Marshal(quote.Assignee)
+	var itemsJSON []byte
+	if len(quote.Items) == 0 {
+		itemsJSON = []byte("[]")
+	} else {
+		itemsJSON, _ = json.Marshal(quote.Items)
+	}
+
 	var salesIDPtr *uuid.UUID
 	if quote.SalesID != uuid.Nil {
 		salesIDPtr = &quote.SalesID
 	}
+	// var itemsStrArray pq.StringArray
+
+	// if quote.Items != nil {
+	// 	for _, id := range *quote.Items {
+	// 		itemsStrArray = append(itemsStrArray, id.String())
+	// 	}
+	// }
 	return &OrderModel{
-		OrderID:              quote.OrderID,
-		Type:                 quote.Type,
-		CustomerID:           quote.CustomerID,
-		CreatedBy:            quote.CreatedBy,
-		OrderNo:              quote.OrderNo,
-		SubTotal:             quote.SubTotal,
-		AdditionalCharges:    ConvertAdditionalChargesFromDomain(quote.AdditionalCharges),
-		Discount:             quote.Discount,
-		Total:                quote.Total,
-		Vat:                  quote.Vat,
+		OrderID:           quote.OrderID,
+		Type:              quote.Type,
+		CustomerID:        quote.CustomerID,
+		CreatedBy:         quote.CreatedBy,
+		OrderNo:           quote.OrderNo,
+		SubTotal:          quote.SubTotal,
+		AdditionalCharges: ConvertAdditionalChargesFromDomain(quote.AdditionalCharges),
+		Discount:          quote.Discount,
+		Total:             quote.Total,
+		Vat:               quote.Vat,
+		// Items:                itemsStrArray,
+		Items:                itemsJSON,
 		OrderStatus:          quote.OrderStatus,
 		PaymentStatus:        quote.PaymentStatus,
 		ExpectedDeliveryDate: quote.ExpectedDeliveryDate,
@@ -166,6 +186,8 @@ func OrderModelFromDomain(quote *domain.Order) *OrderModel {
 		CADFiles:             ConvertCADFileFromDomain(quote.CADFiles),
 		Designer:             ConvertDesignerFromDomain(quote.Designer),
 		PoNo:                 quote.PoNo,
+		QcProof:              quote.QcProof,
+		DeliveryProof:        quote.DeliveryProof,
 		SalesID:              salesIDPtr,
 		CreatedAt:            quote.CreatedAt,
 		UpdatedAt:            quote.UpdatedAt,
@@ -201,31 +223,54 @@ func OrderModelToDomain(model *OrderModel) *domain.Order {
 	}
 	var payments []domain.Payment
 	for _, p := range model.OrderPayments {
-		payments = append(payments, *p.PaymentModelToDomain())
+		// Now calling the safe version above
+		paymentDomain := p.PaymentModelToDomain()
+		if paymentDomain != nil {
+			payments = append(payments, *paymentDomain)
+		}
 	}
+
 	var assignees []string
 	if len(model.Assignee) > 0 {
 		_ = json.Unmarshal(model.Assignee, &assignees)
 	}
+	var itemsSummary []domain.OrderItemSummary
+	if len(model.Items) > 0 {
+		_ = json.Unmarshal(model.Items, &itemsSummary)
+	}
+
 	var salesID uuid.UUID
 	if model.SalesID != nil {
 		salesID = *model.SalesID
 	}
+	// var itemsUUIDs []uuid.UUID
+	// for _, str := range model.Items {
+	// 	if parsedID, err := uuid.Parse(str); err == nil {
+	// 		itemsUUIDs = append(itemsUUIDs, parsedID)
+	// 	}
+	// }
+
+	// var itemsPtr *[]uuid.UUID
+	// if len(itemsUUIDs) > 0 {
+	// 	itemsPtr = &itemsUUIDs
+	// }
 	return &domain.Order{
-		OrderID:              model.OrderID,
-		Type:                 model.Type,
-		CustomerID:           model.CustomerID,
-		SalesID:              salesID,
-		Customer:             model.Customer.CustomerModelToDomain(),
-		User:                 model.User.UserModelToDomain(),
-		Sale:                 model.Sale.SaleFromModelToDomain(),
-		CreatedBy:            model.CreatedBy,
-		OrderNo:              model.OrderNo,
-		SubTotal:             model.SubTotal,
-		AdditionalCharges:    convertAdditionalChargesToDomain(model.AdditionalCharges),
-		Discount:             model.Discount,
-		Total:                model.Total,
-		Vat:                  model.Vat,
+		OrderID:           model.OrderID,
+		Type:              model.Type,
+		CustomerID:        model.CustomerID,
+		SalesID:           salesID,
+		Customer:          model.Customer.CustomerModelToDomain(),
+		User:              model.User.UserModelToDomain(),
+		Sale:              model.Sale.SaleFromModelToDomain(),
+		CreatedBy:         model.CreatedBy,
+		OrderNo:           model.OrderNo,
+		SubTotal:          model.SubTotal,
+		AdditionalCharges: convertAdditionalChargesToDomain(model.AdditionalCharges),
+		Discount:          model.Discount,
+		Total:             model.Total,
+		Vat:               model.Vat,
+		// Items:                itemsPtr,
+		Items:                itemsSummary,
 		OrderStatus:          model.OrderStatus,
 		PaymentStatus:        model.PaymentStatus,
 		OrderItems:           items,
@@ -236,6 +281,8 @@ func OrderModelToDomain(model *OrderModel) *domain.Order {
 		CADFiles:             convertCADFileToDomain(model.CADFiles),
 		Designer:             convertDesignerToDomain(model.Designer),
 		PoNo:                 model.PoNo,
+		QcProof:              model.QcProof,
+		DeliveryProof:        model.DeliveryProof,
 		CreatedAt:            model.CreatedAt,
 		UpdatedAt:            model.UpdatedAt,
 	}

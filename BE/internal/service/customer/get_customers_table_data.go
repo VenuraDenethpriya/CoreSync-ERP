@@ -1,8 +1,8 @@
 package customer
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetCustomersTableData(ctx context.Context) ([]*domain.Customer, error) {

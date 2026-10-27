@@ -1,10 +1,10 @@
 package customer
 
 import (
-	dto "rims-backend/internal/controller/http/dto/const"
-	"rims-backend/internal/controller/http/middleware"
-	auditlogs "rims-backend/internal/service/audit_logs"
-	"rims-backend/internal/service/customer"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
+	"CoreSync-backend/internal/service/customer"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,17 +38,17 @@ func SetupCustomerRoutes(
 		)
 		authorizationRouter.GET("/:customerId",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			customerHandler.GetCustomerByID,
 		)
 		authorizationRouter.GET("",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			customerHandler.GetCustomers,
 		)
 		authorizationRouter.GET("/table",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.READ_ONLY)),
 			customerHandler.GetCustomersTableData,
 		)
 		authorizationRouter.PUT("",
@@ -65,12 +65,12 @@ func SetupCustomerRoutes(
 		)
 		authorizationRouter.GET("/search",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			customerHandler.SearchCustomers,
 		)
 		authorizationRouter.GET("/phone/:phoneNo",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF), string(dto.OFFICE_STAFF), string(dto.READ_ONLY)),
 			customerHandler.GetCustomerByPhoneNo,
 		)
 	}

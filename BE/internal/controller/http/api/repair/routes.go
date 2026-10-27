@@ -1,9 +1,10 @@
 package repair
 
 import (
-	"rims-backend/internal/controller/http/middleware"
-	auditlogs "rims-backend/internal/service/audit_logs"
-	"rims-backend/internal/service/repair"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
+	"CoreSync-backend/internal/service/repair"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,47 +28,47 @@ func SetupRepairRoutes(
 		authorizationRouter := repair.Group("")
 
 		authorizationRouter.POST("",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
 			repairHandler.CreateRepair,
 			middleware.AuditMiddleware(auditSvc),
 		)
 		authorizationRouter.PUT("/:repair-id",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
 			repairHandler.UpdateRepair,
 			middleware.AuditMiddleware(auditSvc),
 		)
 		authorizationRouter.DELETE("/:repair-id",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
 			repairHandler.DeleteRepair,
 			middleware.AuditMiddleware(auditSvc),
 		)
 		authorizationRouter.GET("/:repair-id",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF), string(dto.WAREHOUSE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF), string(dto.WAREHOUSE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			repairHandler.GetRepairByID,
 		)
 		authorizationRouter.GET("",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF), string(dto.WAREHOUSE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			repairHandler.GetRepairs,
 		)
 		authorizationRouter.GET("/last-job-no",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.OFFICE_STAFF), string(dto.READ_ONLY)),
 			repairHandler.GetLastRepairNo,
 		)
 		authorizationRouter.POST("/repair-usage",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF)),
 			repairHandler.CreateRepairItemUsage,
 			middleware.AuditMiddleware(auditSvc),
 		)
 		authorizationRouter.GET("/usage",
-			// middleware.ClerkAuthMiddleware(),
-			// middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF)),
+			middleware.ClerkAuthMiddleware(),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.INVENTORY_MANAGER), string(dto.WAREHOUSE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			repairHandler.GetRepairItemUsage,
 		)
 	}

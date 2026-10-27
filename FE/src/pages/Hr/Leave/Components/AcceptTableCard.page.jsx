@@ -13,11 +13,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useNavigate } from "react-router-dom"
-import { fetchInventoryItemsList } from "@/api/inventoryApi"
 import { PaginationComponent } from "@/components/Pagination"
 import { useAuth } from "@clerk/clerk-react"
 import { useDebounce } from "@/hooks/useDebounce"
-import { ChangeItemStatusDropdownMenu } from "./ChangeStatusMenu"
+import { fetchLeaveRequests } from "@/api/hrApi"
+import { ChangeStatusDropdownMenu } from "./ChangeStatusMenu"
+import { AddComment } from "./AddComment"
 
 
 
@@ -38,11 +39,11 @@ export function AcceptTable({ setExportData }) {
   const navigate = useNavigate()
 
   useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const pageParam = parseInt(params.get("page") || "1", 10);
-        setOffset((pageParam - 1) * limit);
-      }, [location.search, limit]);
-      
+    const params = new URLSearchParams(location.search);
+    const pageParam = parseInt(params.get("page") || "1", 10);
+    setOffset((pageParam - 1) * limit);
+  }, [location.search, limit]);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -88,74 +89,77 @@ export function AcceptTable({ setExportData }) {
 
   const columns = [
     {
-      accessorKey: "itemCode",
-      header: "Item Code",
+      accessorKey: "empName",
+      header: "Employee Name",
       cell: ({ row }) => {
-        const { itemCode, id } = row.original
+        const { empName } = row.original
         return (
-          <div
-            className="capitalize cursor-pointer"
-            onClick={() => navigate(`/inventory/${id}`)}
-          >
-            {itemCode}
+          <div className="capitalize font-medium text-slate-800">
+            {empName || "-"}
           </div>
         )
       },
     },
     {
-      accessorKey: "itemName",
-      header: "Item Name",
+      accessorKey: "date",
+      header: "Requested Dates",
       cell: ({ row }) => {
-        const { itemName, id } = row.original
+        const dates = row.getValue("date") || [];
+        if (dates.length === 0) return <div>-</div>;
+        
+        const formattedDates = dates.map(d => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })).join(", ");
+        
         return (
-          <div
-            className="capitalize cursor-pointer"
-            onClick={() => navigate(`/inventory/${id}`)}
-          >
-            {itemName}
+          <div className="flex flex-col">
+            <span className="font-semibold text-slate-700">{dates.length} Day{dates.length > 1 ? 's' : ''}</span>
+            <span className="text-xs text-slate-500">{formattedDates}</span>
           </div>
         )
       },
     },
     {
-      accessorKey: "quantity",
-      header: "Quantity",
+      accessorKey: "type",
+      header: "Type",
       cell: ({ row }) => {
-        const { quantity, threshold, id } = row.original
-        // const quantity = row.getValue("quantity")
-        // const threshold = row.original.threshold
-        const isBelowQuantity = quantity < threshold
         return (
-          <div
-            onClick={() => navigate(`/inventory/${id}`)}
-            className={`capitalize font-medium text-sm px-3 py-1 rounded-full w-fit transition-colors duration-200
-    ${isBelowQuantity ? "bg-red-100 text-red-800 border border-red-300" : ""}`}>
-            {quantity}
+          <div className="capitalize pl-5 font-medium">{row.getValue("type")}</div>
+        )
+      },
+    },
+    {
+      accessorKey: "reason",
+      header: "Reason",
+      cell: ({ row }) => {
+        return (
+          <div className="pl-5 text-slate-600 max-w-[200px] truncate" title={row.getValue("reason")}>
+            {row.getValue("reason") || "-"}
           </div>
         )
       },
     },
     {
-      accessorKey: "hold",
-      header: "Hold",
+      accessorKey: "proof",
+      header: "Proof",
       cell: ({ row }) => {
-        const { hold, id } = row.original
+        const proofUrl = row.getValue("proof");
+
+        if (!proofUrl || proofUrl.toLowerCase() === "none" || proofUrl.trim() === "") {
+          return <div className="pl-5 text-slate-400 italic text-sm">No Document</div>;
+        }
+
         return (
-          <div
-            onClick={() => navigate(`/inventory/${id}`)}
-            className="capitalize pl-5" >{row.getValue("hold")}</div>
-        )
-      },
-    },
-    {
-      accessorKey: "threshold",
-      header: "Threshold",
-      cell: ({ row }) => {
-        const { threshold, id } = row.original
-        return (
-          <div
-            onClick={() => navigate(`/inventory/${id}`)}
-            className="capitalize pl-5" >{row.getValue("threshold")}</div>
+          <div className="pl-5">
+            <a
+              href={proofUrl}
+              target="_blank"             
+              rel="noopener noreferrer"  
+              className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm transition-colors"
+              onClick={(e) => e.stopPropagation()} 
+            >
+              View File
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </a>
+          </div>
         )
       },
     },
@@ -163,15 +167,34 @@ export function AcceptTable({ setExportData }) {
       accessorKey: "status",
       header: () => <div className="pl-8">Status</div>,
       cell: ({ row }) => {
-        const item = row.original
+        const leave = row.original
         return (
-          <ChangeItemStatusDropdownMenu
-            item={item}
-          />
+          <ChangeStatusDropdownMenu leave={leave} />
         )
       },
     },
-
+    {
+      accessorKey: "comment",
+      header: "Comment",
+      cell: ({ row }) => (
+        <AddComment 
+          row={row} 
+          getToken={getToken} 
+          handleInventoryUpdate={handleInventoryUpdate} 
+        />
+      ),
+    },
+    {
+      accessorKey: "acceptedBy",
+      header: "Accepted By",
+      cell: ({ row }) => {
+        return (
+          <div className="capitalize pl-5 text-slate-600">
+            {row.getValue("acceptedBy") || "-"}
+          </div>
+        )
+      },
+    },
   ]
 
   useEffect(() => {
@@ -179,24 +202,23 @@ export function AcceptTable({ setExportData }) {
       try {
         setIsLoading(true)
         const token = await getToken();
-        console.log(token)
-        const response = await fetchInventoryItemsList(token, debouncedSearch, limit, offset)
-        const apiData = response?.data?.items || []
-        const total = response.data.total_inventory;
+        const response = await fetchLeaveRequests(token, debouncedSearch, limit, offset)
+        const apiData = response?.data?.leaves || []
+        const total = response.data.total_leaves;
         setTotal(total)
 
         const mappedData = apiData
           .map((item) => ({
             id: item.id,
-            itemCode: item.item_code,
-            itemName: item.item_name,
-            quantity: item.quantity_in_stock,
-            hold: item.hold,
-            unitPrice: item.unit_cost,
-            threshold: item.threshold,
+            empId: item.emp_id,
+            empName: item.emp_name,
+            type: item.type,
+            date: item.date,
+            reason: item.reason,
+            proof: item.proof,
             status: item.status,
-            // allocated: item.allocated,
-            updatedAt: item.updated_at,
+            comment: item.comment,
+            acceptedBy: item.accepted_by,
             createdAt: item.created_at,
           }))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))

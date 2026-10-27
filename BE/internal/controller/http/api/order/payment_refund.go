@@ -1,11 +1,11 @@
 package order
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -21,16 +21,16 @@ func (oh *OrderHandler) PaymentRefund(ctx *gin.Context) {
 		return
 	}
 
+	actingClerkID := ctx.GetString("user_id")
 	// Update order status
 	order := mapper.UpdateOrderPaymentRefundRequestOrderToDomain(&req)
-	updateOrderStatus, err := oh.orderService.UpdateOrderStatus(ctx, order)
+	updateOrderStatus, _, err := oh.orderService.UpdateOrderStatus(ctx, order, actingClerkID)
 	if err != nil {
 		common.HandleError(ctx, err)
 		return
 	}
 	logger.Info(ctx, "Order status updated", zap.Any("order", updateOrderStatus))
 
-	actingClerkID := ctx.GetString("user_id")
 	// Update ALL payments
 	payments := mapper.UpdateOrderPaymentRefundRequestPaymentsToDomain(&req)
 	for _, payment := range payments {

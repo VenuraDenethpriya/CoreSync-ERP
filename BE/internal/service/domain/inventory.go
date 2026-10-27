@@ -39,6 +39,8 @@ type InventoryItemUsage struct {
 	OrderID   uuid.UUID `json:"order_id"`
 	OrderType string    `json:"order_type"`
 	OrederNo  string    `json:"order_no"`
+	PackID    uuid.UUID `json:"pack_id"`
+	SerialNo  string    `json:"serial_no"`
 	// OldUsageCount int       `json:"old_usage_count"`
 	// NewUsageCount int       `json:"new_usage_count"`
 	// UsageCount    int    `json:"usage_count"`
@@ -50,6 +52,7 @@ type InventoryItemUsage struct {
 type InventoryItemRestock struct {
 	ID uuid.UUID `json:"id"`
 	// User      *User
+	OrderID   uuid.UUID `json:"order_id"`
 	User      *User     `gorm:"foreignKey:UserName"`
 	ItemID    uuid.UUID `json:"item_id"`
 	ItemCode  string    `json:"item_code"`
@@ -70,6 +73,8 @@ type InventoryItemAllocate struct {
 	ItemCode  string    `json:"item_code"`
 	ItemName  string    `json:"item_name"`
 	OrderID   uuid.UUID `json:"order_id"`
+	PackID    uuid.UUID `json:"pack_id"`
+	SerialNo  string    `json:"serial_no"`
 	OrderType string    `json:"order_type"`
 	OrderNo   string    `json:"order_no"`
 	OldCount  int       `json:"old_count"`
@@ -84,4 +89,20 @@ type InventoryItem struct {
 	RestockID uuid.UUID  `json:"restock_id"`
 	ItemCode  string     `json:"item_code"`
 	Inventory *Inventory `json:"inventory"`
+}
+
+type InventoryOrder struct {
+	ID            uuid.UUID `json:"id"`
+	OrderNo       string    `json:"order_no"`
+	User          *User     `gorm:"foreignKey:CreatedBy"`
+	ItemCode      string    `json:"item_code"`
+	ItemName      string    `json:"item_name"`
+	OrderQuantity int       `json:"order_quantity"`
+	Quantity      int       `json:"quantity"`
+	Amount        float64   `json:"amount"`
+	Status        string    `json:"status"`
+	OrderDate     string    `json:"oder_date"`
+	CreatedBy     string    `json:"created_by"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

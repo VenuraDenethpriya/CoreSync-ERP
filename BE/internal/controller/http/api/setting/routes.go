@@ -1,9 +1,9 @@
 package setting
 
 import (
-	dto "rims-backend/internal/controller/http/dto/const"
-	"rims-backend/internal/controller/http/middleware"
-	auditlogs "rims-backend/internal/service/audit_logs"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
 
 	"github.com/gin-gonic/gin"
 )

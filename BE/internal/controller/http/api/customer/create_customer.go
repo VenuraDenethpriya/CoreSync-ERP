@@ -1,11 +1,11 @@
 package customer
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/helper/logger"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/helper/logger"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -58,7 +58,7 @@ func (ch *CustomerHandler) CreateCustomer(ctx *gin.Context) {
 	// Custom description
 	userName := createdCustomer.CreatedBy
 	if createdCustomer.User != nil {
-		userName = strings.TrimSpace(createdCustomer.User.FirstName + " " + createdCustomer.User.LastName)
+		userName = strings.TCoreSyncpace(createdCustomer.User.FirstName + " " + createdCustomer.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{

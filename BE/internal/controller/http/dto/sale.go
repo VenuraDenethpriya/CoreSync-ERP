@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -267,6 +267,7 @@ type CreateSalespersonRequest struct {
 	Email     string `json:"email"`
 	PhoneNo   string `json:"phone" binding:"required"`
 	CreatedBy string `json:"created_by"`
+	Status    string `json:"status"`
 }
 
 type CreateSalespersonResponse struct {
@@ -276,6 +277,7 @@ type CreateSalespersonResponse struct {
 	Email     string    `json:"email"`
 	PhoneNo   string    `json:"phone"`
 	CreatedBy string    `json:"created_by"`
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -287,6 +289,7 @@ func NewCreateSalespersonResponse(salesperson *domain.Salesperson) *CreateSalesp
 		LastName:  salesperson.LastName,
 		Email:     salesperson.Email,
 		PhoneNo:   salesperson.PhoneNo,
+		Status:    salesperson.Status,
 		CreatedBy: salesperson.CreatedBy,
 		CreatedAt: salesperson.CreatedAt,
 		UpdatedAt: salesperson.UpdatedAt,
@@ -307,6 +310,7 @@ type GetSalespersonResponse struct {
 	PhoneNo         string    `json:"phone_no"`
 	TotalSalesNo    int       `json:"total_sales_no"`
 	TotalCommission float64   `json:"total_commission"`
+	Status          string    `json:"status"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `josn:"updated_at"`
 }
@@ -325,6 +329,7 @@ func NewGetSalespersonResponse(salesperson *domain.Salesperson, totalSalesNo int
 		PhoneNo:         salesperson.PhoneNo,
 		TotalSalesNo:    totalSalesNo,
 		TotalCommission: totalCommission,
+		Status:          salesperson.Status,
 		CreatedAt:       salesperson.CreatedAt,
 		UpdatedAt:       salesperson.UpdatedAt,
 	}
@@ -354,6 +359,7 @@ func NewGetSalespersonsResponse(
 			PhoneNo:         salesperson.PhoneNo,
 			TotalSalesNo:    ts,
 			TotalCommission: tc,
+			Status:          salesperson.Status,
 			CreatedAt:       salesperson.CreatedAt,
 			UpdatedAt:       salesperson.UpdatedAt,
 		})
@@ -371,6 +377,7 @@ type UpdateSalespersonRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
+	Status    string `json:"status"`
 	PhoneNo   string `json:"phone_no"`
 }
 
@@ -380,6 +387,7 @@ type UpdateSalespersonResponse struct {
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email"`
 	PhoneNo   string    `json:"phone"`
+	Status    string    `json:"status"`
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -392,6 +400,7 @@ func NewUpdateSalespersonResponse(salesperson *domain.Salesperson) *UpdateSalesp
 		LastName:  salesperson.LastName,
 		Email:     salesperson.Email,
 		PhoneNo:   salesperson.PhoneNo,
+		Status:    salesperson.Status,
 		CreatedBy: salesperson.User.FirstName + " " + salesperson.User.LastName,
 		CreatedAt: salesperson.CreatedAt,
 		UpdatedAt: salesperson.UpdatedAt,
@@ -447,6 +456,9 @@ func NewGetSalespersonIDResponse(salesperson *domain.Salesperson, totalSalesNoLa
 	}
 }
 
+type GetSalespersonNameRequest struct {
+	Status string `form:"status" json:"status"`
+}
 type GetSalespersonNameResponse struct {
 	ID          uuid.UUID `json:"id"`
 	Salesperson string    `json:"salesperson"`
@@ -584,5 +596,209 @@ func NewGetCallsResponses(call []*domain.Call, totalCalls int) *GetCallsResponse
 		Calls:      callResponse,
 		Total:      len(callResponse),
 		TotalCalls: totalCalls,
+	}
+}
+
+type CreateSalesTarget struct {
+	SalespersonID uuid.UUID `json:"salesperson_id"`
+	Month         int       `json:"month"`
+	Year          int       `json:"year"`
+	Amount        float64   `json:"amount"`
+	CreatedBy     string    `json:"created_by"`
+}
+type CreateSalesTargetResponse struct {
+	ID          uuid.UUID `json:"id"`
+	Salesperson string    `json:"salesperson"`
+	CreatedBy   string    `json:"created_by"`
+}
+
+func NewCreatesalesTargetResponse(salesTarget *domain.SalesTarget) *CreateSalesTargetResponse {
+	return &CreateSalesTargetResponse{
+		ID:          salesTarget.ID,
+		Salesperson: salesTarget.Salesperson.FirstName + " " + salesTarget.Salesperson.LastName,
+		CreatedBy:   salesTarget.User.FirstName + " " + salesTarget.User.LastName,
+	}
+}
+
+type SaleTargetBySalespersonResponse struct {
+	ID         uuid.UUID `json:"id"`
+	Month      int       `json:"month"`
+	Year       int       `json:"year"`
+	Target     float64   `json:"target"`
+	Sale       float64   `json:"sale"`
+	Commission float64   `josn:"commission"`
+}
+
+type SaleTargetsBySalespersonResponse struct {
+	Targets []SaleTargetBySalespersonResponse `json:"targets"`
+}
+
+func NewSalesTargetsBySalespersonResponse(items []domain.SalesTarget) *SaleTargetsBySalespersonResponse {
+	var responseTargets []SaleTargetBySalespersonResponse
+
+	for _, item := range items {
+		responseTargets = append(responseTargets, SaleTargetBySalespersonResponse{
+			ID:         item.ID,
+			Month:      item.Month,
+			Year:       item.Year,
+			Target:     item.TargetAmount,
+			Sale:       item.Sale,
+			Commission: item.Commission,
+		})
+	}
+
+	return &SaleTargetsBySalespersonResponse{
+		Targets: responseTargets,
+	}
+}
+
+type DeleteSalesTargetIDRequest struct {
+	ID string `uri:"id" binding:"required"`
+}
+type DeleteSalesTargetResponse struct {
+	ID uuid.UUID `json:"id"`
+}
+
+func NewDeleteSalesTargetResponse(salesTarget *domain.SalesTarget) *DeleteSalesTargetResponse {
+	return &DeleteSalesTargetResponse{
+		ID: salesTarget.ID,
+	}
+}
+
+type DateRangeResponse struct {
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+}
+
+type LastMonthSalesResponse struct {
+	Salesperson string  `json:"salesperson"`
+	Target      float64 `json:"target"`
+	Sales       float64 `json:"sale"`
+}
+
+type AllLastMonthSalesResponse struct {
+	DatePeriod DateRangeResponse        `json:"date_period"`
+	Data       []LastMonthSalesResponse `json:"data"`
+}
+
+type LastYearSalesResponse struct {
+	Month       string  `json:"month"`
+	Salesperson string  `json:"salesperson"`
+	Target      float64 `json:"target"`
+	Sales       float64 `json:"sales"`
+}
+
+type AllLastYearSalesResponse struct {
+	DatePeriod DateRangeResponse       `json:"date_period"`
+	Data       []LastYearSalesResponse `json:"data"`
+}
+
+type SalesDashboardResponse struct {
+	LastMonth AllLastMonthSalesResponse `json:"last_month"`
+	LastYear  AllLastYearSalesResponse  `json:"last_year"`
+}
+
+func GetSalesDashboardDataResponse(dashboard *domain.SalesDashboard) *SalesDashboardResponse {
+	var lastMonthData []LastMonthSalesResponse
+	for _, item := range dashboard.LastMonthData {
+		lastMonthData = append(lastMonthData, LastMonthSalesResponse{
+			Salesperson: item.SalespersonName,
+			Target:      item.Target,
+			Sales:       item.Sales,
+		})
+	}
+
+	var lastYearData []LastYearSalesResponse
+	for _, item := range dashboard.LastYearData {
+		lastYearData = append(lastYearData, LastYearSalesResponse{
+			Month:       item.MonthName,
+			Salesperson: item.SalespersonName,
+			Target:      item.Target,
+			Sales:       item.Sales,
+		})
+	}
+
+	return &SalesDashboardResponse{
+		LastMonth: AllLastMonthSalesResponse{
+			DatePeriod: DateRangeResponse{
+				StartDate: dashboard.LastMonthDate.StartDate,
+				EndDate:   dashboard.LastMonthDate.EndDate,
+			},
+			Data: lastMonthData,
+		},
+		LastYear: AllLastYearSalesResponse{
+			DatePeriod: DateRangeResponse{
+				StartDate: dashboard.LastYearDate.StartDate,
+				EndDate:   dashboard.LastYearDate.EndDate,
+			},
+			Data: lastYearData,
+		},
+	}
+}
+
+type GetSalesBySalespersonRequest struct {
+	Email string `uri:"email" binding:"required"`
+}
+
+type TotalSalesFrom1stOfMonth struct {
+	TargetForMonth     float64 `json:"target"`
+	TotalSalesForMonth float64 `json:"sales"`
+}
+
+type TotalSalesForMonth struct {
+	Month     string  `json:"month"`
+	TotalSale float64 `json:"sale"`
+}
+
+type SalesForthisMonthFrom1st struct {
+	DatePeriod DateRangeResponse          `json:"date_period"`
+	TotalSales []TotalSalesFrom1stOfMonth `json:"total_sales_from_1st"`
+}
+
+type TotalSalesForYear struct {
+	DatePeriod        DateRangeResponse    `json:"date_period"`
+	TotalSalesForSale []TotalSalesForMonth `json:"total_sales_for_12_months"`
+}
+
+type SalespersonDashboardResponse struct {
+	ThisMonth SalesForthisMonthFrom1st `json:"this_month"`
+	LastYear  TotalSalesForYear        `json:"last_year"`
+}
+
+// Mapper Function
+func NewSalespersonDashboardResponse(dashboard *domain.SingleSalespersonDashboard) *SalespersonDashboardResponse {
+	// Map This Month
+	var thisMonthData []TotalSalesFrom1stOfMonth
+	for _, item := range dashboard.ThisMonthData {
+		thisMonthData = append(thisMonthData, TotalSalesFrom1stOfMonth{
+			TargetForMonth:     item.Target,
+			TotalSalesForMonth: item.Sales,
+		})
+	}
+
+	// Map Last 12 Months
+	var lastYearData []TotalSalesForMonth
+	for _, item := range dashboard.LastYearData {
+		lastYearData = append(lastYearData, TotalSalesForMonth{
+			Month:     item.MonthName,
+			TotalSale: item.TotalSale,
+		})
+	}
+
+	return &SalespersonDashboardResponse{
+		ThisMonth: SalesForthisMonthFrom1st{
+			DatePeriod: DateRangeResponse{
+				StartDate: dashboard.ThisMonthDate.StartDate,
+				EndDate:   dashboard.ThisMonthDate.EndDate,
+			},
+			TotalSales: thisMonthData,
+		},
+		LastYear: TotalSalesForYear{
+			DatePeriod: DateRangeResponse{
+				StartDate: dashboard.LastYearDate.StartDate,
+				EndDate:   dashboard.LastYearDate.EndDate,
+			},
+			TotalSalesForSale: lastYearData,
+		},
 	}
 }

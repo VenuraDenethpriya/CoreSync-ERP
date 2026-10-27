@@ -1,8 +1,8 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) CreateInventoryItemUsage(ctx context.Context, usageReq domain.InventoryItemUsage) (*domain.InventoryItemUsage, error) {

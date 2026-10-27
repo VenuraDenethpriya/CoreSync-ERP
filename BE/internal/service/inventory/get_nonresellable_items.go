@@ -1,8 +1,8 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetNonResellableInventory(ctx context.Context, query string, limit int) ([]*domain.Inventory, error) {

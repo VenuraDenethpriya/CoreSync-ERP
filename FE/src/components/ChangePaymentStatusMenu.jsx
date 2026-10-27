@@ -34,7 +34,6 @@ export function ChangePaymentStatusDropdownMenu(props) {
                     window.location.reload();
                 }, 2500);
             }
-            console.log(status);
         } catch (error) {
             console.error("Error updating order payment status:", error);
 

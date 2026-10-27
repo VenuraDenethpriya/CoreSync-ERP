@@ -103,7 +103,7 @@
 //           {/* Mobile Header */}
 //           {isMobile && (
 //             <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'white', borderBottom: '1px solid #eee' }}>
-//               <Typography variant="h6" sx={{ fontWeight: 700, color: '#6366f1' }}>Renewaa</Typography>
+//               <Typography variant="h6" sx={{ fontWeight: 700, color: '#6366f1' }}>CoreSync</Typography>
 //               <UserButton afterSignOutUrl="/" />
 //             </Box>
 //           )}
@@ -125,7 +125,7 @@
 
 //           {!isMobile && (
 //             <Typography variant="body2" sx={{ p: 2, color: "#947e79", textAlign: 'center' }}>
-//               Copyright © Renewaa
+//               Copyright © CoreSync
 //             </Typography>
 //           )}
 //         </Box>

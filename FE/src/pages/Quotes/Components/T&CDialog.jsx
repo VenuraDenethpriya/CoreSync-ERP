@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Dialog,
     DialogTrigger,
@@ -27,7 +27,7 @@ const tcOptions = [
     { value: 4, label: "E- Bikes" },
     { value: 5, label: "E- Vehicles (CATL battery pack)" },
     { value: 6, label: "Off-Grid Solar System" },
-    { value: 11, label: "Off-Grid System Complete Installation" },
+    { value: 11, label: "Off-grid System (Deye Inverter)" },
     { value: 7, label: "On-Grid Solar System" },
     { value: 12, label: "On-Grid to Hybrid System Conversion" },
     { value: 13, label: "Hybrid Solar System" },
@@ -50,7 +50,6 @@ function TCDropDown(props) {
     const [terms, setTerms] = useState([]);
     const [otherTerms, setOtherTerms] = useState("");
     const [open, setOpen] = useState(false);
-
 
     const debouncedTerms = useDebounce(terms, 500);
     const debouncedOtherTerms = useDebounce(otherTerms, 500);
@@ -85,40 +84,57 @@ function TCDropDown(props) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="bg-blue-800 hover:bg-blue-900">Download</Button>
+                 <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">Download</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[1000px]">
-                <DialogHeader>
-                    <DialogTitle>Select T & C to continue downloading</DialogTitle>
+            <DialogContent className="sm:max-w-[900px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl">
+                <DialogHeader className="space-y-1.5">
+                    <DialogTitle className="text-xl font-extrabold text-slate-800">Select T & C to continue downloading</DialogTitle>
                 </DialogHeader>
 
-                <div className="mb-4">
-                    <Select
-                        isMulti
-                        options={tcOptions}
-                        onChange={handleSelectChange}
-                        value={tcOptions.filter(option => terms.includes(option.value))}
-                        placeholder="Select Terms & Conditions"
-                        className="text-black"
-                    />
-                </div>
-
-                {terms.includes(8) && (
-                    <div className="flex flex-col gap-2 w-full mb-4">
-                        <Label className="font-normal" htmlFor="custometerm">Other</Label>
-                        <Textarea
-                            className="focus:border-blue-400"
-                            id="custometerm"
-                            placeholder="Enter your custom T & C"
-                            value={otherTerms}
-                            onChange={(e) => setOtherTerms(e.target.value)}
+                <div className="space-y-6 pt-4">
+                    <div className="flex flex-col gap-2">
+                        <Label className="text-slate-700 font-semibold text-sm">Terms & Conditions</Label>
+                        <Select
+                            isMulti
+                            options={tcOptions}
+                            onChange={handleSelectChange}
+                            value={tcOptions.filter(option => terms.includes(option.value))}
+                            placeholder="Select Terms & Conditions"
+                            className="text-black text-sm"
+                            styles={{
+                                control: (provided) => ({
+                                    ...provided,
+                                    backgroundColor: '#f8fafc',
+                                    borderColor: '#e2e8f0',
+                                    borderRadius: '0.75rem',
+                                    minHeight: '44px',
+                                    boxShadow: 'none',
+                                    '&:hover': {
+                                        borderColor: '#cbd5e1'
+                                    }
+                                })
+                            }}
                         />
                     </div>
-                )}
 
-                <DialogFooter>
+                    {terms.includes(8) && (
+                        <div className="flex flex-col gap-2 w-full">
+                            <Label className="text-slate-700 font-semibold text-sm" htmlFor="custometerm">Other Terms</Label>
+                            <Textarea
+                                className="w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
+                                id="custometerm"
+                                placeholder="Enter your custom T & C"
+                                value={otherTerms}
+                                onChange={(e) => setOtherTerms(e.target.value)}
+                                rows={4}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter className="pt-6 border-t border-slate-100 flex gap-3 sm:justify-end mt-4">
                     <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
+                        <Button variant="outline" className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6">Cancel</Button>
                     </DialogClose>
 
                     {props.isClient && (
@@ -135,7 +151,7 @@ function TCDropDown(props) {
                                 />
                             }
                             fileName={`${props.quoteData?.type}${props.quoteData?.quote_no}.pdf`}
-                            className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-blue-700 bg-blue-700 text-blue-50 hover:bg-blue-800 h-9 px-4 py-2"
+                            className="inline-flex items-center justify-center rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 h-10 px-6 shadow-sm transition-colors"
                             onClick={() => {
                                 handleDownloadLog();
                                 setTimeout(() => {

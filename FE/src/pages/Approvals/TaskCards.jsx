@@ -1,4 +1,3 @@
-import ReactDOM from "react-dom";
 import React, { useEffect, useState, useMemo } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { fetchCardTasks } from "@/api/taskApi";
@@ -11,6 +10,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { createAuditLog } from "@/api/settingApi";
 import AddUsage from "./Components/AddUsage";
+import { useNavigate } from "react-router-dom";
 
 function TaskCards() {
     const { user } = useUser();
@@ -18,6 +18,7 @@ function TaskCards() {
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const navigate = useNavigate();
 
     const [tasks, setTasks] = useState([]);
     const [employees, setEmployees] = useState([]);
@@ -109,7 +110,6 @@ function TaskCards() {
 
     const handleReportDownload = async (employeeName, assignedTasks) => {
         try {
-            console.log(`Generating PDF for ${employeeName}...`);
 
             const doc = new jsPDF();
 
@@ -128,16 +128,28 @@ function TaskCards() {
                 const t = data.task;
                 const items = data.items || [];
 
-                const itemsString = items.length > 0
-                    ? items.map(i => `${i.product_name} (x${i.quantity})`).join(", ")
+                const groupedItems = items.reduce((acc, current) => {
+                    const existingItem = acc.find(item => item.product_name === current.product_name);
+                    if (existingItem) {
+                        existingItem.quantity += current.quantity;
+                    } else {
+                        acc.push({ ...current });
+                    }
+                    return acc;
+                }, []);
+
+                const itemsString = groupedItems.length > 0
+                    ? groupedItems.map(i => `${i.product_name} (x${i.quantity})`).join(", ")
                     : "None";
 
-                const referenceNo = t.order_no ? `${t.type || ''}${t.order_no}` : (t.Job_no ? t.Job_no : "N/A");
+                const referenceNo =
+                    t.order_no
+                        ? `${t.type || ''}${t.order_no}`
+                        : t.job_no || t.serial_no || "N/A";
 
                 const taskRow = [
                     new Date(t.date).toLocaleDateString(),
                     t.time || "-",
-                    // t.order_no ? `${t.type || ''}${t.order_no}` : "N/A",
                     referenceNo,
                     t.task,
                     t.description || "",
@@ -162,7 +174,6 @@ function TaskCards() {
 
             const fileName = `${employeeName.replace(/\s+/g, '_')}_Report.pdf`;
             doc.save(fileName);
-            console.log(`PDF saved as ${fileName}`);
 
             const token = await getToken();
             await createAuditLog(token, {
@@ -192,7 +203,7 @@ function TaskCards() {
                         <Skeleton key={i} className="h-[380px] w-full rounded-2xl" />
                     ))
                 ) : (
-                    employees.slice(0, 8).map((employee) => {
+                    employees.slice(0, 12).map((employee) => {
                         const employeeFullName = `${employee.first_name} ${employee.last_name}`.trim();
                         const assignedTasks = tasksByAssignee[employeeFullName] || [];
 
@@ -204,12 +215,12 @@ function TaskCards() {
                             >
                                 {/* Employee Header */}
                                 <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-blue-100">
-                                    <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold uppercase">
+                                    <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold uppercase shrink-0">
                                         {employee.first_name?.charAt(0)}
                                         {employee.last_name?.charAt(0)}
                                     </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-semibold text-gray-900">{employeeFullName}</h3>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-lg font-semibold text-gray-900 truncate">{employeeFullName}</h3>
                                         <p className="text-xs text-gray-500">Assigned Tasks: {assignedTasks.length}</p>
                                     </div>
                                     <div>
@@ -237,7 +248,6 @@ function TaskCards() {
                                             const taskDate = new Date(task.date);
                                             const isOverdue = taskDate < today;
 
-                                            // Determine background color by task status
                                             let cardClasses = "";
                                             if (isOverdue) {
                                                 cardClasses = "bg-red-50 border-red-200 hover:bg-red-100";
@@ -251,6 +261,16 @@ function TaskCards() {
 
                                             const isHovered = hoveredTaskId === task.id;
 
+                                            const groupedItems = (items || []).reduce((acc, current) => {
+                                                const existingItem = acc.find(i => i.product_name === current.product_name);
+                                                if (existingItem) {
+                                                    existingItem.quantity += current.quantity;
+                                                } else {
+                                                    acc.push({ ...current });
+                                                }
+                                                return acc;
+                                            }, []);
+
                                             return (
                                                 <motion.div
                                                     key={task.id}
@@ -259,47 +279,88 @@ function TaskCards() {
                                                     whileHover={{ scale: 1.03 }}
                                                     className={`relative p-3 rounded-xl border ${cardClasses} cursor-pointer transition-all duration-200 ${isHovered ? 'z-10' : 'z-0'}`}
                                                 >
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <div className="flex gap-x-2">
-                                                            <p className="font-medium text-gray-800 truncate">{task.task}</p>
-                                                            {/* Order Badge (Blue) */}
+                                                    {/* Task Name + Badge on Left, Time on Right */}
+                                                    <div className="flex justify-between items-start gap-2 mb-2">
+                                                        <div className="flex flex-col items-start gap-1.5 min-w-0 flex-1">
+                                                            <p className="font-medium text-gray-800 w-full truncate" title={task.task}>
+                                                                {task.task}
+                                                            </p>
+
+                                                            {/* Order / Job / Pack Badge Links */}
                                                             {task.order_no ? (
-                                                                <span className="text-xs font-medium bg-white/60 px-2 py-0.5 rounded-md text-blue-700 border border-blue-200">
-                                                                    {task.type}{task.order_no}
+                                                                <span
+                                                                    className="flex items-center gap-x-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200 shadow-sm transition-colors"
+                                                                >
+                                                                    <div 
+                                                                        className="cursor-pointer hover:underline"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            navigate(`/orders/${task.order_id}`);
+                                                                        }}
+                                                                    >
+                                                                        {task.type}{task.order_no}
+                                                                    </div>
+                                                                    <AddUsage type="order" orderData={task} onUpdate={fetchTasks} />
                                                                 </span>
-                                                            ) :
-                                                                /* Job Badge */
-                                                                task.Job_no ? (
-                                                                    <span className="flex items-center text-xs font-medium bg-purple-50 px-1.5 py-0.5 rounded-md text-purple-700 border border-purple-200 shadow-sm">
-                                                                        <span className="flex items-center justify-center w-3.5 h-3.5 bg-purple-600 text-white rounded-full text-[9px] font-bold mr-1.5">
+                                                            ) : task.Job_no ? (
+                                                                <span
+                                                                    className="flex items-center gap-x-2 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-md border border-purple-200 shadow-sm transition-colors"
+                                                                >
+                                                                    <div 
+                                                                        className="flex items-center cursor-pointer hover:underline"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            navigate(`/repairs/${task.Job_id}`);
+                                                                        }}
+                                                                    >
+                                                                        <span className="flex items-center justify-center w-4 h-4 bg-purple-600 text-white rounded-full text-[10px] font-bold mr-1.5 shadow-inner">
                                                                             R
                                                                         </span>
                                                                         {task.Job_no}
-                                                                    </span>
-                                                                ) : null}
+                                                                    </div>
+                                                                    <AddUsage type="job" jobData={task} onUpdate={fetchTasks} />
+                                                                </span>
+                                                            ) : task.serial_no ? (
+                                                                <span
+                                                                    className="flex items-center gap-x-2 text-xs font-medium text-yellow-700 bg-yellow-50 px-2 py-1 rounded-md border border-yellow-200 shadow-sm transition-colors"
+                                                                >
+                                                                    <div 
+                                                                        className="flex items-center cursor-pointer hover:underline"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            navigate(`/orders/packs/${task.Pack_id}`);
+                                                                        }}
+                                                                    >
+                                                                        <span className="flex items-center justify-center w-4 h-4 bg-yellow-600 text-white rounded-full text-[10px] font-bold mr-1.5 shadow-inner">
+                                                                            P
+                                                                        </span>
+                                                                        {task.serial_no}
+                                                                    </div>
+                                                                    <AddUsage type="pack" packData={task} onUpdate={fetchTasks} />
+                                                                </span>
+                                                            ) : null}
                                                         </div>
 
-                                                        <div className="flex flex-col items-end leading-tight">
+                                                        {/* Protected Time Box */}
+                                                        <div className="flex flex-col items-center justify-center shrink-0 bg-white/60 px-2 py-1 rounded-md border border-gray-200/50 shadow-sm min-w-[50px]">
                                                             {task.time?.includes("-") ? (
                                                                 task.time.split("-").map((t, i) => (
-                                                                    <span key={i} className="text-xs font-semibold text-gray-700 block">
+                                                                    <span key={i} className="text-xs font-bold text-gray-700 block leading-tight">
                                                                         {t.trim()}
                                                                     </span>
                                                                 ))
                                                             ) : (
-                                                                <span className="text-xs font-semibold text-gray-700">
+                                                                <span className="text-xs font-bold text-gray-700 leading-tight">
                                                                     {task.time?.substring(0, 5)}
                                                                 </span>
                                                             )}
                                                         </div>
-
                                                     </div>
 
                                                     <p className="text-sm text-gray-700 mt-2 truncate">
-                                                        {task.description || "No description"}
+                                                        {task.description || "No description provided."}
                                                     </p>
 
-                                                    {/* Hover Expanded View */}
                                                     <AnimatePresence>
                                                         {isHovered && (
                                                             <motion.div
@@ -312,64 +373,90 @@ function TaskCards() {
                                                                 <div
                                                                     onMouseEnter={() => setHoveredTaskId(task.id)}
                                                                     onMouseLeave={() => setHoveredTaskId(null)}
-                                                                    className="pointer-events-auto w-[320px] bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl p-5 flex flex-col gap-3 relative"
+                                                                    className="pointer-events-auto w-[320px] bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl p-5 flex flex-col gap-3 relative"
                                                                     style={{
-                                                                        boxShadow:
-                                                                            "0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 6px rgba(0,0,0,0.1)",
-                                                                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                                                                        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 6px rgba(0,0,0,0.1)",
                                                                     }}
                                                                 >
-                                                                    {/* Header */}
-                                                                    <div className="flex justify-between items-start">
-                                                                        <h4 className="text-gray-900 font-semibold text-base truncate">
+                                                                    <div className="flex justify-between items-start gap-3">
+                                                                        <h4 className="text-gray-900 font-semibold text-base flex-1">
                                                                             {task.task}
                                                                         </h4>
-                                                                        {/* Order Badge with Usage */}
+
                                                                         {task.order_no ? (
-                                                                            <span className="flex items-center gap-x-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
-                                                                                {task.type}{task.order_no}
+                                                                            <span
+                                                                                className="flex items-center gap-x-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200 shadow-sm shrink-0"
+                                                                            >
+                                                                                <div 
+                                                                                    className="cursor-pointer hover:underline"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        navigate(`/orders/${task.order_id}`);
+                                                                                    }}
+                                                                                >
+                                                                                    {task.type}{task.order_no}
+                                                                                </div>
                                                                                 <AddUsage type="order" orderData={task} onUpdate={fetchTasks} />
                                                                             </span>
-                                                                        ) :
-                                                                            /* Job Badge with Usage */
-                                                                            task.Job_no ? (
-                                                                                <span className="flex items-center gap-x-2 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-md border border-purple-200 shadow-sm">
-                                                                                    <div className="flex items-center">
-                                                                                        <span className="flex items-center justify-center w-4 h-4 bg-purple-600 text-white rounded-full text-[10px] font-bold mr-1.5 shadow-inner">
-                                                                                            R
-                                                                                        </span>
-                                                                                        {task.Job_no}
-                                                                                    </div>
-                                                                                    <AddUsage type="job" jobData={task} onUpdate={fetchTasks} />
-                                                                                </span>
-                                                                            ) : null}
+                                                                        ) : task.Job_no ? (
+                                                                            <span
+                                                                                className="flex items-center gap-x-2 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-md border border-purple-200 shadow-sm shrink-0"
+                                                                            >
+                                                                                <div 
+                                                                                    className="flex items-center cursor-pointer hover:underline"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        navigate(`/repairs/${task.Job_id}`);
+                                                                                    }}
+                                                                                >
+                                                                                    <span className="flex items-center justify-center w-4 h-4 bg-purple-600 text-white rounded-full text-[10px] font-bold mr-1.5 shadow-inner">
+                                                                                        R
+                                                                                    </span>
+                                                                                    {task.Job_no}
+                                                                                </div>
+                                                                                <AddUsage type="job" jobData={task} onUpdate={fetchTasks} />
+                                                                            </span>
+                                                                        ) : task.serial_no ? (
+                                                                            <span
+                                                                                className="flex items-center gap-x-2 text-xs font-medium text-yellow-700 bg-yellow-50 px-2 py-1 rounded-md border border-yellow-200 shadow-sm shrink-0"
+                                                                            >
+                                                                                <div 
+                                                                                    className="flex items-center cursor-pointer hover:underline"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        navigate(`/orders/packs/${task.Pack_id}`);
+                                                                                    }}
+                                                                                >
+                                                                                    <span className="flex items-center justify-center w-4 h-4 bg-yellow-600 text-white rounded-full text-[10px] font-bold mr-1.5 shadow-inner">
+                                                                                        P
+                                                                                    </span>
+                                                                                    {task.serial_no}
+                                                                                </div>
+                                                                                <AddUsage type="pack" packData={task} onUpdate={fetchTasks} />
+                                                                            </span>
+                                                                        ) : null}
                                                                     </div>
 
-                                                                    {/* Description */}
-                                                                    <p className="text-gray-700 text-sm line-clamp-4">
+                                                                    <p className="text-gray-700 text-sm">
                                                                         {task.description || "No description provided."}
                                                                     </p>
 
-                                                                    {/* Items */}
-                                                                    {items && items.length > 0 && (
+                                                                    {groupedItems && groupedItems.length > 0 && (
                                                                         <div className="mt-2 pt-2 border-t border-gray-200">
-                                                                            <h5 className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-1">
+                                                                            <h5 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1">
                                                                                 <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                                                                                 Items
                                                                             </h5>
-                                                                            <ul className="space-y-1 text-gray-700 text-sm">
-                                                                                {items.map((item, index) => (
-                                                                                    <li key={index} className="flex justify-between items-center">
-                                                                                        <span>{item.product_name}</span>
-                                                                                        <span className="font-medium text-gray-900">x{item.quantity}</span>
+                                                                            <ul className="space-y-1.5 text-gray-700 text-sm">
+                                                                                {groupedItems.map((item, index) => (
+                                                                                    <li key={index} className="flex justify-between items-start">
+                                                                                        <span className="pr-2">{item.product_name}</span>
+                                                                                        <span className="font-medium text-gray-900 shrink-0 bg-gray-100 px-1.5 rounded">x{item.quantity}</span>
                                                                                     </li>
                                                                                 ))}
                                                                             </ul>
                                                                         </div>
                                                                     )}
-
-
-                                                                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-100/30 via-purple-100/20 to-pink-100/30 blur-xl -z-10" />
                                                                 </div>
                                                             </motion.div>
                                                         )}
@@ -383,7 +470,6 @@ function TaskCards() {
                                         </div>
                                     )}
                                 </div>
-
                             </motion.div>
                         );
                     })
@@ -458,7 +544,6 @@ function TaskCards() {
                                         >
                                             <strong>{item.task.assignee || "Unassigned"}</strong>:{" "}
                                             {item.task.description || "No description"}
-                                            <div className="absolute inset-0 bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition duration-300"></div>
                                         </div>
                                     ))
                                 ) : (
@@ -468,12 +553,8 @@ function TaskCards() {
                         </div>
                     </div>
                 </div>
-
                 <div className="h-[3px] bg-gradient-to-r from-indigo-400 via-blue-500 to-indigo-600 rounded-b-2xl"></div>
             </footer>
-
-
-
         </section>
     );
 }

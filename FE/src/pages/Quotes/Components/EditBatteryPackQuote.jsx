@@ -1,5 +1,5 @@
 import { updateQuote } from "@/api/quoteApi";
-import { fetchBasicProductsList, fetchProductsList } from "@/api/productApi";
+import { fetchProductsList } from "@/api/productApi";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,77 +23,65 @@ import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@clerk/clerk-react";
-import { MdDelete } from "react-icons/md";
-import { MinusCircleIcon, PlusCircle, PlusCircleIcon } from "lucide-react";
+import { MinusCircleIcon, PlusCircle, PlusCircleIcon, Trash2, Pencil } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 
+// Utility to generate unique keys safely
+const generateLocalId = () => Math.random().toString(36).substring(7);
 
 const getNoteFromSpecification = (spec) => {
   switch (spec) {
     case '6.2kW Solar Ongrid System Complete Installation':
-      return `Inverter Capacity : 5kW 
-Inverter Model : Solax X1-BOOST G4 
-Panels Capacity : 6.2kW 
-Panel Model : 620W -JA N-Type Solar 
-DC Switchgear - Zbeny 
-DC Cable - LAPP (German) 
-AC Switchgear - Kripal 
-AC Cable - ACL/Kelani`;
+      return `Inverter Capacity : 5kW \nInverter Model : Solax X1-BOOST G4 \nPanels Capacity : 6.2kW \nPanel Model : 620W -JA N-Type Solar \nDC Switchgear - Zbeny \nDC Cable - LAPP (German) \nAC Switchgear - Kripal \nAC Cable - ACL/Kelani`;
 
     case '5kW Solar Ongrid System Complete Installation':
-      return `Inverter Capacity : 5kW
-Inverter Model : Solax X1-BOOST G4
-Panels Capacity : 5kW
-Panel Model : 620W -JA N-Type Solar
-DC Switchgear - Zbeny
-DC Cable - LAPP (German)
-AC Switchgear - Kripal
-AC Cable - ACL/Kelani `;
+      return `Inverter Capacity : 5kW\nInverter Model : Solax X1-BOOST G4\nPanels Capacity : 5kW\nPanel Model : 620W -JA N-Type Solar\nDC Switchgear - Zbeny\nDC Cable - LAPP (German)\nAC Switchgear - Kripal\nAC Cable - ACL/Kelani `;
     default:
       return '';
   }
 };
 
-
-
-export function EditBatteryPackQuote({ onUpdate, ...props }) {
+export function EditBatteryPackQuote({ onUpdate, quoteData: initialQuoteData }) {
   const { getToken } = useAuth();
-  const quoteId = props.quoteData?.id;
+  const quoteId = initialQuoteData?.id;
 
-  const [search, setSearch] = useState("")
-  const [limit, setLimit] = useState(15)
-  const [offset, setOffset] = useState(0)
+  const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(15);
+  const [offset, setOffset] = useState(0);
 
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const [addProduct, setAddProduct] = useState([{ id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '' }]);
-  console.log('addProduct', addProduct);
+  // FIX: Added localId to track products accurately during deletions
+  const [addProduct, setAddProduct] = useState([{ id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '', localId: generateLocalId() }]);
 
   const handleAddProductChange = () => {
-    setAddProduct([...addProduct, { id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '' }]);
-  }
+    setAddProduct([...addProduct, { id: null, product_id: 0, product_name: '', unitprice: 0, qty: 1, subtotal: 0, note: '', specifications: '', localId: generateLocalId() }]);
+  };
 
   const handleRemoveProduct = (index) => {
     const updated = [...addProduct];
     updated.splice(index, 1);
     setAddProduct(updated);
-  }
+  };
+
   const handleIncrementQty = (index) => {
     const updated = [...addProduct];
     updated[index].qty++;
     updated[index].subtotal = updated[index].qty * updated[index].unitprice;
     setAddProduct(updated);
-  }
+  };
+
   const handleDecrementQty = (index) => {
     if (addProduct[index].qty <= 1) return;
     const updated = [...addProduct];
     updated[index].qty--;
     updated[index].subtotal = updated[index].qty * updated[index].unitprice;
     setAddProduct(updated);
-  }
+  };
 
   useEffect(() => {
     let updated = [...addProduct];
@@ -116,23 +104,18 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
     }
   }, [addProduct.map(p => p.specifications).join('|')]);
 
-
-
-
-  const [additionalCharges, setAdditionalCharges] = useState([{ type: '', value: '' }]);
+  // FIX: Track the option type as well as the custom value
+  const [additionalCharges, setAdditionalCharges] = useState([{ option: '', type: '', value: '', localId: generateLocalId() }]);
 
   const handleAddAdditionalCharge = () => {
-    setAdditionalCharges([...additionalCharges, { type: '', value: '' }]);
+    setAdditionalCharges([...additionalCharges, { option: '', type: '', value: '', localId: generateLocalId() }]);
   };
-
 
   const handleRemoveCharge = (index) => {
     const updated = [...additionalCharges];
     updated.splice(index, 1);
     setAdditionalCharges(updated);
   };
-
-
 
   const [subTotal, setSubTotal] = useState("");
   const [discount, setDiscount] = useState("");
@@ -152,7 +135,6 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
   const [status, setStatus] = useState("");
   const [poNo, setPoNO] = useState("");
   const [vatNo, setVatNo] = useState("");
-
 
   useEffect(() => {
     if (!open) return;
@@ -184,51 +166,12 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, open, limit, offset]);
+  }, [search, open, limit, offset, getToken]);
 
-  useEffect(() => {
-    if (open) {
-      initializeFormData();
-    }
-  }, [open]);
-
-
-
-  // const initializeFormData = () => {
-  //   if (!props.quoteData) return;
-
-  //   const items = props.quoteData.items || [];
-
-  //   const normalizedItems = items.map((item) => ({
-  //     id: item.id || null,
-  //     product_id: item.product_id || 0,
-  //     product_name: item.product_name || "",
-  //     unitprice: item.unitprice || item.unit_price || 0,
-  //     qty: item.quantity,
-  //     subtotal: item.subtotal || 0,
-  //     note: item.note || ""
-  //   }));
-  //   setAddProduct(normalizedItems);
-
-  //   setAdditionalCharges(props.quoteData.additional_charges || []);
-
-  //   setSubTotal(props.quoteData.subtotal || 0);
-  //   setDiscount(props.quoteData.discount || 0);
-  //   setTotal(props.quoteData.total || 0);
-  //   setVat(props.quoteData.vat || false);
-
-  //   setTitle(props.quoteData.title || "");
-  //   setFisrtName(props.quoteData.first_name || "");
-  //   setLastName(props.quoteData.last_name || "");
-  //   setEmail(props.quoteData.email || "");
-  //   setPhoneNo(props.quoteData.phone_no || "");
-  //   setAddress(props.quoteData.address || "");
-  //   setStatus(props.quoteData.status || "");
-  // };
   const initializeFormData = () => {
-    if (!props.quoteData) return;
+    if (!initialQuoteData) return;
 
-    const items = props.quoteData.items || [];
+    const items = initialQuoteData.items || [];
 
     const normalizedItems = items.map((item) => {
       const spec = item.specifications || '';
@@ -242,34 +185,59 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
         subtotal: item.subtotal || 0,
         note: note || item.note || "",
         specifications: spec,
+        localId: generateLocalId() // FIX: Set local ID
       };
     });
 
     setAddProduct(normalizedItems);
-    setAdditionalCharges(props.quoteData.additional_charges || []);
-    setSubTotal(props.quoteData.subtotal || 0);
-    setDiscount(props.quoteData.discount || 0);
-    setTotal(props.quoteData.total || 0);
-    setVat(props.quoteData.vat || false);
-    setIncludeCatalog(props.quoteData.is_catalog || false);
-    setTitle(props.quoteData.title || "");
-    setFisrtName(props.quoteData.first_name || "");
-    setLastName(props.quoteData.last_name || "");
-    setEmail(props.quoteData.email || "");
-    setPhoneNo1(props.quoteData.phone_no1 || "");
-    setPhoneNo2(props.quoteData.phone_no2 || "");
-    setAddress(props.quoteData.address || "");
-    setStatus(props.quoteData.status || "");
-    setPoNO(props.quoteData.PoNo || "");
-    setVatNo(props.quoteData.vat_no || "");
+
+    // FIX: Parse existing additional charges to separate "Others(value)" correctly
+    const parsedCharges = (initialQuoteData.additional_charges || []).map(charge => {
+      let optionType = charge.type;
+      let customType = charge.type;
+      
+      const match = charge.type?.match(/^Others\((.*)\)$/);
+      if (match) {
+          optionType = "Others";
+          customType = match[1];
+      } else if (!["Delivery Charges", "Installation Charges", "Installation Material Charges"].includes(charge.type)) {
+          // Fallback if it's a completely unformatted custom string
+          optionType = "Others";
+      }
+
+      return {
+          id: charge.id || null,
+          option: optionType,
+          type: customType,
+          value: charge.value,
+          localId: generateLocalId()
+      };
+    });
+
+    setAdditionalCharges(parsedCharges);
+    
+    setSubTotal(initialQuoteData.subtotal || 0);
+    setDiscount(initialQuoteData.discount || 0);
+    setTotal(initialQuoteData.total || 0);
+    setVat(initialQuoteData.vat || false);
+    setIncludeCatalog(initialQuoteData.is_catalog || false);
+    setTitle(initialQuoteData.title || "");
+    setFisrtName(initialQuoteData.first_name || "");
+    setLastName(initialQuoteData.last_name || "");
+    setEmail(initialQuoteData.email || "");
+    setPhoneNo1(initialQuoteData.phone_no1 || "");
+    setPhoneNo2(initialQuoteData.phone_no2 || "");
+    setAddress(initialQuoteData.address || "");
+    setStatus(initialQuoteData.status || "");
+    setPoNO(initialQuoteData.PoNo || "");
+    setVatNo(initialQuoteData.vat_no || "");
   };
 
-
   useEffect(() => {
-    if (open && props.quoteData) {
+    if (open && initialQuoteData) {
       initializeFormData();
     }
-  }, [open, props.quoteData]);
+  }, [open, initialQuoteData]);
 
   useEffect(() => {
     const subtotal = (addProduct || []).reduce((acc, item) => {
@@ -277,35 +245,32 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
       return acc + (isNaN(value) ? 0 : value);
     }, 0);
 
-    // const discountP = parseFloat(discount) || 0;
-
     const additionalChargesTotal = (additionalCharges ?? []).reduce((acc, charge) => {
       const value = parseFloat(charge.value || "0");
       return acc + (isNaN(value) ? 0 : value);
     }, 0);
 
     const subTotalWithAdditionalCharges = subtotal + additionalChargesTotal;
-    // const discountAmount = subTotalWithAdditionalCharges - discount;
-    const total = subTotalWithAdditionalCharges - discount;
+    const totalCalc = subTotalWithAdditionalCharges - (parseFloat(discount) || 0);
 
-    const vatAmount = total * 0.18;
-    const netTotal = total + vatAmount;
+    const vatCalc = totalCalc * 0.18;
+    const netTotalCalc = totalCalc + vatCalc;
 
     setSubTotal(subtotal.toFixed(2));
-    setTotal(total.toFixed(2));
-    setNetTotal(netTotal.toFixed(2));
-    setVatAmount(vatAmount.toFixed(2));
-
+    setTotal(totalCalc.toFixed(2));
+    setNetTotal(netTotalCalc.toFixed(2));
+    setVatAmount(vatCalc.toFixed(2));
   }, [addProduct, additionalCharges, discount]);
 
-
-
-  const handleEditBatteryPackQuoteSubmit = async () => {
+  const handleEditBatteryPackQuoteSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setIsSubmitting(true);
+    
     try {
       const token = await getToken();
-      const quoteData = {
+      const quotePayload = {
         customer: {
-          customer_id: props.quoteData.customer_id,
+          customer_id: initialQuoteData.customer_id,
           Title: title,
           PhoneNo1: phoneNo1,
           PhoneNo2: phoneNo2,
@@ -313,15 +278,22 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
           LastName: lastName,
           Email: email,
           Address: address,
-          VatNo: vatNo
+          VatNo: vatNo,
         },
         quote: {
-          QuoteNo: props.quoteData.quote_no,
+          QuoteNo: initialQuoteData.quote_no,
           SubTotal: parseFloat(subTotal) || 0,
-          additional_charges: additionalCharges.map(charge => ({
-            type: charge.type,
-            value: parseFloat(charge.value) || 0,
-          })),
+          // FIX: Format "Others" before sending
+          additional_charges: additionalCharges.map(charge => {
+            const finalType = charge.option === "Others" 
+                ? `Others(${charge.type})` 
+                : (charge.option || charge.type);
+            
+            return {
+                type: finalType,
+                value: parseFloat(charge.value) || 0,
+            };
+          }),
           Discount: parseFloat(discount) || 0,
           Total: parseFloat(total) || 0,
           Vat: vat,
@@ -343,13 +315,12 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
         },
       };
 
-      const response = await updateQuote(token, quoteId, quoteData);
+      const response = await updateQuote(token, quoteId, quotePayload);
 
       if (response && (response.message === "success" || response.status === "success")) {
         setOpen(false);
         toast.success("Battery pack quote updated successfully!", { position: "bottom-right" });
 
-        // 2. Call Parent Update
         if (onUpdate) {
           onUpdate(); 
         }
@@ -360,51 +331,48 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
     } catch (error) {
       console.error("Error updating quote:", error);
       toast.error("Failed to update quote. Please try again.", { position: "bottom-right" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
-      if (newOpen && !props.quoteData) {
+      if (newOpen && !initialQuoteData) {
         return;
       }
       setOpen(newOpen);
     }}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit</Button>
+        <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-10 px-4">
+          <Pencil className="w-4 h-4 mr-2" /> Edit
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[1200px] sm:h-screen h-[800px] overflow-y-auto my-8">
-        <DialogHeader>
-          <DialogTitle>{props.quoteData?.type}{props.quoteData?.quote_no}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[1000px] w-full max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200/70 p-6 sm:p-8 bg-white shadow-xl">
+        <DialogHeader className="space-y-1.5">
+          <DialogTitle className="text-xl font-extrabold text-slate-800">{initialQuoteData?.type}{initialQuoteData?.quote_no}</DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
             Make changes to quote details. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
 
+        <form onSubmit={handleEditBatteryPackQuoteSubmit} className="space-y-6 pt-4">
+          
+          {/* Product Details Section */}
+          <div className="p-6 border border-slate-200/70 rounded-2xl shadow-sm bg-slate-50/50 space-y-6">
+            <h2 className="font-bold text-lg text-slate-800">Product Details</h2>
 
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2">
-            <div>
-              <h1 className="font-semibold text-2xl text-gray-800">Product Details</h1>
-
-            </div>
-            <div className="flex justify-between mt-6 mx-6">
-              <h1 className="">Unit Price</h1>
-              <h1 className="">Qty.</h1>
-              <h1 className="">Total Price</h1>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 grid-cols-1 gap-x-4">
-            <div>
-              {/* Product  */}
-              {
-                addProduct.map((product, index) => (
-                  <div key={index} className=" items-center py-2">
-                    <div>
+            <div className="space-y-4">
+              {addProduct.map((product, index) => (
+                <div key={product.localId || index} className="p-4 border border-slate-200/70 rounded-2xl bg-white shadow-sm space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    
+                    {/* Product Select */}
+                    <div className="md:col-span-5">
                       <Select
-                        value={addProduct[index].product_id.toString()}
+                        value={addProduct[index].product_id ? addProduct[index].product_id.toString() : undefined}
                         onValueChange={(value) => {
-                          const selectedProduct = products.find(p => p.productId.toString() === value);
+                          const selectedProduct = products.find(p => p.productId.toString() === value.toString());
                           const specs = selectedProduct?.specifications || '';
                           const note = getNoteFromSpecification(specs);
 
@@ -415,11 +383,11 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
 
                             updated[index] = {
                               ...updated[index],
-                              id: selectedProduct?.id || 0,
+                              id: selectedProduct?.id || null,
                               product_id: selectedProduct?.productId || 0,
                               product_name: selectedProduct?.productName || '',
                               unitprice: price,
-                              specifications: selectedProduct?.specifications || '',
+                              specifications: specs,
                               note: note,
                               qty,
                               subtotal: price * qty,
@@ -431,8 +399,7 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
                           if (!isOpen) setSearch("");
                         }}
                       >
-
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl w-full">
                           <SelectValue placeholder="Select product">
                             {product.product_name || "Select product"}
                           </SelectValue>
@@ -443,314 +410,292 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
                               placeholder="Search products…"
                               value={search}
                               onChange={(e) => setSearch(e.target.value)}
-                              className="w-full"
+                              className="w-full h-9 text-sm"
                             />
                           </div>
 
                           {isLoading ? (
-                            <div className="p-2 text-sm text-gray-500">Loading...</div>
+                            <div className="p-2 text-sm text-slate-400">Loading...</div>
                           ) : products.length > 0 ? (
-                            products.map((product) => (
-                              <SelectItem key={product.productId} value={product.productId.toString()}>
-                                {product.productName}
+                            products.map((prod) => (
+                              <SelectItem key={prod.productId} value={prod.productId?.toString()}>
+                                {prod.productName}
                               </SelectItem>
                             ))
                           ) : (
-                            <div className="p-2 text-sm text-gray-500">No products found</div>
+                            <div className="p-2 text-sm text-slate-400">No products found</div>
                           )}
                         </SelectContent>
-
                       </Select>
                     </div>
-                    <div>
-                      <Textarea
-                        id="Product1Price"
-                        type="text"
-                        value={addProduct[index]?.note}
+
+                    {/* Unit Price */}
+                    <div className="md:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Unit Price"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl text-right font-medium"
+                        value={product.unitprice}
                         onChange={(e) => {
+                          const value = Number(e.target.value) || 0;
                           const updated = [...addProduct];
-                          updated[index].note = e.target.value;
+                          const qty = updated[index].qty || 1;
+                          updated[index].unitprice = value;
+                          updated[index].subtotal = value * qty;
                           setAddProduct(updated);
                         }}
-                        placeholder={`**Note for product ${index + 1}**`}
-                        className="col-span-3 w-full mt-1"
                       />
+                    </div>
+
+                    {/* Qty */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className={`p-1.5 rounded-lg border border-slate-200 ${product.qty > 1 ? 'text-slate-700 hover:bg-slate-50' : 'text-slate-300'}`}
+                          onClick={() => handleDecrementQty(index)}
+                        >
+                          <MinusCircleIcon size={16} />
+                        </button>
+                        <Input
+                          type="number"
+                          placeholder="Qty"
+                          className="bg-slate-50 border-slate-200 h-11 rounded-xl text-center font-medium flex-1"
+                          value={product.qty}
+                          onChange={(e) => {
+                            let qty = Number(e.target.value) || 1;
+                            if (qty < 1) qty = 1;
+                            const updated = [...addProduct];
+                            updated[index].qty = qty;
+                            updated[index].subtotal = qty * updated[index].unitprice;
+                            setAddProduct(updated);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+                          onClick={() => handleIncrementQty(index)}
+                        >
+                          <PlusCircleIcon size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Subtotal & Delete */}
+                    <div className="md:col-span-3 flex items-center gap-3">
+                      <Input
+                        type="number"
+                        placeholder="Subtotal"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl text-right font-bold flex-1"
+                        value={product.subtotal}
+                        readOnly
+                      />
+                      {addProduct.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleRemoveProduct(index)}
+                          className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-2 h-11 w-11 rounded-xl shrink-0"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
                     </div>
 
                   </div>
-                ))
-              }
 
-              <div
-                className="flex items-center text-blue-600 hover:underline cursor-pointer mt-1 gap-x-1"
-                onClick={handleAddProductChange}
-              >
-                <PlusCircle size={12} />
-                <span className="text-xs">Add</span>
-              </div>
-            </div>
-            <div className="justify-between items-center">
-              {
-                addProduct.map((product, index) => (
-                  <div key={index} className="grid grid-cols-3 py-2 mb-6">
-                    <div>
-                      <Input
-                        id={addProduct[index].unitprice}
-                        type="number"
-                        value={addProduct[index]?.unitprice}
-                        onChange={(e) => {
-                          const updated = [...addProduct];
-                          updated[index].unitprice = e.target.value;
-                          updated[index].subtotal = e.target.value * addProduct[index].qty;
-                          setAddProduct(updated);
-                        }}
-                        className="col-span-3 w-fit text-right"
-                      />
-                    </div>
-                    <div className="flex gap-x-2  justify-center">
-                      <button
-                        type="button"
-                        className={`text-black hover:text-black-700 mb-9 ${addProduct[index].qty > 1 ? '' : 'text-slate-300 hover:text-black-700 mb-9'}`}
-                        onClick={() => handleDecrementQty(index)}
-                      >
-                        <MinusCircleIcon size={18} />
-                      </button>
-                      <Input
-                        id="Product1Price"
-                        type="number"
-                        value={addProduct[index]?.qty}
-                        onChange={(e) => {
-                          const updated = [...addProduct];
-                          updated[index].qty = e.target.value;
-                          updated[index].subtotal = e.target.value * addProduct[index].unitprice;
-                          setAddProduct(updated);
-                        }}
-                        className="col-span-3 w-20 text-center "
-                      />
-                      <button
-                        type="button"
-                        className="text-black hover:text-black-700 mb-9 text-center"
-                        onClick={() => handleIncrementQty(index)}
-                      >
-                        <PlusCircleIcon size={18} />
-                      </button>
-                    </div>
-                    <div className="flex mr-8 mb-10">
-                      <Input
-                        id="Product1Price"
-                        type="number"
-                        value={addProduct[index]?.subtotal}
-                        onChange={(e) => {
-                          const updated = [...addProduct];
-                          updated[index].subtotal = e.target.value;
-                          setAddProduct(updated);
-                        }}
-                        className="col-span-3 w-fit text-right"
-                      />
-                      <button
-                        type="button"
-                        className="text-zinc-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-                        onClick={() => handleRemoveProduct(index)}
-                      >
-                        <MdDelete size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              }
-
-
-            </div>
-          </div>
-
-          <Separator className="mt-2" />
-          <div className="grid grid-cols-2">
-            {/* Labels */}
-            <div className="pt-2 space-y-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="subTotal" className="justify-self-start text-right">
-                  Sub Total
-                </Label>
-              </div>
-
-              <div>
-                <Label htmlFor="discount" className="justify-self-start text-right">
-                  Additional Charges
-                </Label>
-                <div className={additionalCharges.length === 0 ? "hidden" : ""}>
-                  {additionalCharges.map((charge, index) => (
-                    <div key={index} className="flex items-center py-2 w-[430px]">
-                      <Select
-                        value={charge.type}
-                        onValueChange={(value) => {
-                          const updated = [...additionalCharges];
-                          updated[index].type = value;
-                          setAdditionalCharges(updated);
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select charge type">
-                            {charge.type || "Select charge type"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Delivery Charges">Delivery Charges</SelectItem>
-                          <SelectItem value="Installation Charges">Installation Charges</SelectItem>
-                          <SelectItem value="Installation Material Charges">Installation Material Charges</SelectItem>
-                          <SelectItem value="Others">Others</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-
-                <div
-                  className="flex items-center text-blue-600 hover:underline cursor-pointer gap-x-1"
-                  onClick={handleAddAdditionalCharge}
-                >
-                  <PlusCircle size={12} />
-                  <span className="text-xs">Add</span>
-                </div>
-              </div>
-
-
-              <div className="grid grid-cols-4 items-center gap-4 pt-3">
-                <Label htmlFor="discount" className="justify-self-start text-right">
-                  Discount
-                </Label>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4 pt-4">
-                <Label htmlFor="total" className="justify-self-start text-right">
-                  Total
-                </Label>
-              </div>
-
-              <div className="flex items-center gap-3 pt-6">
-                <Checkbox
-                  id="vat"
-                  checked={vat}
-                  onCheckedChange={() => setVat(!vat)}
-                />
-                <Label htmlFor="vat" className="text-xs font-normal italic">
-                  Include VAT (18%)
-                </Label>
-              </div>
-              {
-                vat && (
-                  <div className="flex items-center gap-3 pt-8">
-                    <Label htmlFor="NetTotal" className="">
-                      Net Total
-                    </Label>
-                  </div>
-                )
-              }
-              <div className="flex items-center gap-3 pt-6">
-                <Checkbox
-                  id="vat"
-                  checked={includeCatalog}
-                  onCheckedChange={() => setIncludeCatalog(!includeCatalog)}
-                />
-                <Label htmlFor="vat" className="text-xs font-normal italic">
-                  Catalog
-                </Label>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <Input
-                id="subtotal"
-                type="number"
-                value={subTotal}
-                onChange={(e) => setSubTotal(e.target.value)}
-                className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right  mb-6 mr-4"
-              />
-
-              {additionalCharges.map((charge, index) => (
-                <div
-                  key={index}
-                  className="flex justify-end items-center"
-                >
-                  <Input
-                    id={`additionalCharge-${index}.value`}
-                    type="number"
-                    value={additionalCharges[index]?.value}
+                  {/* Note */}
+                  <Textarea
+                    value={product.note}
                     onChange={(e) => {
-                      const updated = [...additionalCharges];
-                      updated[index].value = e.target.value;
-                      setAdditionalCharges(updated);
+                      const updated = [...addProduct];
+                      updated[index].note = e.target.value;
+                      setAddProduct(updated);
                     }}
-                    className="w-[185px] text-right"
+                    placeholder={`Note for product ${index + 1}`}
+                    className="bg-slate-50/50 border-slate-200 text-xs rounded-xl p-3"
+                    rows={2}
                   />
-                  <button
-                    type="button"
-                    className="text-zinc-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-                    onClick={() => handleRemoveCharge(index)}
-                  >
-                    <MdDelete size={18} />
-                  </button>
                 </div>
               ))}
 
-              <div className="space-y-4 pt-7">
-                <Input
-                  id="discount"
-                  type="number"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4"
-                />
-                <Input
-                  id="total"
-                  type="number"
-                  value={total}
-                  onChange={(e) => setTotal(e.target.value)}
-                  className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4"
-                  readOnly
-                />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddProductChange}
+                className="border-slate-200 text-blue-600 hover:bg-blue-50 rounded-xl h-10 px-4 w-full"
+              >
+                <PlusCircle className="w-4 h-4 mr-2" /> Add Another Product
+              </Button>
+            </div>
 
-                {
-                  vat && (<>
-                    <Input
-                      id="vat"
-                      type="number"
-                      value={vatAmount}
-                      className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4 bg-gray-100"
-                      readOnly
-                    />
-                    <Input
-                      id="netTotal"
-                      type="number"
-                      value={netTotal}
-                      className="col-span-3 sm:w-fit w-[160px] justify-self-end text-right mr-4 bg-gray-100"
-                      readOnly
-                    />
-                  </>
-                  )
-                }
+            <Separator className="my-6" />
+
+            {/* Totals & Calculations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-slate-200/70">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Additional Charges</Label>
+                  {additionalCharges.map((charge, index) => (
+                    <div key={charge.localId || index} className="flex items-start gap-2">
+                      <div className="flex-1 flex flex-col gap-2">
+                        <Select
+                          value={charge.option || ""}
+                          onValueChange={(value) => {
+                            const updated = [...additionalCharges];
+                            updated[index].option = value;
+                            updated[index].type = value === "Others" ? "" : value;
+                            setAdditionalCharges(updated);
+                          }}
+                        >
+                          <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                            <SelectValue placeholder="Charge Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Delivery Charges">Delivery Charges</SelectItem>
+                            <SelectItem value="Installation Charges">Installation Charges</SelectItem>
+                            <SelectItem value="Installation Material Charges">Installation Material Charges</SelectItem>
+                            <SelectItem value="Others">Others</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {charge.option === "Others" && (
+                          <Input
+                            placeholder="Enter custom charge type"
+                            className="bg-slate-50 border-slate-200 h-11 rounded-xl mt-1"
+                            value={charge.type}
+                            onChange={(e) => {
+                              const updated = [...additionalCharges];
+                              updated[index].type = e.target.value;
+                              setAdditionalCharges(updated);
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      <Input
+                        type="number"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl w-32 text-right"
+                        placeholder="0.00"
+                        value={charge.value}
+                        onChange={(e) => {
+                          const updated = [...additionalCharges];
+                          updated[index].value = e.target.value;
+                          setAdditionalCharges(updated);
+                        }}
+                      />
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => handleRemoveCharge(index)}
+                        className="text-rose-500 hover:text-rose-700 p-2 h-11 w-11 rounded-xl"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddAdditionalCharge}
+                    className="border-slate-200 text-blue-600 hover:bg-blue-50 rounded-xl h-9 px-3 text-xs"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Add Charge
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <Checkbox
+                    id="vat"
+                    checked={vat}
+                    onCheckedChange={() => setVat(!vat)}
+                  />
+                  <Label htmlFor="vat" className="text-sm font-semibold text-slate-700 cursor-pointer">
+                    Include VAT (18%)
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="catalog"
+                    checked={includeCatalog}
+                    onCheckedChange={() => setIncludeCatalog(!includeCatalog)}
+                  />
+                  <Label htmlFor="catalog" className="text-sm font-semibold text-slate-700 cursor-pointer">
+                    Include Catalog
+                  </Label>
+                </div>
               </div>
 
+              <div className="space-y-4 flex flex-col justify-end">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-semibold text-sm">Sub Total</span>
+                  <Input
+                    type="number"
+                    className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-medium"
+                    value={subTotal}
+                    readOnly
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-semibold text-sm">Discount</span>
+                  <Input
+                    type="number"
+                    className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-medium"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-800 font-bold text-base">Total</span>
+                  <Input
+                    type="number"
+                    className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-bold text-slate-900"
+                    value={total}
+                    readOnly
+                  />
+                </div>
+
+                {vat && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 font-semibold text-sm">VAT (18%)</span>
+                      <Input
+                        type="number"
+                        className="bg-slate-50 border-slate-200 h-11 rounded-xl w-44 text-right font-medium"
+                        value={vatAmount}
+                        readOnly
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                      <span className="text-blue-700 font-extrabold text-base">Net Total</span>
+                      <Input
+                        type="number"
+                        className="bg-blue-50 border-blue-200 h-11 rounded-xl w-44 text-right font-extrabold text-blue-800"
+                        value={netTotal}
+                        readOnly
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-
-          <Separator className="mt-2" />
-          <div>
-            <h1 className="text-md font-semibold mb-4">Customer Details</h1>
-            <div className="grid sm:grid-cols-2 grid-cols-1 gap-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PackType" className="justify-self-start text-left">
-                    Title
-                  </Label>
-                  <Select
-                    value={title || undefined}
-                    onValueChange={setTitle}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select title">
-                        {title || "Select title"}
-                      </SelectValue>
+          {/* Customer Details Section */}
+          <div className="p-6 border border-slate-200/70 rounded-2xl shadow-sm bg-slate-50/50 space-y-6">
+            <h2 className="font-bold text-lg text-slate-800">Customer Details</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Title</Label>
+                  <Select value={title || undefined} onValueChange={setTitle}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                      <SelectValue placeholder="Select title" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Mr.">Mr</SelectItem>
@@ -763,118 +708,71 @@ export function EditBatteryPackQuote({ onUpdate, ...props }) {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PhoneNo2" className="justify-self-start text-left">
-                    Secondary Phone No.
-                  </Label>
-                  <Input
-                    id="PhoneNo2"
-                    value={phoneNo2}
-                    onChange={(e) => setPhoneNo2(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Secondary Phone No.</Label>
+                  <Input value={phoneNo2} onChange={(e) => setPhoneNo2(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="FirstName" className="justify-self-start text-left">
-                    First Name
-                  </Label>
-                  <Input
-                    id="FirstName"
-                    value={fisrtName}
-                    onChange={(e) => setFisrtName(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">First Name</Label>
+                  <Input value={fisrtName} onChange={(e) => setFisrtName(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="John" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="Address" className="justify-self-start text-left">
-                    Address
-                  </Label>
-                  <Input
-                    id="Address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Address</Label>
+                  <Input value={address} onChange={(e) => setAddress(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="123 Street Name" />
                 </div>
 
-                {
-                  vat && (<div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="VatNo" className="justify-self-start text-left">
-                      VAT No
-                    </Label>
-                    <Input
-                      id="VatNo"
-                      value={vatNo}
-                      onChange={(e) => setVatNo(e.target.value)}
-                      className="col-span-3"
-                    />
-                  </div>)
-                }
+                {vat && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-slate-700 font-semibold text-sm">VAT No.</Label>
+                    <Input value={vatNo} onChange={(e) => setVatNo(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Customer's VAT No" />
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PhoneNo" className="justify-self-start text-left">
-                    Phone No.
-                  </Label>
-                  <Input
-                    id="PhoneNo"
-                    value={phoneNo1}
-                    onChange={(e) => setPhoneNo1(e.target.value)}
-                    className="col-span-3"
-                  />
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Phone No.</Label>
+                  <Input value={phoneNo1} onChange={(e) => setPhoneNo1(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="Email" className="justify-self-start text-left">
-                    Email
-                  </Label>
-                  <Input
-                    id="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Email</Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="john@example.com" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="LastName" className="justify-self-start text-left">
-                    Last Name
-                  </Label>
-                  <Input
-                    id="LastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">Last Name</Label>
+                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Doe" />
                 </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="PoNo" className="justify-self-start text-left">
-                    PO No
-                  </Label>
-                  <Input
-                    id="PoNo"
-                    value={poNo}
-                    onChange={(e) => setPoNO(e.target.value)}
-                    className="col-span-3"
-                  />
+                <div className="flex flex-col gap-2">
+                  <Label className="text-slate-700 font-semibold text-sm">PO No.</Label>
+                  <Input value={poNo} onChange={(e) => setPoNO(e.target.value)} className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Purchasing Order No" />
                 </div>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+
+          <DialogFooter className="pt-4 border-t border-slate-100 flex gap-3 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-6"
+            >
               Cancel
             </Button>
-            <Button className="bg-blue-800 hover:bg-blue-900" onClick={handleEditBatteryPackQuoteSubmit}>
-              Save changes
+            <Button 
+              type="submit" 
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Saving..." : "Save changes"}
             </Button>
           </DialogFooter>
-        </>
-
+        </form>
       </DialogContent>
     </Dialog>
   );

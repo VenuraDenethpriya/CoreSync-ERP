@@ -1,8 +1,8 @@
 package inventory
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) UpdateInventoryItemRestockPrintStatus(ctx context.Context, inventoryItemRestock *domain.InventoryItemRestock, actingClerkID string) (*domain.InventoryItemRestock, string, error) {

@@ -1,8 +1,8 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetSalesList(ctx context.Context, query string, limit int, offset int) ([]*domain.Sale, error) {

@@ -1,8 +1,8 @@
 package db
 
 import (
+	"CoreSync-backend/internal/models"
 	"fmt"
-	"rims-backend/internal/models"
 	"time"
 
 	"gorm.io/gorm"

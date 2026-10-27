@@ -29,20 +29,22 @@ type QuoteInfo struct {
 }
 
 type Customer struct {
-	CustomerID uuid.UUID `json:"id"`
-	User       *User
-	CreatedBy  string        `json:"created_by"`
-	Title      string        `json:"title"`
-	FirstName  string        `json:"first_name"`
-	LastName   string        `json:"last_name"`
-	Address    string        `json:"address"`
-	PhoneNo1   string        `json:"phone_no1"`
-	PhoneNo2   string        `json:"phone_no2"`
-	Email      string        `json:"email"`
-	VatNo      string        `json:"vat_no"`
-	CreatedAt  time.Time     `json:"created_at"`
-	UpdatedAt  time.Time     `json:"updated_at"`
-	LastOrder  LastOrderInfo `json:"last_order"`
-	Orders     []OrderInfo   `json:"orders"`
-	Quotes     []QuoteInfo   `json:"quotes"`
+	CustomerID      uuid.UUID `json:"id"`
+	User            *User
+	CreatedBy       string        `json:"created_by"`
+	Title           string        `json:"title"`
+	FirstName       string        `json:"first_name"`
+	LastName        string        `json:"last_name"`
+	Address         string        `json:"address"`
+	PhoneNo1        string        `json:"phone_no1"`
+	PhoneNo2        string        `json:"phone_no2"`
+	Email           string        `json:"email"`
+	VatNo           string        `json:"vat_no"`
+	TinNo           string        `json:"tin_no"`
+	CreatedAt       time.Time     `json:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at"`
+	LastOrder       LastOrderInfo `json:"last_order"`
+	TotalOrderValue float64       `json:"total_order_value"`
+	Orders          []OrderInfo   `json:"orders"`
+	Quotes          []QuoteInfo   `json:"quotes"`
 }

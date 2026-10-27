@@ -1,9 +1,9 @@
 package call
 
 import (
-	dto "rims-backend/internal/controller/http/dto/const"
-	"rims-backend/internal/controller/http/middleware"
-	"rims-backend/internal/service/sale"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	"CoreSync-backend/internal/service/sale"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +28,7 @@ func SetupCallRoutes(
 		)
 		call.GET("",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.SALES_TEAM), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			callHandler.GetCalls,
 		)
 	}

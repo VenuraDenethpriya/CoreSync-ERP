@@ -1,14 +1,13 @@
 package order
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/events"
+	"CoreSync-backend/internal/helper/logger"
 	"context"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/events"
-	"rims-backend/internal/helper/logger"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -23,20 +22,18 @@ func (ch *OrderHandler) UpdateOrderStatus(ctx *gin.Context) {
 		return
 	}
 	order := mapper.UpdateOrderStatusUpdateToDomain(&req)
-	updatedOrder, err := ch.orderService.UpdateOrderStatus(ctx, order)
+	actingClerkID := ctx.GetString("user_id")
+	updatedOrder, actorName, err := ch.orderService.UpdateOrderStatus(ctx, order, actingClerkID)
 	if err != nil {
 		common.HandleError(ctx, err)
 		logger.Error(ctx, "Failed to update order status", zap.Error(err))
 		return
 	}
-	userName := updatedOrder.CreatedBy
-	if updatedOrder.User != nil {
-		userName = strings.TrimSpace(updatedOrder.User.FirstName + " " + updatedOrder.User.LastName)
-	}
+
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Order status updated"},
-		Description: fmt.Sprintf("%s update order status %s/%s", userName, updatedOrder.Type, updatedOrder.OrderNo),
+		Description: fmt.Sprintf("%s update order status %s/%s", actorName, updatedOrder.Type, updatedOrder.OrderNo),
 	})
 
 	logger.Info(ctx, "Order status updated", zap.Any("order", updatedOrder))
@@ -46,7 +43,7 @@ func (ch *OrderHandler) UpdateOrderStatus(ctx *gin.Context) {
 		go func() {
 			if ch.smsService != nil && updatedOrder.Customer != nil && updatedOrder.Customer.PhoneNo1 != "" {
 				message := fmt.Sprintf(
-					"Great news! Your order %s%s is now complete. Thank you for choosing Renewaa – powering your future, your way.",
+					"Great news! Your order %s%s is now complete. Thank you for choosing CoreSync – powering your future, your way.",
 					updatedOrder.Type,
 					updatedOrder.OrderNo,
 				)

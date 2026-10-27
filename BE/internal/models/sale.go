@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +12,7 @@ type SaleModel struct {
 	SalesID         uuid.UUID        `json:"SalesID" gorm:"type:uuid;primary_key"`
 	SalesNo         string           `json:"sales_no"`
 	User            *UserModel       `gorm:"foreignKey:UpdatedBy;references:ClerkID" json:"user"`
+	Order           *OrderModel      `gorm:"foreignKey:SalesID;references:SalesID" json:"order"`
 	Salesperson     uuid.UUID        `json:"salesperson" gorm:"type:uuid"`
 	SalespersonData SalespersonModel `gorm:"foreignKey:Salesperson;references:ID" json:"salesperson_data"`
 	SalesType       string           `json:"type"`
@@ -64,10 +65,15 @@ func (s *SaleModel) SaleFromModelToDomain() *domain.Sale {
 	if s.User != nil {
 		userDomain = s.User.UserModelToDomain()
 	}
+	var orderDomain *domain.Order
+	if s.Order != nil {
+		orderDomain = s.Order.OrderModelToDomain()
+	}
 	domainSale := &domain.Sale{
 		SalesID:       s.SalesID,
 		SalesNo:       s.SalesNo,
 		User:          userDomain,
+		Order:         orderDomain,
 		Salesperson:   s.Salesperson,
 		SalesType:     s.SalesType,
 		Status:        s.Status,
@@ -89,6 +95,8 @@ func (s *SaleModel) SaleFromModelToDomain() *domain.Sale {
 	if s.User != nil {
 		domainSale.User = s.User.UserModelToDomain()
 	}
-
+	if s.Order != nil {
+		domainSale.Order = s.Order.OrderModelToDomain()
+	}
 	return domainSale
 }

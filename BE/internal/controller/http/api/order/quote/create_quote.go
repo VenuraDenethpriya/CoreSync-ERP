@@ -1,17 +1,17 @@
 package quote
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/service/domain"
 	"errors"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/service/domain"
 	"strings"
 
 	"github.com/google/uuid"
 
-	"rims-backend/internal/helper/logger"
+	"CoreSync-backend/internal/helper/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -118,7 +118,7 @@ func (ch *QuoteHandler) CreateQuote(ctx *gin.Context) {
 	}
 	userName := createdQuote.CreatedBy
 	if createdQuote.User != nil {
-		userName = strings.TrimSpace(createdQuote.User.FirstName + " " + createdQuote.User.LastName)
+		userName = strings.TCoreSyncpace(createdQuote.User.FirstName + " " + createdQuote.User.LastName)
 	}
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{

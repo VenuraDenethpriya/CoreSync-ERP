@@ -1,13 +1,12 @@
 package quote
 
 import (
+	"CoreSync-backend/internal/controller/http/common"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/controller/http/mapper"
+	"CoreSync-backend/internal/helper/logger"
 	"errors"
 	"fmt"
-	"rims-backend/internal/controller/http/common"
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/controller/http/mapper"
-	"rims-backend/internal/helper/logger"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -80,7 +79,8 @@ func (ch *QuoteHandler) UpdateQuote(ctx *gin.Context) {
 	quote.CustomerID = customerID
 	quote.QuoteID = quoteID
 
-	updateQuote, err := ch.orderService.UpdateQuote(ctx.Request.Context(), quote)
+	actingClerkID := ctx.GetString("user_id")
+	updateQuote, actorName, err := ch.orderService.UpdateQuote(ctx.Request.Context(), quote, actingClerkID)
 	if err != nil {
 		common.HandleError(ctx, err)
 		logger.Error(ctx, "Failed to update quote", zap.Error(err))
@@ -139,15 +139,11 @@ func (ch *QuoteHandler) UpdateQuote(ctx *gin.Context) {
 			logger.Info(ctx, "Quote item created", zap.Any("quote item", createQuoteItem))
 		}
 	}
-	userName := updateQuote.CreatedBy
-	if updateQuote.User != nil {
-		userName = strings.TrimSpace(updateQuote.User.FirstName + " " + updateQuote.User.LastName)
-	}
 
 	// Helper function to set audit info
 	common.SetAuditInfo(ctx, common.AuditLogDetails{
 		Headers:     map[string]string{"X-Response-Message": "Quote updated"},
-		Description: fmt.Sprintf("%s update a Quote %s/%s", userName, updateQuote.Type, updateQuote.QuoteNo),
+		Description: fmt.Sprintf("%s update a Quote %s/%s", actorName, updateQuote.Type, updateQuote.QuoteNo),
 	})
 	common.HandleSuccess(ctx, common.StatusOK, dto.NewUpdateQuoteResponse(updateQuote))
 	logger.Info(ctx, "Quote updated successfully", zap.Any("quote", updateQuote))

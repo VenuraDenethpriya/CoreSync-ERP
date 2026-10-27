@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,6 +70,8 @@ func (rs *RepairRepository) GetRepairByID(ctx context.Context, repair *domain.Re
 	err := rs.db.WithContext(ctx).
 		Preload("User").
 		Preload("Order").
+		Preload("Tasks").
+		Preload("Tasks.AssigneeUser").
 		First(&repairModel, "id = ?", repair.ID).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -139,13 +141,11 @@ func (rs *RepairRepository) CreateRepairUsageAndAdjustInventory(db *gorm.DB, usa
 	var createdUsage domain.RepairItemUsage
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		// Fetch the CHILD item (the specific barcode scanned)
 		var childItem models.InventoryItemModel
 		if err := tx.Where("id = ?", usageReq.ItemID).First(&childItem).Error; err != nil {
-			return err // Returns error if the specific serial ID doesn't exist
+			return err
 		}
 
-		// Fetch the PARENT inventory (to get current stock/hold)
 		var parentInventory models.InventoryModel
 		if err := tx.Where("id = ?", childItem.ItemID).First(&parentInventory).Error; err != nil {
 			return err
@@ -256,7 +256,7 @@ func (r *RepairRepository) GetRepairUsageGroupedByJob(
 
 		base = r.db.Table("repair_item_usage").
 			Joins("JOIN inventory ii ON ii.id = repair_item_usage.item_id").
-			Where("repari_item_usage.item_id = ?", itemID)
+			Where("repair_item_usage.item_id = ?", itemID)
 
 		if err := base.Session(&gorm.Session{}).
 			Distinct("repair_item_usage.repair_id").

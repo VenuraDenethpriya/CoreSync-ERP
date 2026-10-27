@@ -1,9 +1,9 @@
 package auditlogs
 
 import (
+	"CoreSync-backend/internal/service/domain"
+	"CoreSync-backend/internal/storage/repository"
 	"context"
-	"rims-backend/internal/service/domain"
-	"rims-backend/internal/storage/repository"
 )
 
 type Service interface {

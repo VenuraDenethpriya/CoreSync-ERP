@@ -1,10 +1,8 @@
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
 import BatteryPackQuoteView from "./Components/BatteryPackQuoteView";
 
 function QuoteDetails() {
     return (
-        <div className="max-w-screen sm:px-3 bg-slate-50 rounded-md">
+        <div className="w-full space-y-6">
             <BatteryPackQuoteView />
         </div>
     );

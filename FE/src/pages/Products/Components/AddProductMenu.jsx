@@ -3,13 +3,14 @@
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
-    DropdownMenuCheckboxItem,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 export function AddProductDropdownMenu() {
     const navigate = useNavigate();
@@ -29,7 +30,6 @@ export function AddProductDropdownMenu() {
         navigate("/products/add-service");
     };
 
-
     const handleOtherClick = () => {
         navigate("/products/add-other");
     };
@@ -37,36 +37,45 @@ export function AddProductDropdownMenu() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button className="bg-blue-800 hover:bg-blue-900">New Product</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">
+                    <Plus className="w-4 h-4 mr-2" /> New Product
+                </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Select Product</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
+            <DropdownMenuContent className="w-56 rounded-2xl p-2 shadow-xl border-slate-200/70" align="end">
+                <DropdownMenuLabel className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 py-1.5">
+                    Select Product
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-slate-100 my-1" />
+                <DropdownMenuItem
                     onClick={handleBatteryPackClick}
+                    className="rounded-xl px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors"
                 >
                     Battery Pack
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
+                </DropdownMenuItem>
+                <DropdownMenuItem
                     onClick={handleSolarClick}
+                    className="rounded-xl px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors"
                 >
                     Solar
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
+                </DropdownMenuItem>
+                <DropdownMenuItem
                     onClick={handleEVClick}
+                    className="rounded-xl px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors"
                 >
                     E-Vehicle
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
+                </DropdownMenuItem>
+                <DropdownMenuItem
                     onClick={handleService}
+                    className="rounded-xl px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors"
                 >
                     Service
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
+                </DropdownMenuItem>
+                <DropdownMenuItem
                     onClick={handleOtherClick}
+                    className="rounded-xl px-3 py-2.5 font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors"
                 >
                     Other
-                </DropdownMenuCheckboxItem>
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );

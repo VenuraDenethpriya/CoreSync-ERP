@@ -1,28 +1,30 @@
 package dto
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type CreateTaskRequest struct {
-	OrderId     uuid.UUID `json:"order_id"`
-	JobId       uuid.UUID `json:"job_id"`
-	Task        string    `json:"task" binding:"required"`
-	Date        time.Time `json:"date" binding:"required"`
-	Time        string    `json:"time"`
-	Status      string    `json:"status"`
-	Assignee    string    `json:"assignee" binding:"required"`
-	Supervisor  string    `json:"supervisor" binding:"required"`
-	Description string    `json:"description"`
+	OrderId     *uuid.UUID `json:"order_id,omitempty"`
+	JobId       *uuid.UUID `json:"job_id,omitempty"`
+	PackId      *uuid.UUID `json:"pack_id,omitempty"`
+	Task        string     `json:"task" binding:"required"`
+	Date        time.Time  `json:"date" binding:"required"`
+	Time        string     `json:"time"`
+	Status      string     `json:"status"`
+	Assignee    string     `json:"assignee" binding:"required"`
+	Supervisor  string     `json:"supervisor" binding:"required"`
+	Description string     `json:"description"`
 }
 
 type CreateTaskResponse struct {
 	ID          uuid.UUID `json:"id"`
 	OrderId     uuid.UUID `json:"order_id"`
 	JobId       uuid.UUID `json:"job_id"`
+	PackId      uuid.UUID `json:"pack_id"`
 	Task        string    `json:"task"`
 	Date        time.Time `json:"date"`
 	Time        string    `json:"time"`
@@ -39,6 +41,7 @@ func NewCreateTaskResponse(task *domain.Task) *CreateTaskResponse {
 		ID:          task.ID,
 		OrderId:     task.OrderId,
 		JobId:       task.JobId,
+		PackId:      task.PackId,
 		Task:        task.Task,
 		Date:        task.Date,
 		Time:        task.Time,
@@ -52,9 +55,12 @@ func NewCreateTaskResponse(task *domain.Task) *CreateTaskResponse {
 }
 
 type GetTaskRequest struct {
-	Query  string `form:"query"`
-	Limit  int    `form:"limit"`
-	Offset int    `form:"offset"`
+	Query     string    `form:"query"`
+	Limit     int       `form:"limit"`
+	Offset    int       `form:"offset"`
+	Assignee  string    `form:"assignee"`
+	StartDate time.Time `form:"start_date" time_format:"2006-01-02"`
+	EndDate   time.Time `form:"end_date" time_format:"2006-01-02"`
 }
 
 type TaskData struct {
@@ -62,6 +68,7 @@ type TaskData struct {
 	OrderId     uuid.UUID `json:"order_id"`
 	OrderNo     string    `json:"order_no"`
 	JobNo       string    `json:"job_no"`
+	SerialNo    string    `json:"serial_no"`
 	Task        string    `json:"task"`
 	Date        time.Time `json:"date"`
 	Time        string    `json:"time"`
@@ -86,6 +93,7 @@ func NewGetTaskResponse(task []*domain.Task, totalTasks int) *GetTaskResponse {
 			ID:          t.ID,
 			OrderNo:     t.OrderType + t.OrderNo,
 			JobNo:       t.JobNo,
+			SerialNo:    t.SerialNo,
 			OrderId:     t.OrderId,
 			Task:        t.Task,
 			Date:        t.Date,
@@ -199,6 +207,8 @@ type TaskCardResponse struct {
 	OrderNo     string    `json:"order_no"`
 	JobId       uuid.UUID `json:"Job_id"`
 	JobNo       string    `json:"Job_no"`
+	PackId      uuid.UUID `json:"Pack_id"`
+	SerialNo    string    `json:"serial_no"`
 	Task        string    `json:"task"`
 	Assignee    string    `json:"assignee"`
 	Date        time.Time `json:"date"`
@@ -252,6 +262,8 @@ func NewGetTaskCardListResponse(tasks []*domain.Task) *GetTaskCardList {
 				OrderNo:     domainTask.OrderNo,
 				JobId:       domainTask.JobId,
 				JobNo:       domainTask.JobNo,
+				PackId:      domainTask.PackId,
+				SerialNo:    domainTask.SerialNo,
 				Task:        domainTask.Task,
 				Assignee:    domainTask.Assignee,
 				Date:        domainTask.Date,

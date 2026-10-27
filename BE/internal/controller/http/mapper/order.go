@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"rims-backend/internal/controller/http/dto"
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/controller/http/dto"
+	"CoreSync-backend/internal/service/domain"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +19,6 @@ func QuoteRequestToDomain(req *dto.CreateQuoteRequest) *domain.Quote {
 	}
 	var salesUUID uuid.UUID
 	if req.SalesID != "" {
-		// We use Parse instead of MustParse to prevent crashing on bad input
 		parsedID, err := uuid.Parse(req.SalesID)
 		if err == nil {
 			salesUUID = parsedID
@@ -192,7 +191,6 @@ func OrderRequestToDomain(req *dto.CreateOrderRequest) *domain.Order {
 	}
 	var salesUUID uuid.UUID
 	if req.SalesID != "" {
-		// We use Parse instead of MustParse to prevent crashing on bad input
 		parsedID, err := uuid.Parse(req.SalesID)
 		if err == nil {
 			salesUUID = parsedID
@@ -252,8 +250,8 @@ func OrderItemsRequestToDomain(req *dto.CreateOrderItemRequest) []*domain.OrderI
 			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
 			UnitPrice: item.UnitPrice,
-			SubTotal:  item.SubTotal,
-			Note:      item.Note,
+			// SubTotal:  item.SubTotal,
+			Note: item.Note,
 		})
 	}
 	return items
@@ -263,11 +261,11 @@ func OrderItemsRequestToDomain(req *dto.CreateOrderItemRequest) []*domain.OrderI
 func OrderItemResponseToDomain(req *dto.CreateOrderItemResponse) *domain.OrderItem {
 	return &domain.OrderItem{
 		ID:        req.ID,
-		OrderNo:   req.OrderNo,
+		OrderNo:   &req.OrderNo,
 		ProductID: req.ProductID,
 		Quantity:  req.Quantity,
 		UnitPrice: req.UnitPrice,
-		SubTotal:  req.SubTotal,
+		// SubTotal:  req.SubTotal,
 		Note:      req.Note,
 		CreatedAt: req.CreatedAt,
 	}
@@ -355,8 +353,8 @@ func UpdateOrderItemsRequestToDomain(req *dto.UpdateOrderItemRequest) []*domain.
 			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
 			UnitPrice: item.UnitPrice,
-			SubTotal:  item.SubTotal,
-			Note:      item.Note,
+			// SubTotal:  item.SubTotal,
+			Note: item.Note,
 		}
 
 		if item.ID != nil {
@@ -373,11 +371,11 @@ func UpdateOrderItemsRequestToDomain(req *dto.UpdateOrderItemRequest) []*domain.
 func UpdateOrderItemResponseToDomain(req *dto.UpdateOrderItemResponse) *domain.OrderItem {
 	return &domain.OrderItem{
 		ID:        req.ID,
-		OrderNo:   req.OrderNo,
+		OrderNo:   &req.OrderNo,
 		ProductID: req.ProductID,
 		Quantity:  req.Quantity,
 		UnitPrice: req.UnitPrice,
-		SubTotal:  req.SubTotal,
+		// SubTotal:  req.SubTotal,
 		Note:      req.Note,
 		CreatedAt: req.CreatedAt,
 	}
@@ -389,11 +387,15 @@ func UpdateOrderStatusUpdateToDomain(req *dto.UpdateOrderStatusRequest) *domain.
 		OrderID:       uuid.MustParse(req.OrderID),
 		PaymentStatus: req.PaymentStatus,
 		OrderStatus:   req.OrderStatus,
+		QcProof:       req.QcProof,
+		DeliveryProof: req.DeliveryProof,
 	}
 }
+
 func OrderPaymentsRequestToDomain(req *dto.CreateOrderPaymentRequest) *domain.Payment {
 	return &domain.Payment{
 		PaymentType: req.PaymentType,
+		PaymentMode: req.PaymentMode,
 		Amount:      req.Amount,
 		LoanAmount:  req.LoanAmount,
 		PaidDate:    req.PaidDate,
@@ -404,7 +406,9 @@ func OrderPaymentsRequestToDomain(req *dto.CreateOrderPaymentRequest) *domain.Pa
 
 func UpdateOrderPaymentsRequestToDomain(req *dto.UpdateOrderPaymentRequest) *domain.Payment {
 	return &domain.Payment{
+		ID:          req.ID,
 		PaymentType: req.PaymentType,
+		PaymentMode: req.PaymentMode,
 		Amount:      req.Amount,
 		LoanAmount:  req.LoanAmount,
 		PaidDate:    req.PaidDate,
@@ -432,4 +436,63 @@ func UpdateOrderPaymentRefundRequestPaymentsToDomain(req *dto.UpdateOrderPayment
 	}
 
 	return payments
+}
+
+func UpdatePackUpdateToDomain(req *dto.UpdatePackSRequest) *domain.OrderItem {
+	var orderNoPtr *uuid.UUID
+	if req.OrderID != "" {
+		parsedOrderID := uuid.MustParse(req.OrderID)
+		orderNoPtr = &parsedOrderID
+	}
+	return &domain.OrderItem{
+		ID:       uuid.MustParse(req.PackID),
+		OrderNo:  orderNoPtr,
+		Status:   req.Status,
+		SerialNo: req.SerialNo,
+		Priority: req.Priority,
+	}
+}
+
+func UpdatePacksOrderIDToDomain(req *dto.UpdatePacksOrderIDRequest) *domain.OrderItem {
+	var existingOrderID uuid.UUID
+	if req.ExistingOrderID != "" {
+		if parsed, err := uuid.Parse(req.ExistingOrderID); err == nil {
+			existingOrderID = parsed
+		}
+	}
+
+	return &domain.OrderItem{
+		ID:              uuid.MustParse(req.PackID),
+		ExistingOrderID: existingOrderID,
+		NewOrderID:      uuid.MustParse(req.NewOrderID),
+	}
+}
+
+func UpdatePayment(req *dto.UpdatePaymentRequest) *domain.Payment {
+	return &domain.Payment{
+		ID:     req.ID,
+		Status: req.Status,
+	}
+}
+
+func UpdatePacksProductionToDomain(req *dto.UpdatePacksProductionIDRequest) *domain.OrderItem {
+	var casingID *uuid.UUID
+	if req.CasingID != "" && req.CasingID != "00000000-0000-0000-0000-000000000000" {
+		if parsed, err := uuid.Parse(req.CasingID); err == nil && parsed != uuid.Nil {
+			casingID = &parsed
+		}
+	}
+
+	var wireHarnessID *uuid.UUID
+	if req.WireHarnessID != "" && req.WireHarnessID != "00000000-0000-0000-0000-000000000000" {
+		if parsed, err := uuid.Parse(req.WireHarnessID); err == nil && parsed != uuid.Nil {
+			wireHarnessID = &parsed
+		}
+	}
+
+	return &domain.OrderItem{
+		ID:            uuid.MustParse(req.PackID),
+		CasingID:      casingID,
+		WireHarnessID: wireHarnessID,
+	}
 }

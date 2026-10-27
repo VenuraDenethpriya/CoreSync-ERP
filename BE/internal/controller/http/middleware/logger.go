@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	"CoreSync-backend/internal/helper/logger"
 	"bytes"
 	"io"
-	"rims-backend/internal/helper/logger"
 	"strings"
 
 	"time"

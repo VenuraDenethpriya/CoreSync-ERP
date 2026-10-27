@@ -1,10 +1,10 @@
 package models
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"rims-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"

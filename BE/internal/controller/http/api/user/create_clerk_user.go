@@ -1,12 +1,12 @@
 package user
 
 import (
+	"CoreSync-backend/internal/controller/http/dto"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"rims-backend/internal/controller/http/dto"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,10 +1,10 @@
 package salesperson
 
 import (
-	dto "rims-backend/internal/controller/http/dto/const"
-	"rims-backend/internal/controller/http/middleware"
-	auditlogs "rims-backend/internal/service/audit_logs"
-	"rims-backend/internal/service/sale"
+	dto "CoreSync-backend/internal/controller/http/dto/const"
+	"CoreSync-backend/internal/controller/http/middleware"
+	auditlogs "CoreSync-backend/internal/service/audit_logs"
+	"CoreSync-backend/internal/service/sale"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,7 +33,7 @@ func SetupSalespersonRoutes(
 		)
 		salesperson.GET("",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			salespersonHandler.GetSalespersons,
 		)
 		salesperson.PUT("",
@@ -50,17 +50,17 @@ func SetupSalespersonRoutes(
 		)
 		salesperson.GET("/:salesperson-id",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			salespersonHandler.GetSalespersonByID,
 		)
 		salesperson.GET("/salespersons-list",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.SALES_TEAM), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			salespersonHandler.GetSalespersonsList,
 		)
 		salesperson.GET("/get-by-range",
 			middleware.ClerkAuthMiddleware(),
-			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF)),
+			middleware.RoleAuthMiddleware(string(dto.SUPER_ADMIN), string(dto.INVENTORY_MANAGER), string(dto.HEAD), string(dto.OFFICE_STAFF), string(dto.FINANCE_HEAD), string(dto.READ_ONLY)),
 			salespersonHandler.GetSalespersonsSaleByDateRange,
 		)
 	}

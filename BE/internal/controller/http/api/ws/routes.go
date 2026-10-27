@@ -1,8 +1,8 @@
 package ws
 
 import (
+	"CoreSync-backend/internal/events"
 	"net/http"
-	"rims-backend/internal/events"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"

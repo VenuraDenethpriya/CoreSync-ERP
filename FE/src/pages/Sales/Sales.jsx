@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
-import BreadCrumbs from "../../components/ui/BreadCrumbs";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { LockIcon } from "lucide-react";
+import { LockIcon, Plus, Download } from "lucide-react";
 import { Roles } from "@/const/const";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalesTable } from "./Sales/Components/SalesTableCard.page";
 import { TeamTable } from "./Team/Components/TeamTableCard.page";
 import { CallsTable } from "./Calls/Components/CallsTableCard.page";
@@ -13,282 +12,186 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { createAuditLog } from "@/api/settingApi";
+import SalesDashboard from "./Dashboard/SalesDashboard";
+import SalesTeamDashboard from "./Dashboard/SalesTeamDashboard";
 
 const Sales = () => {
-  const { user, isSignedIn } = useUser();
+  const { user } = useUser();
   const { getToken } = useAuth();
+  const navigate = useNavigate();
 
-  const breadcrumbssales = [
-    { name: "Dashboard", link: "/" },
-    { name: "Sales", link: "/sales" },
-  ];
-
-  const breadcrumbscals = [
-    { name: "Dashboard", link: "/" },
-    { name: "Calls", link: "/calls" },
-  ];
-
-  const breadcrumbsteam = [
-    { name: "Dashboard", link: "/" },
-    { name: "Team", link: "/team" },
-  ];
-
+  const [activeTab, setActiveTab] = useState("sales");
   const [saleExportData, setSaleExportData] = useState([]);
   const [teamExportData, setTeamExportData] = useState([]);
   const [callExportData, setCallsExportData] = useState([]);
-
-  const navigate = useNavigate();
 
   const handleSaleDownloadPDF = async () => {
     try {
       const doc = new jsPDF();
       const tableColumn = ["Sales No.", "Type", "Date", "Salesperson", "Customer Name", "Commission", "Description"];
-      const tableRows = [];
+      const tableRows = saleExportData.map(s => [s.salesNo, s.type, s.date, s.salesPerson, s.customerName, s.commission, s.description]);
 
-      saleExportData.forEach(sale => {
-        const rowData = [
-          sale.salesNo,
-          sale.type,
-          sale.date,
-          sale.salesPerson,
-          sale.customerName,
-          sale.commission,
-          sale.description,
-        ];
-        tableRows.push(rowData);
-      });
-
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 20,
-      });
-      doc.text("Sales List", 14, 15);
+      autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
       doc.save("Sales List.pdf");
 
       const token = await getToken();
-      await createAuditLog(token, {
-        action: "PDF Downloaded",
-        status_code: 200,
-        user: user.id,
-        description: `${user.firstName} ${user.lastName} downloaded the sales list as a PDF file.`,
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to generate PDF");
-      return;
-    }
-
+      await createAuditLog(token, { action: "PDF Downloaded", status_code: 200, user: user.id, description: `Downloaded sales list.` });
+    } catch (error) { toast.error("Failed to generate PDF"); }
   };
 
   const handleCallsDownloadPDF = async () => {
     try {
       const doc = new jsPDF();
       const tableColumn = ["Salesperson", "Customer Phone No.", "Call Status", "Call Duration"];
-      const tableRows = [];
-
-      callExportData.forEach(call => {
-        const rowData = [
-          call.agentName,
-          call.customerPhoneNo,
-          call.callStatus,
-          call.callDuration,
-        ];
-        tableRows.push(rowData);
-      });
-
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 20,
-      });
-      doc.text("Call List", 14, 15);
+      const tableRows = callExportData.map(c => [c.agentName, c.customerPhoneNo, c.callStatus, c.callDuration]);
+      autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
       doc.save("Calls List.pdf");
-
-      const token = await getToken();
-      await createAuditLog(token, {
-        action: "PDF Downloaded",
-        status_code: 200,
-        user: user.id,
-        description: `${user.firstName} ${user.lastName} downloaded the calls list as a PDF file.`,
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to generate PDF");
-      return;
-    }
-
+    } catch (error) { toast.error("Failed to generate PDF"); }
   };
 
   const handleTeamDownloadPDF = async () => {
     try {
       const doc = new jsPDF();
       const tableColumn = ["Name", "Phone No.", "Email", "Total No. of Sale", "Total Commission"];
-      const tableRows = [];
-
-      teamExportData.forEach(team => {
-        const rowData = [
-          team.name,
-          team.phoneNo,
-          team.email,
-          team.totalSales,
-          team.totalCommission,
-        ];
-        tableRows.push(rowData);
-      });
-
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 20,
-      });
-      doc.text("Sales Team List", 14, 15);
+      const tableRows = teamExportData.map(t => [t.name, t.phoneNo, t.email, t.totalSales, t.totalCommission]);
+      autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
       doc.save("Sales Team List.pdf");
-
-      const token = await getToken();
-      await createAuditLog(token, {
-        action: "PDF Downloaded",
-        status_code: 200,
-        user: user.id,
-        description: `${user.firstName} ${user.lastName} downloaded the sales team list as a PDF file.`,
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to generate PDF");
-      return;
-    }
-
+    } catch (error) { toast.error("Failed to generate PDF"); }
   };
 
-  const handleNewSale = () => {
-    navigate("/sales/add-sale");
-  };
-
-  const handleNewMember = () => {
-    navigate("/sales/add-salesperson");
-  };
-
-  if (!isSignedIn) {
-    return (
-      <div className="flex items-center justify-center h-[80vh] px-4">
-        <div className="bg-white shadow-md rounded-xl p-8 max-w-lg text-center border border-red-200">
-          <div className="flex flex-col items-center justify-center gap-3">
-            <LockIcon className="w-14 h-14 text-red-600" />
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Authentication Required
-            </h1>
-            <p className="text-gray-600">
-              You should be signed in to access this page.
-            </p>
-            <Button
-              className="mt-4 bg-blue-700 hover:bg-blue-800 text-white"
-              onClick={() =>  navigate("/login")} 
-            >
-              Log In
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-
-  if (user.publicMetadata.role == Roles.HEAD || user.publicMetadata.role == Roles.WAREHOUSE_STAFF || user.publicMetadata.role == Roles.INVENTORY_MANAGER) {
-    return (
-      <div className="flex items-center justify-center h-[80vh] px-4">
-        <div className="bg-white shadow-md rounded-xl p-8 max-w-lg text-center border border-red-200">
-          <div className="flex flex-col items-center justify-center gap-3">
-            <LockIcon className="w-14 h-14 text-red-600" />
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Access Denied
-            </h1>
-            <p className="text-gray-600">
-              You are not authorized to access this page. Please contact your administrator if you believe this is a mistake.
-            </p>
-            <Button
-              className="mt-4 bg-blue-700 hover:bg-blue-800 text-white"
-              onClick={() => navigate("/")}
-            >
-              Go to Dashboard
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // if (user?.publicMetadata?.role === Roles.WAREHOUSE_STAFF || user?.publicMetadata?.role === Roles.INVENTORY_MANAGER || user?.publicMetadata?.role === Roles.HR_HEAD) {
+  //   return (
+  //     <div className="flex items-center justify-center min-h-[70vh] w-full px-4">
+  //       <div className="bg-white shadow-sm rounded-2xl p-8 max-w-md text-center border border-red-100">
+  //         <div className="flex flex-col items-center justify-center gap-3">
+  //           <LockIcon className="w-12 h-12 text-red-500" />
+  //           <h1 className="text-xl font-bold text-gray-800">Access Denied</h1>
+  //           <p className="text-sm text-gray-500">
+  //             You are not authorized to access this page. Please contact your
+  //             administrator if you believe this is a mistake.
+  //           </p>
+  //           <Button
+  //             className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl"
+  //             onClick={() => navigate("/")}
+  //           >
+  //             Go to Dashboard
+  //           </Button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
-    <>
-      <div className="px-16 sm:gap-2 gap-1 flex items-center sm:justify-end justify-center mb-4">
-        <Tabs defaultValue="sales" className="w-full">
-          <TabsList>
-            <TabsTrigger value="sales">Sales</TabsTrigger>
-            <TabsTrigger value="calls">Calls</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-          </TabsList>
-          <TabsContent value="sales">
-            <BreadCrumbs breadcrumbs={breadcrumbssales} />
-            <div className="">
-              <div className="gap-x-2 flex items-center justify-end mb-4 mr-3">
-                <Button onClick={handleNewSale} className="bg-blue-800 hover:bg-blue-900">
-                  New Sale
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-2 border-blue-950 hover:bg-blue-950 hover:text-white transition-all ease-in"
-                  onClick={handleSaleDownloadPDF}
-                >
-                  Download
-                </Button>
-              </div>
-              <div className="mx-3 sm:max-w-screen">
-                <SalesTable setExportData={setSaleExportData} />
-              </div>
-            </div>
-          </TabsContent>
+    <div className="w-full space-y-6">
 
-          <TabsContent value="calls">
-            <BreadCrumbs breadcrumbs={breadcrumbscals} />
-            <div className="">
-              <div className="gap-x-2 flex items-center justify-end mb-4 mr-3">
-                <Button
-                  variant="outline"
-                  className="border-2 border-blue-950 hover:bg-blue-950 hover:text-white transition-all ease-in"
-                  onClick={handleCallsDownloadPDF}
-                >
-                  Download
-                </Button>
-              </div>
-              <div className="mx-3 sm:max-w-screen">
-                <CallsTable setExportData={setCallsExportData} />
-              </div>
-            </div>
-          </TabsContent>
+      {/* --- HEADER SECTION --- */}
+      <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/70">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight truncate">
+              {activeTab === "dashboard" && "Sales Dashboard"}
+              {activeTab === "team-dashboard" && "Sales Dashboard"}
+              {activeTab === "sales" && "Sales Management"}
+              {activeTab === "calls" && "Call Logs"}
+              {activeTab === "team" && "Sales Team"}
+            </h1>
+            {/* <p className="text-sm text-slate-500 mt-1">
+              {activeTab === "sales" && "Manage sales records, transactions, and commissions."}
+              {activeTab === "calls" && "View customer call logs and status records."}
+              {activeTab === "team" && "Manage sales team members and performance."}
+              {activeTab.includes("dashboard") && "Overview of your sales performance and metrics."}
+            </p> */}
+          </div>
 
-          <TabsContent value="team">
-            <BreadCrumbs breadcrumbs={breadcrumbsteam} />
-            <div className="">
-              <div className="gap-x-2 flex items-center justify-end mb-4 mr-3">
-                <Button onClick={handleNewMember} className="bg-blue-800 hover:bg-blue-900">
-                  New Member
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-2 border-blue-950 hover:bg-blue-950 hover:text-white transition-all ease-in"
-                  onClick={handleTeamDownloadPDF}
-                >
-                  Download
-                </Button>
-              </div>
-              <div className="mx-3 sm:max-w-screen">
-                <TeamTable setExportData={setTeamExportData} />
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  {
+                    activeTab === "dashboard" || activeTab === "team-dashboard" ? null : (
+                      <Button
+                        variant="outline"
+                        className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl"
+                        onClick={activeTab === 'sales' ? handleSaleDownloadPDF : activeTab === 'calls' ? handleCallsDownloadPDF : handleTeamDownloadPDF}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Export</span>
+                      </Button>
+                    )
+                  }
+
+                  {/* Conditional Action Buttons */}
+                  {activeTab === "sales" && user?.publicMetadata?.role !== Roles.SALES_TEAM && (
+                    <Button onClick={() => navigate("/sales/add-sale")} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">
+                      <Plus className="w-4 h-4 mr-2" /> New Sale
+                    </Button>
+                  )}
+                  {activeTab === "team" && (
+                    <Button onClick={() => navigate("/sales/add-salesperson")} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">
+                      <Plus className="w-4 h-4 mr-2" /> New Member
+                    </Button>
+                  )}
+
+          </div>
+        </div>
       </div>
-    </>
+
+      {/* --- TABS SECTION --- */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="overflow-x-auto pb-1 mb-4">
+          <TabsList className="inline-flex gap-2 min-w-max border-b border-slate-200/70 bg-transparent h-auto p-0">
+            {user?.publicMetadata?.role === Roles.SUPER_ADMIN && (
+              <TabsTrigger value="dashboard" className="rounded-t-xl border-b-2 border-transparent px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-white data-[state=active]:shadow-sm">Dashboard</TabsTrigger>
+            )}
+            {user?.publicMetadata?.role === Roles.SALES_TEAM && (
+              <TabsTrigger value="team-dashboard" className="rounded-t-xl border-b-2 border-transparent px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-white data-[state=active]:shadow-sm">Dashboard</TabsTrigger>
+            )}
+            <TabsTrigger value="sales" className="rounded-t-xl border-b-2 border-transparent px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-white data-[state=active]:shadow-sm">Sales</TabsTrigger>
+            <TabsTrigger value="calls" className="rounded-t-xl border-b-2 border-transparent px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-white data-[state=active]:shadow-sm">Calls</TabsTrigger>
+            {user?.publicMetadata?.role !== Roles.SALES_TEAM && (
+              <TabsTrigger value="team" className="rounded-t-xl border-b-2 border-transparent px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-white data-[state=active]:shadow-sm">Team</TabsTrigger>
+            )}
+          </TabsList>
+        </div>
+
+        {/* --- TAB CONTENTS WITH BORDER --- */}
+        <TabsContent value="dashboard" className="mt-0 outline-none w-full">
+          <div className="w-full overflow-x-auto border border-slate-200/70 rounded-2xl bg-white shadow-sm p-2">
+            <div className="min-w-[850px]">
+              <SalesDashboard />
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="team-dashboard" className="mt-0 outline-none w-full">
+          <div className="w-full overflow-x-auto border border-slate-200/70 rounded-2xl bg-white shadow-sm p-2">
+            <div className="min-w-[850px]">
+              <SalesTeamDashboard />
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="sales" className="mt-0 outline-none w-full">
+          <div className="w-full overflow-x-auto border border-slate-200/70 rounded-2xl bg-white shadow-sm p-2">
+            <div className="min-w-[850px]">
+              <SalesTable setExportData={setSaleExportData} />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="calls" className="mt-0 outline-none w-full">
+          <div className="w-full overflow-x-auto border border-slate-200/70 rounded-2xl bg-white shadow-sm p-2">
+            <div className="min-w-[850px]">
+              <CallsTable setExportData={setCallsExportData} />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-0 outline-none w-full">
+          <div className="w-full overflow-x-auto border border-slate-200/70 rounded-2xl bg-white shadow-sm p-2">
+            <div className="min-w-[850px]">
+              <TeamTable setExportData={setTeamExportData} />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

@@ -1,5 +1,5 @@
 
-# RIMS – Renewaa Inventory Management System
+# CoreSync – CoreSync Inventory Management System
 
 ## Layered Architecture
 This project follows a **layered architecture** approach — a widely adopted Go design pattern for building maintainable, scalable backends.
@@ -172,7 +172,7 @@ The application includes a health check endpoint:
 3. **Docker Build Issues**
    ```bash
    # Clean build (no cache)
-   docker build --no-cache -t rims-backend .
+   docker build --no-cache -t CoreSync-backend .
    
    # Check Docker logs
    docker logs <container_id>
@@ -203,7 +203,7 @@ The application includes a health check endpoint:
 3. **View Logs**
    ```bash
    # Docker logs
-   docker logs rims-backend
+   docker logs CoreSync-backend
    
    # Docker compose logs
    docker-compose logs app

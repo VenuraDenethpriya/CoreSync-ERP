@@ -1,7 +1,7 @@
 package models
 
 import (
-	"rims-backend/internal/service/domain"
+	"CoreSync-backend/internal/service/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +15,7 @@ type SalespersonModel struct {
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email"`
 	PhoneNo   string    `json:"phone_no"`
+	Status    string    `json:"status"`
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -42,6 +43,7 @@ func SalespersonFromDomain(salesperson *domain.Salesperson) *SalespersonModel {
 		LastName:  salesperson.LastName,
 		Email:     salesperson.Email,
 		PhoneNo:   salesperson.PhoneNo,
+		Status:    salesperson.Status,
 		CreatedBy: salesperson.CreatedBy,
 		CreatedAt: salesperson.CreatedAt,
 		UpdatedAt: salesperson.UpdatedAt,
@@ -56,6 +58,7 @@ func (s *SalespersonModel) SalespersonFromModelToDomain() *domain.Salesperson {
 		LastName:  s.LastName,
 		Email:     s.Email,
 		PhoneNo:   s.PhoneNo,
+		Status:    s.Status,
 		CreatedBy: s.CreatedBy,
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,

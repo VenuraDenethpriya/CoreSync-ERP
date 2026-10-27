@@ -1,8 +1,8 @@
 package auditlogs
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) CreateAuditLog(ctx context.Context, log *domain.AuditLog) (*domain.AuditLog, error) {

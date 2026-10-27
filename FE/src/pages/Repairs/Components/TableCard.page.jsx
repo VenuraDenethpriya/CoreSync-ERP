@@ -227,7 +227,7 @@ export function RepairTable({ setExportData }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               <Input
                 type="text"
-                placeholder="Job no, Customer name…"
+                placeholder="Search repair jobs"
                 onChange={(e) => setSearch(e.target.value)}
                 value={search}
               />
@@ -303,7 +303,7 @@ export function RepairTable({ setExportData }) {
       <div className="w-full bg-slate-50 px-4 rounded-md">
         <div className="flex items-center py-4">
           <Input
-            placeholder="Search items…"
+            placeholder="Search repair jobs"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
@@ -374,7 +374,7 @@ export function RepairTable({ setExportData }) {
         </div> */}
         <Input
           type="text"
-          placeholder="Order no, Customer name…"
+          placeholder="Search repair jobs"
           onChange={(e) => setSearch(e.target.value)}
           value={search}
           className="max-w-sm"

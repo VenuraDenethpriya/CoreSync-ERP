@@ -1,13 +1,13 @@
 package repository
 
 import (
+	"CoreSync-backend/internal/helper/logger"
+	"CoreSync-backend/internal/models"
+	"CoreSync-backend/internal/service/domain"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"rims-backend/internal/helper/logger"
-	"rims-backend/internal/models"
-	"rims-backend/internal/service/domain"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -81,22 +81,79 @@ func (ur *OrderRepository) GetLastOrderType(ctx context.Context, types []string)
 }
 
 // GetAllOrders retrieves all orders from the database with pagination
-func (ur *OrderRepository) GetAllOrders(ctx context.Context, searchQuery string, limit int, offset int, vat string, orderStatus string, paymentStatus string) ([]*domain.Order, int, error) {
+// func (ur *OrderRepository) GetAllOrders(ctx context.Context, searchQuery string, limit int, offset int, vat string, orderStatus string, paymentStatus string, userRole string, clerkID string, userEmail string) ([]*domain.Order, int, error) {
 
-	// Building the base query
+// 	// Building the base query
+// 	dbQuery := ur.db.WithContext(ctx).Model(&models.OrderModel{}).
+// 		Joins("LEFT JOIN customers c ON c.customer_id = orders.customer_id")
+
+// 	// Search query
+// 	if searchQuery != "" {
+// 		searchPattern := "%" + searchQuery + "%"
+// 		dbQuery = dbQuery.Where(
+// 			"(orders.order_no ILIKE ? OR c.first_name ILIKE ? OR c.last_name ILIKE ?)",
+// 			searchPattern, searchPattern, searchPattern,
+// 		)
+// 	}
+
+// 	// Add filters
+// 	if vat != "" {
+// 		vatBool, err := strconv.ParseBool(vat)
+// 		if err == nil {
+// 			dbQuery = dbQuery.Where("orders.vat = ?", vatBool)
+// 		}
+// 	}
+// 	if orderStatus != "" {
+// 		dbQuery = dbQuery.Where("orders.order_status = ?", orderStatus)
+// 	}
+// 	if paymentStatus != "" {
+// 		dbQuery = dbQuery.Where("orders.payment_status = ?", paymentStatus)
+// 	}
+
+// 	// Total count using the constructed query
+// 	var totalOrders int64
+// 	if err := dbQuery.Count(&totalOrders).Error; err != nil {
+// 		return nil, 0, err
+// 	}
+
+// 	// Paginated data using the *same* query chain
+// 	var orders []*models.OrderModel
+// 	if err := dbQuery.
+// 		Preload("Customer").
+// 		Order("orders.created_at DESC").
+// 		Limit(limit).
+// 		Offset(offset).
+// 		Find(&orders).Error; err != nil {
+// 		return nil, 0, err
+// 	}
+
+//		// Map to domain models
+//		var domainOrders []*domain.Order
+//		for _, o := range orders {
+//			domainOrders = append(domainOrders, o.OrderModelToDomain())
+//		}
+//		return domainOrders, int(totalOrders), nil
+//	}
+func (ur *OrderRepository) GetAllOrders(ctx context.Context, searchQuery string, limit int, offset int, vat string, orderStatus string, paymentStatus string, userRole string, clerkID string, userEmail string) ([]*domain.Order, int, error) {
+
 	dbQuery := ur.db.WithContext(ctx).Model(&models.OrderModel{}).
 		Joins("LEFT JOIN customers c ON c.customer_id = orders.customer_id")
 
-	// Search query
+	if userRole == "SALES_TEAM" {
+		dbQuery = dbQuery.
+			Joins("LEFT JOIN sales ON sales.sales_id = orders.sales_id").
+			Joins("LEFT JOIN salespersons AS salesperson_data ON salesperson_data.id = sales.salesperson").
+			Where("salesperson_data.email = ?", userEmail)
+	}
+
 	if searchQuery != "" {
 		searchPattern := "%" + searchQuery + "%"
 		dbQuery = dbQuery.Where(
-			"(orders.order_no ILIKE ? OR c.first_name ILIKE ? OR c.last_name ILIKE ?)",
-			searchPattern, searchPattern, searchPattern,
+			"(orders.order_no ILIKE ? OR c.first_name ILIKE ? OR c.last_name ILIKE ? OR c.phone_no1 ILIKE ? OR c.phone_no2 ILIKE ?)",
+			searchPattern, searchPattern, searchPattern, searchPattern, searchPattern,
 		)
 	}
 
-	// Add filters
 	if vat != "" {
 		vatBool, err := strconv.ParseBool(vat)
 		if err == nil {
@@ -110,13 +167,11 @@ func (ur *OrderRepository) GetAllOrders(ctx context.Context, searchQuery string,
 		dbQuery = dbQuery.Where("orders.payment_status = ?", paymentStatus)
 	}
 
-	// Total count using the constructed query
 	var totalOrders int64
 	if err := dbQuery.Count(&totalOrders).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Paginated data using the *same* query chain
 	var orders []*models.OrderModel
 	if err := dbQuery.
 		Preload("Customer").
@@ -127,11 +182,11 @@ func (ur *OrderRepository) GetAllOrders(ctx context.Context, searchQuery string,
 		return nil, 0, err
 	}
 
-	// Map to domain models
 	var domainOrders []*domain.Order
 	for _, o := range orders {
 		domainOrders = append(domainOrders, o.OrderModelToDomain())
 	}
+
 	return domainOrders, int(totalOrders), nil
 }
 
@@ -176,52 +231,6 @@ func (ur *OrderRepository) GetAllDraftedOrders(ctx context.Context, searchQuery 
 	return domainOrders, int(totalOrders), nil
 }
 
-// func (ur *OrderRepository) UpdateOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
-// 	var orderModel models.OrderModel
-// 	err := ur.db.First(&orderModel, order.OrderID).Error
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	orderModel.OrderNo = order.OrderNo
-// 	orderModel.SubTotal = order.SubTotal
-// 	orderModel.AdditionalCharges = models.ConvertAdditionalChargesFromDomain(order.AdditionalCharges)
-// 	orderModel.Discount = order.Discount
-// 	orderModel.Total = order.Total
-// 	orderModel.Vat = order.Vat
-// 	orderModel.OrderStatus = order.OrderStatus
-// 	orderModel.PaymentStatus = order.PaymentStatus
-// 	orderModel.CreatedBy = order.CreatedBy
-// 	orderModel.PoNo = order.PoNo
-// 	if order.SalesID == uuid.Nil {
-// 		orderModel.SalesID = nil
-// 	} else {
-// 		orderModel.SalesID = &order.SalesID
-// 	}
-// 	// orderModel.Assignee, err = json.Marshal(order.Assignee)
-// 	// if err != nil {
-// 	// 	return nil, fmt.Errorf("failed to marshal assignee: %w", err)
-// 	// }
-// 	// orderModel.Supervisor = order.Supervisor
-// 	// orderModel.CADFiles = models.ConvertCADFileFromDomain(order.CADFiles)
-// 	// orderModel.Designer = models.ConvertDesignerFromDomain(order.Designer)
-// 	err = ur.db.Updates(&orderModel).Error
-
-// 	if err != nil {
-// 		logger.Error(ctx, "Error updating order", zap.String("method", "PUT"), zap.String("path", "orders"), zap.Any("order", order), zap.Error(err))
-// 		return nil, err
-// 	}
-
-// 	// Explicitly fetch the user by the ClerkID
-// 	var userModel models.UserModel
-// 	if err := ur.db.First(&userModel, "clerk_id = ?", orderModel.CreatedBy).Error; err == nil {
-// 		orderModel.User = userModel
-// 	} else {
-// 		logger.Error(ctx, "Error fetching user model by ClerkID", zap.String("clerk_id", orderModel.CreatedBy), zap.Error(err))
-// 	}
-
-//		logger.Info(ctx, "Order updated", zap.String("method", "PUT"), zap.String("path", "orders"), zap.Any("order", order))
-//		return orderModel.OrderModelToDomain(), nil
-//	}
 func (ur *OrderRepository) UpdateOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	var orderModel models.OrderModel
 	err := ur.db.First(&orderModel, order.OrderID).Error
@@ -253,6 +262,13 @@ func (ur *OrderRepository) UpdateOrder(ctx context.Context, order *domain.Order)
 	// orderModel.Supervisor = order.Supervisor
 	// orderModel.CADFiles = models.ConvertCADFileFromDomain(order.CADFiles)
 	// orderModel.Designer = models.ConvertDesignerFromDomain(order.Designer)
+	var itemsJSON []byte
+	if len(order.Items) == 0 {
+		itemsJSON = []byte("[]")
+	} else {
+		itemsJSON, _ = json.Marshal(order.Items)
+	}
+	orderModel.Items = itemsJSON
 
 	err = ur.db.Model(&orderModel).Select(
 		"OrderNo",
@@ -266,6 +282,7 @@ func (ur *OrderRepository) UpdateOrder(ctx context.Context, order *domain.Order)
 		"CreatedBy",
 		"PoNo",
 		"SalesID",
+		"Items",
 	).Updates(&orderModel).Error
 
 	if err != nil {
@@ -286,35 +303,88 @@ func (ur *OrderRepository) UpdateOrder(ctx context.Context, order *domain.Order)
 }
 
 // UpdateOrderStatus updates the status of an existing order in the database.
+// func (ur *OrderRepository) UpdateOrderStatus(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+// 	if order.OrderID == uuid.Nil {
+// 		return nil, errors.New("order ID cannot be empty")
+// 	}
+
+// 	updates := map[string]interface{}{
+// 		"order_status":   order.OrderStatus,
+// 		"payment_status": order.PaymentStatus,
+// 		"qc_proof":       order.QcProof,
+// 		"delivery_proof": order.DeliveryProof,
+// 	}
+
+// 	err := ur.db.Model(&models.OrderModel{}).Where("order_id = ?", order.OrderID).Updates(updates).Error
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	var updatedOrderModel models.OrderModel
+// 	err = ur.db.Preload("Customer").First(&updatedOrderModel, order.OrderID).Error
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+//		var userModel models.UserModel
+//		if err := ur.db.First(&userModel, "clerk_id = ?", updatedOrderModel.CreatedBy).Error; err == nil {
+//			updatedOrderModel.User = userModel
+//		} else {
+//			logger.Error(ctx, "Error fetching user model by ClerkID", zap.String("clerk_id", updatedOrderModel.CreatedBy), zap.Error(err))
+//		}
+//		return updatedOrderModel.OrderModelToDomain(), nil
+//	}
 func (ur *OrderRepository) UpdateOrderStatus(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	if order.OrderID == uuid.Nil {
 		return nil, errors.New("order ID cannot be empty")
 	}
+	var existingOrder models.OrderModel
 
-	updates := map[string]interface{}{
-		"order_status":   order.OrderStatus,
-		"payment_status": order.PaymentStatus,
-	}
-
-	err := ur.db.Model(&models.OrderModel{}).Where("order_id = ?", order.OrderID).Updates(updates).Error
+	err := ur.db.First(&existingOrder, "order_id = ?", order.OrderID).Error
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	existingOrder.OrderStatus = order.OrderStatus
+	existingOrder.PaymentStatus = order.PaymentStatus
+	existingOrder.QcProof = order.QcProof
+	existingOrder.DeliveryProof = order.DeliveryProof
+
+	if err := ur.db.Updates(&existingOrder).Error; err != nil {
+		logger.Error(ctx, "Error updating site: ", zap.String("method", "PUT"), zap.String("path", "order"), zap.Any("order", order), zap.Error(err))
 		return nil, err
 	}
 
-	var updatedOrderModel models.OrderModel
-	err = ur.db.Preload("Customer").First(&updatedOrderModel, order.OrderID).Error
-	if err != nil {
-		return nil, err
-	}
-	// Explicitly fetch the user by the ClerkID
 	var userModel models.UserModel
-	if err := ur.db.First(&userModel, "clerk_id = ?", updatedOrderModel.CreatedBy).Error; err == nil {
-		updatedOrderModel.User = userModel
+	if err := ur.db.First(&userModel, "clerk_id = ?", existingOrder.CreatedBy).Error; err == nil {
+		existingOrder.User = userModel
 	} else {
-		logger.Error(ctx, "Error fetching user model by ClerkID", zap.String("clerk_id", updatedOrderModel.CreatedBy), zap.Error(err))
+		logger.Error(ctx, "Error fetching user model by ClerkID", zap.String("clerk_id", existingOrder.CreatedBy), zap.Error(err))
 	}
-	return updatedOrderModel.OrderModelToDomain(), nil
+	return existingOrder.OrderModelToDomain(), nil
 }
+
+// func (ur *OrderRepository) GetOrderById(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+// 	var orderModel models.OrderModel
+// 	err := ur.db.
+// 		Preload("Customer").
+// 		Preload("OrderItems").
+// 		Preload("OrderItems.Name").
+// 		Preload("OrderPayments").
+// 		Preload("OrderPayments.User").
+// 		Preload("User").
+// 		Preload("Sale").
+// 		Preload("Sale.SalespersonData").
+// 		Preload("Sale.User").
+// 		First(&orderModel, "order_id = ?", order.OrderID).Error
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+//		return orderModel.OrderModelToDomain(), nil
+//	}
 
 func (ur *OrderRepository) GetOrderById(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	var orderModel models.OrderModel
@@ -332,7 +402,34 @@ func (ur *OrderRepository) GetOrderById(ctx context.Context, order *domain.Order
 	if err != nil {
 		return nil, err
 	}
-	return orderModel.OrderModelToDomain(), nil
+
+	domainOrder := orderModel.OrderModelToDomain()
+
+	if len(domainOrder.Items) > 0 {
+		var productIDs []uuid.UUID
+		for _, item := range domainOrder.Items {
+			productIDs = append(productIDs, item.ProductID)
+		}
+
+		var products []models.ProductModel
+
+		if err := ur.db.Where("product_id IN ?", productIDs).Find(&products).Error; err == nil {
+
+			productMap := make(map[uuid.UUID]string)
+			for _, p := range products {
+
+				productMap[p.ProductID] = p.Name
+			}
+
+			for i, item := range domainOrder.Items {
+				if name, exists := productMap[item.ProductID]; exists {
+					domainOrder.Items[i].ProductName = name
+				}
+			}
+		}
+	}
+
+	return domainOrder, nil
 }
 
 func (ur *OrderRepository) DeleteOrder(ctx context.Context, orderID uuid.UUID) (*domain.Order, error) {
@@ -362,6 +459,7 @@ func (ur *OrderRepository) DeleteOrder(ctx context.Context, orderID uuid.UUID) (
 	}
 	return orderModel.OrderModelToDomain(), nil
 }
+
 func (ur *OrderRepository) UpdateOrderApproval(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	var orderModel models.OrderModel
 	err := ur.db.First(&orderModel, order.OrderID).Error

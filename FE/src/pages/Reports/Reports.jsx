@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
-import BreadCrumbs from "../../components/ui/BreadCrumbs";
-import { useEffect, useState } from "react";
-import { useAuth, useUser } from "@clerk/clerk-react";
-import { LockIcon } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { LockIcon, Download } from "lucide-react";
 import { Roles } from "@/const/const";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -12,50 +11,24 @@ import { createAuditLog } from "@/api/settingApi";
 import { ReportTable } from "./Components/TableCard.page";
 
 const Reports = () => {
-  const { user, isSignedIn } = useUser();
+  const { user } = useUser();
   const { getToken } = useAuth();
   const navigate = useNavigate();
-
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const breadcrumbs = [
-    { name: "Dashboard", link: "/" },
-    { name: "Reports", link: "/reports" },
-  ];
   const [exportData, setExportData] = useState([]);
 
   const handleDownloadPDF = async () => {
     try {
       const doc = new jsPDF();
       const tableColumn = ["Product Name", "Category", "Price", "Type", "Active"];
-      const tableRows = [];
+      const tableRows = exportData.map(item => [
+        item.productName,
+        item.category,
+        new Intl.NumberFormat("en-LK", { style: "currency", currency: "LKR" }).format(item.price),
+        item.type,
+        item.is_active === true ? "Yes" : "No",
+      ]);
 
-      exportData.forEach(item => {
-        const rowData = [
-          item.productName,
-          item.category,
-          new Intl.NumberFormat("en-LK", { style: "currency", currency: "LKR" }).format(item.price),
-          item.type,
-          item.is_active === true ? "Yes" : "No",
-        ];
-        tableRows.push(rowData);
-      });
-
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 20,
-      });
-
+      autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
       doc.text("Product List", 14, 15);
       doc.save("Products List.pdf");
 
@@ -64,54 +37,27 @@ const Reports = () => {
         action: "PDF Downloaded",
         status_code: 200,
         user: user.id,
-        description: `${user.firstName} ${user.lastName} downloaded the products list as a PDF file.`,
+        description: `${user.firstName} ${user.lastName} downloaded the report.`,
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Failed to generate PDF");
-      return;
     }
-
   };
 
-  if (!isSignedIn) {
+  if (user?.publicMetadata?.role === Roles.WAREHOUSE_STAFF || user?.publicMetadata?.role === Roles.INVENTORY_MANAGER || user?.publicMetadata?.role === Roles.OFFICE_STAFF || user?.publicMetadata?.role === Roles.SALES_TEAM || user?.publicMetadata?.role === Roles.HR_HEAD) {
     return (
-      <div className="flex items-center justify-center h-[80vh] px-4">
-        <div className="bg-white shadow-md rounded-xl p-8 max-w-lg text-center border border-red-200">
+      <div className="flex items-center justify-center min-h-[70vh] w-full px-4">
+        <div className="bg-white shadow-sm rounded-2xl p-8 max-w-md text-center border border-red-100">
           <div className="flex flex-col items-center justify-center gap-3">
-            <LockIcon className="w-14 h-14 text-red-600" />
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Authentication Required
-            </h1>
-            <p className="text-gray-600">
-              You should be signed in to access this page.
+            <LockIcon className="w-12 h-12 text-red-500" />
+            <h1 className="text-xl font-bold text-gray-800">Access Denied</h1>
+            <p className="text-sm text-gray-500">
+              You are not authorized to access this page. Please contact your
+              administrator if you believe this is a mistake.
             </p>
             <Button
-              className="mt-4 bg-blue-700 hover:bg-blue-800 text-white"
-              onClick={() =>  navigate("/login")} 
-            >
-              Log In
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (user.publicMetadata.role == Roles.WAREHOUSE_STAFF) {
-    return (
-      <div className="flex items-center justify-center h-[80vh] px-4">
-        <div className="bg-white shadow-md rounded-xl p-8 max-w-lg text-center border border-red-200">
-          <div className="flex flex-col items-center justify-center gap-3">
-            <LockIcon className="w-14 h-14 text-red-600" />
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Access Denied
-            </h1>
-            <p className="text-gray-600">
-              You are not authorized to access this page. Please contact your administrator if you believe this is a mistake.
-            </p>
-            <Button
-              className="mt-4 bg-blue-700 hover:bg-blue-800 text-white"
+              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-sm"
               onClick={() => navigate("/")}
             >
               Go to Dashboard
@@ -123,26 +69,40 @@ const Reports = () => {
   }
 
   return (
-    <div className="w-full relative  bg-slate-50 overflow-x-hidden">
-      (
-      <>
-        <BreadCrumbs breadcrumbs={breadcrumbs} />
-        <div className="px-4 lg:px-16 flex items-center justify-end gap-2 mb-4">
-          {/* <Button
-            variant="outline"
-            className="hidden lg:flex border-2 border-blue-950 hover:bg-blue-950 hover:text-white transition-all"
-            onClick={handleDownloadPDF}
-          >
-            Download
-          </Button> */}
+    <div className="w-full space-y-6">
+      {/* --- HEADER SECTION --- */}
+      <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/70 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight truncate">
+            Reports Management
+          </h1>
+          {/* <p className="text-sm text-slate-500 mt-1">
+            View and download comprehensive data reports.
+          </p> */}
         </div>
-        <div className="mx-3 sm:max-w-screen sm:mx-16">
-          <ReportTable
-            setExportData={setExportData}
-          />
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {
+            user.publicMetadata.role == Roles.READ_ONLY ? null : <Button
+              variant="outline"
+              className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-10 px-4"
+              onClick={handleDownloadPDF}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          }
         </div>
-      </>
-      )
+      </div>
+
+      {/* --- TABLE CONTENT WITH BORDER --- */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-2">
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[850px] p-2">
+            <ReportTable setExportData={setExportData} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

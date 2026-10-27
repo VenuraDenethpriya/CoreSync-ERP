@@ -1,4 +1,4 @@
-import { set, z } from "zod"
+import { z } from "zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Eye, EyeOff } from "lucide-react";
 const formSchema = z.object({
     FirstName: z.string().min(2, { message: "First name is required" }),
     LastName: z.string().min(2, { message: "Last name is required" }),
-    Email: z.string().optional(),
+    Email: z.string().email({ message: "Invalid email address" }).optional().or(z.literal("")),
     PhoneNo: z
         .string()
         .regex(/^94\d{9}$/, {
@@ -35,12 +35,18 @@ const AddUserForm = () => {
     const { user } = useUser();
     const userID = user?.id;
     const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const navigate = useNavigate();
     const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {
-
+            FirstName: "",
+            LastName: "",
+            Email: "",
+            PhoneNo: "",
+            Role: "",
+            Password: "",
         }
     });
 
@@ -56,11 +62,13 @@ const AddUserForm = () => {
 
     async function handleSubmit(values) {
         try {
+            setIsSubmitting(true);
             const token = await getToken();
             const clerkData = await createClerkUser(token, values.FirstName, values.LastName, values.Email, values.PhoneNo, values.Password, values.Role);
 
             if (!clerkData.success) {
                 toast.error("Failed to create Clerk user: " + clerkData.message);
+                setIsSubmitting(false);
                 return;
             }
             const clerkUserId = clerkData.clerkUserId;
@@ -85,6 +93,8 @@ const AddUserForm = () => {
         } catch (error) {
             console.error("Error submitting form:", error);
             toast.error("Error adding user!", { position: "bottom-right" });
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -99,19 +109,19 @@ const AddUserForm = () => {
     return (
         <div>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="sm:space-y-8 space-y-4 w-full">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 w-full">
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-6">
-                            {/* Left Column */}
+                        {/* Left Column */}
+                        <div className="flex flex-col gap-5">
                             <FormField
                                 control={form.control}
                                 name="FirstName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>First Name</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">First Name</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="First Name" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter first name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -123,51 +133,55 @@ const AddUserForm = () => {
                                 name="PhoneNo"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone No.</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Phone No.</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="94XXXXXXXXX" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="94XXXXXXXXX" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
+
                             <FormField
                                 control={form.control}
                                 name="Role"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Role</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Role</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
-                                                <SelectTrigger className="bg-white">
-                                                    <SelectValue className="bg-white" placeholder="Role" />
+                                                <SelectTrigger className="bg-slate-50 border-slate-200 h-11 rounded-xl">
+                                                    <SelectValue placeholder="Select user role" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 <SelectItem value="SUPER_ADMIN">SUPER_ADMIN</SelectItem>
                                                 <SelectItem value="HEAD">HEAD</SelectItem>
+                                                <SelectItem value="FINANCE_HEAD">FINANCE_HEAD</SelectItem>
+                                                <SelectItem value="HR_HEAD">HR_HEAD</SelectItem>
                                                 <SelectItem value="WAREHOUSE_STAFF">WAREHOUSE_STAFF</SelectItem>
                                                 <SelectItem value="INVENTORY_MANAGER">INVENTORY_MANAGER</SelectItem>
                                                 <SelectItem value="OFFICE_STAFF">OFFICE_STAFF</SelectItem>
+                                                <SelectItem value="SALES_TEAM">SALES_TEAM</SelectItem>
+                                                <SelectItem value="READ_ONLY">READ_ONLY</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-
                         </div>
 
-                        <div className="flex flex-col gap-6">
-                            {/* Right Column */}
+                        {/* Right Column */}
+                        <div className="flex flex-col gap-5">
                             <FormField
                                 control={form.control}
                                 name="LastName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Last Name</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Last Name</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Last Name" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter last name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -179,9 +193,9 @@ const AddUserForm = () => {
                                 name="Email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Email</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Email" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter email address" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -193,18 +207,18 @@ const AddUserForm = () => {
                                 name="Password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Password</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold text-sm">Password</FormLabel>
                                         <FormControl>
                                             <div className="relative">
                                                 <Input
                                                     type={showPassword ? "text" : "password"}
-                                                    className="bg-white pr-10"
+                                                    className="bg-slate-50 border-slate-200 h-11 rounded-xl pr-10"
                                                     placeholder="Enter password"
                                                     {...field}
                                                 />
                                                 <button
                                                     type="button"
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                                                     onClick={() => setShowPassword(!showPassword)}
                                                 >
                                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -218,10 +232,11 @@ const AddUserForm = () => {
                         </div>
                     </div>
 
-                    <div className="flex sm:justify-between justify-center">
+                    <div className="flex sm:justify-between justify-center items-center pt-6 border-t border-slate-100 mt-8">
                         <Button
+                            type="button"
                             variant="outline"
-                            className="flex items-center gap-2 border rounded-full px-3 py-1 text-sm shadow-sm hover:bg-slate-100 transition-all"
+                            className="flex items-center gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-4 py-2 text-sm shadow-sm transition-all"
                             onClick={handleClearAll}
                             title="Clear All"
                         >
@@ -229,11 +244,25 @@ const AddUserForm = () => {
                             {isSmallScreen ? null : "Clear All"}
                         </Button>
 
-                        <div className="flex gap-4 ml-2">
-                            <Button type="submit" className="bg-blue-800 hover:bg-blue-900 ">Add User</Button>
-                            <Button variant="outline" className="border-2 border-red-400 hover:bg-red-500 hover:text-white" onClick={handleClose}>Close</Button>
+                        <div className="flex gap-3">
+                            <Button 
+                                type="submit" 
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? "Submitting..." : "Add User"}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-6"
+                                onClick={handleClose}
+                            >
+                                Close
+                            </Button>
                         </div>
                     </div>
+
                 </form>
             </Form>
         </div>

@@ -1,8 +1,8 @@
 package sale
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) GetSalespersonByID(ctx context.Context, salesperson *domain.Salesperson) (*domain.Salesperson, int, float64, int, float64, error) {

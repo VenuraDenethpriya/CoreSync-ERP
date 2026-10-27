@@ -1,8 +1,8 @@
 package order
 
 import (
+	"CoreSync-backend/internal/service/domain"
 	"context"
-	"rims-backend/internal/service/domain"
 )
 
 func (s *service) UpdateOrderItem(ctx context.Context, orderItem *domain.OrderItem) (*domain.OrderItem, error) {

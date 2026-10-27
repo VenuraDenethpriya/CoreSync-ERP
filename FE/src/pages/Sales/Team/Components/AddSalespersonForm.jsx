@@ -1,27 +1,25 @@
-import { set, z } from "zod"
+import { z } from "zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MdOutlineRefresh } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { createClerkUser, createUser } from "@/api/userApi";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { Eye, EyeOff } from "lucide-react";
 import { createSalespereson } from "@/api/salespersonApi";
 
 const formSchema = z.object({
     FirstName: z.string().min(2, { message: "First name is required" }),
     LastName: z.string().min(2, { message: "Last name is required" }),
-    Email: z.string().optional(),
+    Email: z.string().email({ message: "Invalid email address" }).optional().or(z.literal("")),
+    Status: z.string().optional(),
     PhoneNo: z
         .string()
-        .regex(/^94\d{9}$/, {
-            message: "Phone number must be in the format 94XXXXXXXXX (e.g., 94771234567)",
+        .regex(/^\d{9}$/, {
+            message: "Phone number must be in the format 7XXXXXXXX",
         }),
 });
 
@@ -34,7 +32,11 @@ const AddSalespersonForm = () => {
     const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {
-
+            FirstName: "",
+            LastName: "",
+            Email: "",
+            PhoneNo: "",
+            Status: "Active",
         }
     });
 
@@ -57,6 +59,7 @@ const AddSalespersonForm = () => {
                 email: values.Email,
                 phone: values.PhoneNo,
                 created_by: userID,
+                status: values.Status || "Active",
             };
 
             const response = await createSalespereson(token, payload);
@@ -83,19 +86,19 @@ const AddSalespersonForm = () => {
     return (
         <div>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="sm:space-y-8 space-y-4 w-full">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 w-full">
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-6">
-                            {/* Left Column */}
+                        {/* --- LEFT COLUMN --- */}
+                        <div className="flex flex-col gap-5">
                             <FormField
                                 control={form.control}
                                 name="FirstName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>First Name</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold">First Name</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="First Name" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter first name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -107,9 +110,9 @@ const AddSalespersonForm = () => {
                                 name="PhoneNo"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone No.</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold">Phone No.</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="94XXXXXXXXX" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="771234567" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -117,16 +120,16 @@ const AddSalespersonForm = () => {
                             />
                         </div>
 
-                        <div className="flex flex-col gap-6">
-                            {/* Right Column */}
+                        {/* --- RIGHT COLUMN --- */}
+                        <div className="flex flex-col gap-5">
                             <FormField
                                 control={form.control}
                                 name="LastName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Last Name</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold">Last Name</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Last Name" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter last name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -138,9 +141,9 @@ const AddSalespersonForm = () => {
                                 name="Email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold">Email</FormLabel>
                                         <FormControl>
-                                            <Input className="bg-white" placeholder="Email" {...field} />
+                                            <Input className="bg-slate-50 border-slate-200 h-11 rounded-xl" placeholder="Enter email address" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -149,10 +152,12 @@ const AddSalespersonForm = () => {
                         </div>
                     </div>
 
-                    <div className="flex sm:justify-between justify-center">
+                    {/* --- FOOTER BUTTONS --- */}
+                    <div className="flex sm:justify-between justify-center items-center pt-6 border-t border-slate-100 mt-8">
                         <Button
+                            type="button"
                             variant="outline"
-                            className="flex items-center gap-2 border rounded-full px-3 py-1 text-sm shadow-sm hover:bg-slate-100 transition-all"
+                            className="flex items-center gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-4 py-2 text-sm shadow-sm transition-all"
                             onClick={handleClearAll}
                             title="Clear All"
                         >
@@ -160,11 +165,24 @@ const AddSalespersonForm = () => {
                             {isSmallScreen ? null : "Clear All"}
                         </Button>
 
-                        <div className="flex gap-4 ml-2">
-                            <Button type="submit" className="bg-blue-800 hover:bg-blue-900 ">Add Salesperson</Button>
-                            <Button variant="outline" className="border-2 border-red-400 hover:bg-red-500 hover:text-white" onClick={handleClose}>Close</Button>
+                        <div className="flex gap-3">
+                            <Button 
+                                type="submit" 
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm px-6"
+                            >
+                                Add Salesperson
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-6" 
+                                onClick={handleClose}
+                            >
+                                Close
+                            </Button>
                         </div>
                     </div>
+
                 </form>
             </Form>
         </div>
